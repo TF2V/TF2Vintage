@@ -211,10 +211,9 @@ class CTFGrenadeConcussion : public CTFGrenadeLauncher
 public:
 
 	DECLARE_CLASS(CTFGrenadeConcussion, CTFGrenadeLauncher);
-#ifdef GAME_DLL
+
 	DECLARE_NETWORKCLASS();
 	DECLARE_PREDICTABLE();
-#endif
 
 	// Server specific.
 
@@ -542,10 +541,9 @@ class CTFGrenadeGas : public CTFGrenadeLauncher
 public:
 
 	DECLARE_CLASS(CTFGrenadeGas, CTFGrenadeLauncher);
-#ifdef GAME_DLL
+
 	DECLARE_NETWORKCLASS();
 	DECLARE_PREDICTABLE();
-#endif
 
 	// Server specific.
 
