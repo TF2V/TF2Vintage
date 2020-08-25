@@ -19,44 +19,7 @@
 #include "KeyValues.h"
 #endif
 
-//=============================================================================
-//
-// TF Napalm Grenade tables.
-//
 
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeNapalm, DT_TFGrenadeNapalm )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeNapalm, DT_TFGrenadeNapalm )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeNapalm )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_napalm, CTFGrenadeNapalm );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_napalm );
-
-//=============================================================================
-//
-// TF Napalm Grenade functions.
-//
-
-// Server specific.
-#ifdef GAME_DLL
-
-BEGIN_DATADESC( CTFGrenadeNapalm )
-END_DATADESC()
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeNapalm::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-							        AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	return CTFGrenadeNapalmProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, 
-		                                pPlayer, GetTFWpnData(), flTime );
-}
-
-#endif
 
 //=============================================================================
 //

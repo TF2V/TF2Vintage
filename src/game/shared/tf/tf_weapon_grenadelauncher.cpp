@@ -445,3 +445,1810 @@ void CTFGrenadeLauncher_Cannon::Precache(void)
 
 	BaseClass::Precache();
 }
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeFrag, DT_WeaponGrenadeFrag)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeFrag, DT_WeaponGrenadeFrag)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeFrag)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_frag, CTFGrenadeFrag);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_frag);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeFrag::CTFGrenadeFrag()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeFrag::~CTFGrenadeFrag()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeFrag::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeFrag::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeFrag::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeFrag::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeFrag::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeFrag::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeFrag::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeFrag::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeFrag::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeFrag::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeFrag::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeCaltrop, DT_WeaponGrenadeCaltrop)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeCaltrop, DT_WeaponGrenadeCaltrop)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeCaltrop)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_caltrop, CTFGrenadeCaltrop);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_caltrop);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeCaltrop::CTFGrenadeCaltrop()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeCaltrop::~CTFGrenadeCaltrop()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeCaltrop::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeCaltrop::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeCaltrop::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeCaltrop::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeCaltrop::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeCaltrop::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeCaltrop::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeCaltrop::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeCaltrop::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeCaltrop::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeCaltrop::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+//Grenade CONCUSSION
+
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeConcussion, DT_WeaponGrenadeConcussion)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeConcussion, DT_WeaponGrenadeConcussion)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeConcussion)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_concussion, CTFGrenadeConcussion);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_concussion);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeConcussion::CTFGrenadeConcussion()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeConcussion::~CTFGrenadeConcussion()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeConcussion::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeConcussion::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeConcussion::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeConcussion::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeConcussion::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeConcussion::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeConcussion::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeConcussion::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeConcussion::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeConcussion::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeConcussion::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeEmp, DT_WeaponGrenadeEmp)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeEmp, DT_WeaponGrenadeEmp)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeEmp)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_emp, CTFGrenadeEmp);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_emp);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeEmp::CTFGrenadeEmp()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeEmp::~CTFGrenadeEmp()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeEmp::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeEmp::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeEmp::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeEmp::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeEmp::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeEmp::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeEmp::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeEmp::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeEmp::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeEmp::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeEmp::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeSmokeBomb, DT_WeaponGrenadeSmokeBomb)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeSmokeBomb, DT_WeaponGrenadeSmokeBomb)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeSmokeBomb)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_smoke_bomb, CTFGrenadeSmokeBomb);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_smoke_bomb);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeSmokeBomb::CTFGrenadeSmokeBomb()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeSmokeBomb::~CTFGrenadeSmokeBomb()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeSmokeBomb::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeSmokeBomb::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeSmokeBomb::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeSmokeBomb::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeSmokeBomb::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeSmokeBomb::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeSmokeBomb::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeSmokeBomb::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeSmokeBomb::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeSmokeBomb::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeSmokeBomb::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+#define GRENADE_HEAL_TIMER	1.0f // seconds
+
+//=============================================================================
+//
+// Weapon Grenade Launcher tables.
+//
+IMPLEMENT_NETWORKCLASS_ALIASED(TFHealGrenade, DT_WeaponHealGrenade)
+
+BEGIN_NETWORK_TABLE(CTFHealGrenade, DT_WeaponHealGrenade)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFHealGrenade)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_heal_grenade, CTFHealGrenade);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_heal_grenade);
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFHealGrenade::CTFHealGrenade()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFHealGrenade::~CTFHealGrenade()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFHealGrenade::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFHealGrenade::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFHealGrenade::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFHealGrenade::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFHealGrenade::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFHealGrenade::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFHealGrenade::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFHealGrenade::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFHealGrenade::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFHealGrenade::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFHealGrenade::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+//=============================================================================
+//
+// Weapon Grenade Launcher tables.
+//
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeMirv, DT_WeaponGrenadeMirv)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeMirv, DT_WeaponGrenadeMirv)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeMirv)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_mirv, CTFGrenadeMirv);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_mirv);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeMirv::CTFGrenadeMirv()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeMirv::~CTFGrenadeMirv()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeMirv::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeMirv::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeMirv::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeMirv::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeMirv::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeMirv::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeMirv::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeMirv::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeMirv::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeMirv::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeMirv::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+//=============================================================================
+//
+// Weapon Grenade Launcher tables.
+//
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeNail, DT_WeaponGrenadeNail)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeNail, DT_WeaponGrenadeNail)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeNail)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_nail, CTFGrenadeNail);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_nail);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeNail::CTFGrenadeNail()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeNail::~CTFGrenadeNail()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNail::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeNail::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeNail::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeNail::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeNail::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNail::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNail::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNail::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeNail::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeNail::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeNail::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+//=============================================================================
+//
+// Weapon Grenade Launcher tables.
+//
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeNapalm, DT_WeaponGrenadeNapalm)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeNapalm, DT_WeaponGrenadeNapalm)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeNapalm)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_napalm, CTFGrenadeNapalm);
+PRECACHE_WEAPON_REGISTER(tf_weaponbased_grenade_napalm);
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeNapalm::CTFGrenadeNapalm()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeNapalm::~CTFGrenadeNapalm()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNapalm::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeNapalm::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeNapalm::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeNapalm::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeNapalm::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNapalm::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNapalm::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeNapalm::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeNapalm::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeNapalm::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeNapalm::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+//=============================================================================
+//
+// Weapon Grenade Launcher tables.
+//
+
+IMPLEMENT_NETWORKCLASS_ALIASED(TFGrenadeGas, DT_WeaponGrenadeGas)
+
+BEGIN_NETWORK_TABLE(CTFGrenadeGas, DT_WeaponGrenadeGas)
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA(CTFGrenadeGas)
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS(tf_weaponbased_grenade_gas, CTFGrenadeGas);
+PRECACHE_WEAPON_REGISTER(tf_weapon_grenade_gas);
+
+
+
+#define TF_GRENADE_LAUNCER_MIN_VEL 1200
+
+//=============================================================================
+//
+// Weapon Grenade Launcher functions.
+//
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeGas::CTFGrenadeGas()
+{
+	m_bReloadsSingly = true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  :  - 
+//-----------------------------------------------------------------------------
+CTFGrenadeGas::~CTFGrenadeGas()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeGas::Spawn(void)
+{
+	m_iAltFireHint = HINT_ALTFIRE_GRENADELAUNCHER;
+	BaseClass::Spawn();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we holster
+//-----------------------------------------------------------------------------
+bool CTFGrenadeGas::Holster(CBaseCombatWeapon* pSwitchingTo)
+{
+	return BaseClass::Holster(pSwitchingTo);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Reset the charge when we deploy
+//-----------------------------------------------------------------------------
+bool CTFGrenadeGas::Deploy(void)
+{
+	return BaseClass::Deploy();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeGas::GetMaxClip1(void) const
+{
+#ifdef _X360 
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetMaxClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFGrenadeGas::GetDefaultClip1(void) const
+{
+#ifdef _X360
+	return TF_GRENADE_LAUNCHER_XBOX_CLIP;
+#endif
+
+	return BaseClass::GetDefaultClip1();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeGas::PrimaryAttack(void)
+{
+	// Check for ammunition.
+	if (m_iClip1 <= 0 && m_iClip1 != -1)
+		return;
+
+	// Are we capable of firing again?
+	if (m_flNextPrimaryAttack > gpGlobals->curtime)
+		return;
+
+	if (!CanAttack())
+	{
+		return;
+	}
+
+	m_iWeaponMode = TF_WEAPON_PRIMARY_MODE;
+
+	LaunchGrenade();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeGas::WeaponIdle(void)
+{
+	BaseClass::WeaponIdle();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFGrenadeGas::LaunchGrenade(void)
+{
+	// Get the player owning the weapon.
+	CTFPlayer* pPlayer = ToTFPlayer(GetPlayerOwner());
+	if (!pPlayer)
+		return;
+
+	CalcIsAttackCritical();
+
+	SendWeaponAnim(ACT_VM_PRIMARYATTACK);
+
+	pPlayer->SetAnimation(PLAYER_ATTACK1);
+	pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+
+	FireProjectile(pPlayer);
+
+#if !defined( CLIENT_DLL ) 
+	pPlayer->SpeakWeaponFire();
+	CTF_GameStats.Event_PlayerFiredWeapon(pPlayer, IsCurrentAttackACrit());
+#endif
+
+	// Set next attack times.
+	m_flNextPrimaryAttack = gpGlobals->curtime + m_pWeaponInfo->GetWeaponData(m_iWeaponMode).m_flTimeFireDelay;
+
+	SetWeaponIdleTime(gpGlobals->curtime + SequenceDuration());
+
+	// Check the reload mode and behave appropriately.
+	if (m_bReloadsSingly)
+	{
+		m_iReloadMode.Set(TF_RELOAD_START);
+	}
+}
+
+float CTFGrenadeGas::GetProjectileSpeed(void)
+{
+	return TF_GRENADE_LAUNCER_MIN_VEL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Detonate this demoman's pipebombs
+//-----------------------------------------------------------------------------
+void CTFGrenadeGas::SecondaryAttack(void)
+{
+#ifdef GAME_DLL
+
+	if (!CanAttack())
+		return;
+
+	CTFPlayer* pOwner = ToTFPlayer(GetOwner());
+	pOwner->DoClassSpecialSkill();
+
+#endif
+}
+
+bool CTFGrenadeGas::Reload(void)
+{
+	return BaseClass::Reload();
+}
+
+

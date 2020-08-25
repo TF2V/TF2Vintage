@@ -21,21 +21,6 @@
 #include "te_effect_dispatch.h"
 #endif
 
-//=============================================================================
-//
-// TF Smoke Bomb tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeSmokeBomb, DT_TFGrenadeSmokeBomb )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeSmokeBomb, DT_TFGrenadeSmokeBomb )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeSmokeBomb )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_smoke_bomb, CTFGrenadeSmokeBomb );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_smoke_bomb );
 
 ConVar tf_smoke_bomb_time("tf_smoke_bomb_time", "5.0", FCVAR_CHEAT | FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY);
 
@@ -47,15 +32,13 @@ ConVar tf_smoke_bomb_time("tf_smoke_bomb_time", "5.0", FCVAR_CHEAT | FCVAR_REPLI
 // Server specific.
 #ifdef GAME_DLL
 
-BEGIN_DATADESC( CTFGrenadeSmokeBomb )
-END_DATADESC()
 
 extern ConVar tf_smoke_bomb_time;
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeSmokeBomb::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
+/*CTFWeaponBaseGrenadeProj *CTFGrenadeSmokeBomb::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
 													 AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
 {							
 	CTFPlayer *pTFPlayer = ToTFPlayer( pPlayer );
@@ -90,7 +73,7 @@ CTFWeaponBaseGrenadeProj *CTFGrenadeSmokeBomb::EmitGrenade( Vector vecSrc, QAngl
 bool CTFGrenadeSmokeBomb::ShouldDetonate( void )
 {
 	return false;
-}
+}*/
 
 #endif // GAME_DLL
 

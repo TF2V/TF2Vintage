@@ -24,44 +24,6 @@
 #define GRENADE_EMP_TIMER	3.0f //Seconds
 #define	GRENADE_EMP_LEADIN	2.0f 
 
-//=============================================================================
-//
-// TF Emp Grenade tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeEmp, DT_TFGrenadeEmp )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeEmp, DT_TFGrenadeEmp )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeEmp )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_emp, CTFGrenadeEmp );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_emp );
-
-//=============================================================================
-//
-// TF Emp Grenade functions.
-//
-
-// Server specific.
-#ifdef GAME_DLL
-
-BEGIN_DATADESC( CTFGrenadeEmp )
-END_DATADESC()
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeEmp::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-							        AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	return CTFGrenadeEmpProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, 
-		                                pPlayer, GetTFWpnData(), flTime );
-}
-
-#endif
 
 //=============================================================================
 //

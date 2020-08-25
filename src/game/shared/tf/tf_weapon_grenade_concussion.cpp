@@ -24,45 +24,6 @@
 
 //=============================================================================
 //
-// TF Concussion Grenade tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeConcussion, DT_TFGrenadeConcussion )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeConcussion, DT_TFGrenadeConcussion )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeConcussion )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_concussion, CTFGrenadeConcussion );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_concussion );
-
-//=============================================================================
-//
-// TF Concussion Grenade functions.
-//
-
-// Server specific.
-#ifdef GAME_DLL
-
-BEGIN_DATADESC( CTFGrenadeConcussion )
-END_DATADESC()
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeConcussion::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-							        AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	return CTFGrenadeConcussionProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, 
-		                                pPlayer, GetTFWpnData(), flTime );
-}
-
-#endif
-
-//=============================================================================
-//
 // TF Concussion Grenade Projectile functions (Server specific).
 //
 #ifdef GAME_DLL

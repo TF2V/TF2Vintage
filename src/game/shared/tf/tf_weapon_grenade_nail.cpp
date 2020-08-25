@@ -24,44 +24,6 @@
 
 #define GRENADE_NAIL_TIMER	3.0f //Seconds
 
-//=============================================================================
-//
-// TF Nail Grenade tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeNail, DT_TFGrenadeNail )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeNail, DT_TFGrenadeNail )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeNail )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_nail, CTFGrenadeNail );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_nail );
-
-//=============================================================================
-//
-// TF Nail Grenade functions.
-//
-
-// Server specific.
-#ifdef GAME_DLL
-
-BEGIN_DATADESC( CTFGrenadeNail )
-END_DATADESC()
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeNail::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-							        AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	return CTFGrenadeNailProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, 
-		                              pPlayer, GetTFWpnData(), flTime );
-}
-
-#endif
 
 //=============================================================================
 //

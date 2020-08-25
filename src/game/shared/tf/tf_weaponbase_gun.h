@@ -12,6 +12,17 @@
 
 #include "tf_shareddefs.h"
 #include "tf_weaponbase.h"
+#include "tf_weapon_grenade_mirv.h"
+#include "tf_weapon_grenade_heal.h"
+#include "tf_weapon_grenade_caltrop.h"
+#include "tf_weapon_grenade_smoke_bomb.h"
+#include "tf_weapon_grenade_normal.h"
+#include "tf_weapon_grenade_concussion.h"
+#include "tf_weapon_grenade_emp.h"
+#include "tf_weapon_grenade_nail.h"
+#include "tf_weapon_grenade_napalm.h"
+#include "tf_weapon_grenade_gas.h"
+#include "tf_weapon_grenade_normal.h"
 
 #if defined( CLIENT_DLL )
 #define CTFWeaponBaseGun C_TFWeaponBaseGun
@@ -63,7 +74,17 @@ public:
 	CBaseEntity *FireFlare( CTFPlayer *pPlayer );
 	CBaseEntity *FireArrow( CTFPlayer *pPlayer, int iType );
 	CBaseEntity *FireJar( CTFPlayer *pPlayer, int iType );
-	CBaseEntity *FireGrenade( CTFPlayer *pPlayer );
+	//CBaseEntity *FireGrenade( CTFPlayer *pPlayer );
+	CBaseEntity* FireMirv(CTFPlayer* pPlayer);
+	CBaseEntity* FireHeal(CTFPlayer* pPlayer);
+	CBaseEntity* FireCaltrop(CTFPlayer* pPlayer);
+	CBaseEntity* FireSmokeBomb(CTFPlayer* pPlayer);
+	CBaseEntity* FireGas(CTFPlayer* pPlayer);
+	CBaseEntity* FireNormal(CTFPlayer* pPlayer);
+	CBaseEntity* FireConcussion(CTFPlayer* pPlayer);
+	CBaseEntity* FireEmp(CTFPlayer* pPlayer);
+	CBaseEntity* FireNailGrenade(CTFPlayer* pPlayer);
+	CBaseEntity* FireNapalm(CTFPlayer* pPlayer);
 
 	virtual float GetWeaponSpread( void );
 	virtual float GetProjectileSpeed( void );

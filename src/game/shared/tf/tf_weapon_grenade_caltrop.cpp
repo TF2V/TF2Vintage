@@ -25,54 +25,12 @@
 
 //=============================================================================
 //
-// TF Caltrop Grenade tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeCaltrop, DT_TFGrenadeCaltrop )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeCaltrop, DT_TFGrenadeCaltrop )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeCaltrop )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_caltrop, CTFGrenadeCaltrop );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_caltrop );
-
-//=============================================================================
-//
-// TF Caltrop Grenade functions.
-//
-
-// Server specific.
-#ifdef GAME_DLL
-
-BEGIN_DATADESC( CTFGrenadeCaltrop )
-END_DATADESC()
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeCaltrop::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-							        AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	// Release several at a time (different directions, angles, speeds, etc.)
-	for ( int i = 0 ; i < GRENADE_CALTROP_RELEASE_COUNT ; i++ )
-	{
-		Vector velocity( random->RandomFloat(-100,100), random->RandomFloat(-100,100), random->RandomFloat(150,200) );
-		CTFGrenadeCaltropProjectile::Create( vecSrc, vecAngles, velocity, angImpulse, 
-			                                 pPlayer, GetTFWpnData(), random->RandomFloat( 10.0f, 15.0f ) );
-	}
-
-	return NULL;
-}
-
-#endif
-
-//=============================================================================
-//
 // TF Caltrop Grenade Projectile functions (Server specific).
 //
+// Server specific.
+
+#ifdef GAME_DLL
+
 LINK_ENTITY_TO_CLASS( tf_weapon_grenade_caltrop_projectile, CTFGrenadeCaltropProjectile );
 PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_caltrop_projectile );
 
@@ -81,7 +39,7 @@ IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeCaltropProjectile, DT_TFGrenadeCaltropP
 BEGIN_NETWORK_TABLE( CTFGrenadeCaltropProjectile, DT_TFGrenadeCaltropProjectile )
 END_NETWORK_TABLE()
 
-#ifdef GAME_DLL
+
 
 #define GRENADE_MODEL "models/weapons/w_models/w_grenade_beartrap.mdl"
 

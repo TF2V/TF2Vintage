@@ -12,39 +12,6 @@
 #include "tf_weaponbase_grenade.h"
 #include "tf_weaponbase_grenadeproj.h"
 
-// Client specific.
-#ifdef CLIENT_DLL
-#define CTFGrenadeConcussion C_TFGrenadeConcussion
-#endif
-
-//=============================================================================
-//
-// TF Concussion Grenade
-//
-class CTFGrenadeConcussion : public CTFWeaponBaseGrenade
-{
-public:
-
-	DECLARE_CLASS( CTFGrenadeConcussion, CTFWeaponBaseGrenade );
-	DECLARE_NETWORKCLASS();
-	DECLARE_PREDICTABLE();
-
-	CTFGrenadeConcussion() {}
-
-	// Unique identifier.
-	virtual int			GetWeaponID( void ) const			{ return TF_WEAPON_GRENADE_CONCUSSION; }
-
-// Server specific.
-#ifdef GAME_DLL
-
-	DECLARE_DATADESC();
-
-	virtual CTFWeaponBaseGrenadeProj *EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags = 0 );
-
-#endif
-
-	CTFGrenadeConcussion( const CTFGrenadeConcussion & ) {}
-};
 
 //=============================================================================
 //

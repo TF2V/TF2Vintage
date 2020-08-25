@@ -23,44 +23,12 @@
 #define GRENADE_HEAL_TIMER	3.0f //Seconds
 #define	GRENADE_HEAL_LEADIN	2.0f 
 
-//=============================================================================
-//
-// TF Heal Grenade tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeHeal, DT_TFGrenadeHeal )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeHeal, DT_TFGrenadeHeal )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeHeal )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_heal, CTFGrenadeHeal );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_heal );
-
-//=============================================================================
-//
-// TF Heal Grenade functions.
-//
 
 // Server specific.
 #ifdef GAME_DLL
 
-BEGIN_DATADESC( CTFGrenadeHeal )
-END_DATADESC()
 
 ConVar tf_grenade_heal_amount( "tf_grenade_heal_amount", "100", FCVAR_CHEAT, "Amount healed by the medic heal grenade.\n" );
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeHeal::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-													 AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	return CTFGrenadeHealProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, 
-		pPlayer, GetTFWpnData(), flTime );
-}
 
 //=============================================================================
 //

@@ -23,53 +23,6 @@
 
 //=============================================================================
 //
-// TF Normal Grenade tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeNormal, DT_TFGrenadeNormal )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeNormal, DT_TFGrenadeNormal )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeNormal )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_normal, CTFGrenadeNormal );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_normal );
-
-//IMPLEMENT_ACTTABLE( CTFGrenadeNormal );
-
-//=============================================================================
-//
-// TF Normal Grenade functions.
-//
-
-// Server specific.
-#ifdef GAME_DLL
-
-BEGIN_DATADESC( CTFGrenadeNormal )
-END_DATADESC()
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeNormal::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-							        AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	CTFPlayer *pTFPlayer = ToTFPlayer( pPlayer );
-	if ( pTFPlayer )
-	{
-		pTFPlayer->RemoveDisguise();
-	}
-
-	return CTFGrenadeNormalProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, 
-		                                pPlayer, GetTFWpnData(), flTime );
-}
-
-#endif
-
-//=============================================================================
-//
 // TF Normal Grenade Projectile functions (Server specific).
 //
 #ifdef GAME_DLL

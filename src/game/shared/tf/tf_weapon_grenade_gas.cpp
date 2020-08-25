@@ -22,44 +22,6 @@
 #define GRENADE_GAS_TIMER	3.0f //Seconds
 #define TF_HALLUCINATION_RADIUS 35.0f
 
-//=============================================================================
-//
-// TF Gas Grenade tables.
-//
-
-IMPLEMENT_NETWORKCLASS_ALIASED( TFGrenadeGas, DT_TFGrenadeGas )
-
-BEGIN_NETWORK_TABLE( CTFGrenadeGas, DT_TFGrenadeGas )
-END_NETWORK_TABLE()
-
-BEGIN_PREDICTION_DATA( CTFGrenadeGas )
-END_PREDICTION_DATA()
-
-LINK_ENTITY_TO_CLASS( tf_weapon_grenade_gas, CTFGrenadeGas );
-PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_gas );
-
-//=============================================================================
-//
-// TF Gas Grenade functions.
-//
-
-// Server specific.
-#ifdef GAME_DLL
-
-BEGIN_DATADESC( CTFGrenadeGas )
-END_DATADESC()
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-CTFWeaponBaseGrenadeProj *CTFGrenadeGas::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, 
-							        AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags )
-{
-	return CTFGrenadeGasProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, 
-		                                pPlayer, GetTFWpnData(), flTime );
-}
-
-#endif
 
 //=============================================================================
 //

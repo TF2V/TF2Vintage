@@ -115,6 +115,4 @@ public:
 
 	virtual int GetWeaponID( void ) const { return TF_WEAPON_PIPEBOMBLAUNCHER_BETA; }
 };
-
-
 #endif // TF_WEAPON_PIPEBOMBLAUNCHER_H

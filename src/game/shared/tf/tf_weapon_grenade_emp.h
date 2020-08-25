@@ -12,40 +12,7 @@
 #include "tf_weaponbase_grenade.h"
 #include "tf_weaponbase_grenadeproj.h"
 
-// Client specific.
-#ifdef CLIENT_DLL
-#define CTFGrenadeEmp C_TFGrenadeEmp
-#endif
 
-//=============================================================================
-//
-// TF Emp Grenade
-//
-class CTFGrenadeEmp : public CTFWeaponBaseGrenade
-{
-public:
-
-	DECLARE_CLASS( CTFGrenadeEmp, CTFWeaponBaseGrenade );
-	DECLARE_NETWORKCLASS();
-	DECLARE_PREDICTABLE();
-//	DECLARE_ACTTABLE();
-
-	CTFGrenadeEmp() {}
-
-	// Unique identifier.
-	virtual int			GetWeaponID( void ) const			{ return TF_WEAPON_GRENADE_EMP; }
-
-// Server specific.
-#ifdef GAME_DLL
-
-	DECLARE_DATADESC();
-
-	virtual CTFWeaponBaseGrenadeProj *EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, float flTime, int iflags = 0 );
-
-#endif
-
-	CTFGrenadeEmp( const CTFGrenadeEmp & ) {}
-};
 
 //=============================================================================
 //

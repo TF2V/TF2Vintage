@@ -212,6 +212,56 @@ CBaseEntity *CTFWeaponBaseGun::FireProjectile( CTFPlayer *pPlayer )
 			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_ATTACK_PRIMARY );
 			break;
 			
+		case TF_WEAPON_GRENADE_MIRV_PROJECTILE:
+			pProjectile = FireMirv(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_HEAL_PROJECTILE:
+			pProjectile = FireHeal(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_CALTROP_PROJECTILE:
+			pProjectile = FireCaltrop(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_SMOKE_BOMB_PROJECTILE:
+			pProjectile = FireSmokeBomb(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_GAS_PROJECTILE:
+			pProjectile = FireSmokeBomb(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_NORMAL_PROJECTILE:
+			pProjectile = FireNormal(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_CONCUSSION_PROJECTILE:
+			pProjectile = FireConcussion(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_EMP_PROJECTILE:
+			pProjectile = FireEmp(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_NAIL_PROJECTILE:
+			pProjectile = FireNailGrenade(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
+		case TF_WEAPON_GRENADE_NAPALM_PROJECTILE:
+			pProjectile = FireNapalm(pPlayer);
+			pPlayer->DoAnimationEvent(PLAYERANIMEVENT_ATTACK_PRIMARY);
+			break;
+
 		case TF_PROJECTILE_ENERGY_BALL:
 			pProjectile = FireEnergyBall( pPlayer );
 			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_ATTACK_PRIMARY );
@@ -524,6 +574,366 @@ CBaseEntity *CTFWeaponBaseGun::FireRocket( CTFPlayer *pPlayer )
 	{
 		pProjectile->SetCritical( IsCurrentAttackACrit() );
 		pProjectile->SetDamage( GetProjectileDamage() );
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Mirv Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireMirv(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (1.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeMirvProjectile* pProjectile = CTFGrenadeMirvProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Heal Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireHeal(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (3.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeHealProjectile* pProjectile = CTFGrenadeHealProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Caltrop Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireCaltrop(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (3.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeCaltropProjectile* pProjectile = CTFGrenadeCaltropProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Smoke Bomb Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireSmokeBomb(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (1.5f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeSmokeBombProjectile* pProjectile = CTFGrenadeSmokeBombProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Smoke Bomb Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireGas(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (1.5f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeGasProjectile* pProjectile = CTFGrenadeGasProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Normal Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireNormal(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (3.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeNormalProjectile* pProjectile = CTFGrenadeNormalProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Concussion Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireConcussion(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (1.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeConcussionProjectile* pProjectile = CTFGrenadeConcussionProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Emp Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireEmp(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (3.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeEmpProjectile* pProjectile = CTFGrenadeEmpProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Nail Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireNailGrenade(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (3.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeNailProjectile* pProjectile = CTFGrenadeNailProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
+	}
+	return pProjectile;
+
+#endif
+
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fire a Napalm Grenade
+//-----------------------------------------------------------------------------
+CBaseEntity* CTFWeaponBaseGun::FireNapalm(CTFPlayer* pPlayer)
+{
+	PlayWeaponShootSound();
+
+#ifdef GAME_DLL
+
+	Vector vecForward, vecRight, vecUp;
+	AngleVectors(pPlayer->EyeAngles(), &vecForward, &vecRight, &vecUp);
+	float timer = (3.0f);
+	int iFlags = 0;
+
+	// Create grenades here!!
+	Vector vecSrc = pPlayer->Weapon_ShootPosition();
+	vecSrc += vecForward * 16.0f + vecRight * 8.0f + vecUp * -6.0f;
+
+	Vector vecVelocity = (vecForward * GetProjectileSpeed()) + (vecUp * 200.0f) + (random->RandomFloat(-10.0f, 10.0f) * vecRight) +
+		(random->RandomFloat(-10.0f, 10.0f) * vecUp);
+
+	CTFGrenadeNapalmProjectile* pProjectile = CTFGrenadeNapalmProjectile::Create(vecSrc, pPlayer->EyeAngles(), vecVelocity,
+		AngularImpulse(600, random->RandomInt(-1200, 1200), 0),
+		pPlayer, GetTFWpnData(), timer, iFlags);
+
+	if (pProjectile)
+	{
+		pProjectile->SetCritical(IsCurrentAttackACrit());
 	}
 	return pProjectile;
 
@@ -1037,7 +1447,7 @@ CBaseEntity *CTFWeaponBaseGun::FireArrow( CTFPlayer *pPlayer, int iType )
 //-----------------------------------------------------------------------------
 // Purpose: Use this for any old grenades: MIRV, Frag, etc
 //-----------------------------------------------------------------------------
-CBaseEntity *CTFWeaponBaseGun::FireGrenade( CTFPlayer *pPlayer )
+/*CBaseEntity *CTFWeaponBaseGun::FireGrenade( CTFPlayer *pPlayer )
 {
 	PlayWeaponShootSound();
 
@@ -1074,7 +1484,7 @@ CBaseEntity *CTFWeaponBaseGun::FireGrenade( CTFPlayer *pPlayer )
 #endif
 
 	return NULL;
-}
+}*/
 
 //-----------------------------------------------------------------------------
 // Purpose: 
