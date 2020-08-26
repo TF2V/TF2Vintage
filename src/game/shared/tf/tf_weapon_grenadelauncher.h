@@ -206,6 +206,12 @@ private:
 
 	CTFGrenadeCaltrop(const CTFGrenadeCaltrop&) {}
 };
+// Client specific.
+#ifdef CLIENT_DLL
+#define CTFGrenadeConcussion C_TFGrenadeConcussion
+#endif
+
+
 class CTFGrenadeConcussion : public CTFGrenadeLauncher
 {
 public:
@@ -536,6 +542,11 @@ private:
 //
 // TF Weapon Grenade Launcher.
 //
+// Client specific.
+#ifdef CLIENT_DLL
+#define CTFGrenadeGas C_TFGrenadeGas
+#endif
+
 class CTFGrenadeGas : public CTFGrenadeLauncher
 {
 public:
