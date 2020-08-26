@@ -4225,8 +4225,10 @@
 			"year"			"2008"
 			"item_name"	"#TF_Unique_Achievement_Medigun1"
 			"propername"	"1"
+			"equip_region"	"medigun_backpack"
 			"image_inventory"	 "backpack/weapons/c_models/c_overhealer/c_overhealer"
 			"model_player"	  "models/weapons/c_models/c_kritzkrieg/c_kritzkrieg.mdl"
+			"extra_wearable"  "models/weapons/c_models/c_kritzkrieg/c_kritzkrieg_backpack.mdl"
 			"attributes"
 			{
 				"lunchbox adds minicrits"
