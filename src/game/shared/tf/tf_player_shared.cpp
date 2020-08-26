@@ -5243,7 +5243,7 @@ void CTFPlayerShared::UpdateEnergyDrinkMeter( void )
 		if ( m_flEnergyDrinkMeter >= 100.0f )
 			return;
 
-		if ( m_pOuter->GetAmmoCount( TF_AMMO_GRENADES2 ) != m_pOuter->GetMaxAmmo( TF_AMMO_GRENADES2 ) )
+		if ( m_pOuter->GetAmmoCount( TF_AMMO_SPECIAL2 ) != m_pOuter->GetMaxAmmo( TF_AMMO_SPECIAL2 ) )
 			return;
 	}
 	
@@ -6903,6 +6903,9 @@ int CTFPlayer::GetMaxAmmo( int iAmmoIndex, int iClassNumber /*= -1*/ ) const
 			CALL_ATTRIB_HOOK_INT( iMaxAmmo, mult_maxammo_grenades2 );
 			break;
 		case TF_AMMO_GRENADES3:
+		case TF_AMMO_SPECIAL1:	// Don't add ammo mults to specials.
+		case TF_AMMO_SPECIAL2:
+		case TF_AMMO_SPECIAL3:
 			iMaxAmmo = 1;
 			break;
 	}
