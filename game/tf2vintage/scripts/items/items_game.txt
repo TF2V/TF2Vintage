@@ -10023,6 +10023,13 @@
 				"sound_melee_hit"	"Weapon_UberSaw.HitFlesh"
 			}
 		}
+		"30839"
+		{
+			"name"	"Team Bottle"
+			"prefab"	"weapon_bottle weapon_reskin"
+			"year"			"2007"
+			"model_player"	"models/weapons/c_models/c_bottle/c_bottle_team.mdl"
+		}
 	}
 	"specialitems"
 	{
