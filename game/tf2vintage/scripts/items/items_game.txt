@@ -504,22 +504,19 @@
 		}
 		"weapon_long_heatmaker"
 		{
-			"prefab"			"weapon_minigun"
+			"item_class"	"tf_weapon_minigun"
 			"base_item_name"	"The Huo Long Heatmaker"
 			"item_name"	"#TF_SD_Minigun"
 			"item_logname"	"long_heatmaker"
 			"item_iconname"	"long_heatmaker"
+			"item_slot"	"primary"
 			"image_inventory"	"backpack/workshop_partner/weapons/c_models/c_canton/c_canton"
 			"model_player"	"models/workshop_partner/weapons/c_models/c_canton/c_canton.mdl"
 			"propername"	"1"
 			"xifier_class_remap"	"long_heatmaker"
-			"visuals"
+			"used_by_classes"
 			{
-				"sound_double_shot"	"Dragon_Minigun.Fire"
-				"sound_special1"	"Dragon_Minigun.WindUp"
-				"sound_special2"	"Dragon_Minigun.WindDown"
-				"sound_special3"	"Dragon_Minigun.Spin"
-				"sound_burst"		"Dragon_Minigun.FireCrit"
+				"heavy"	"1"
 			}
 			"attributes"
 			{
@@ -543,6 +540,18 @@
 					"attribute_class"	"mult_dmg_vs_burning"
 					"value"	"1.25"
 				}
+			}
+			"visuals"
+			{
+				"sound_double_shot"	"Dragon_Minigun.Fire"
+				"sound_special1"	"Dragon_Minigun.WindUp"
+				"sound_special2"	"Dragon_Minigun.WindDown"
+				"sound_special3"	"Dragon_Minigun.Spin"
+				"sound_burst"		"Dragon_Minigun.FireCrit"
+			}
+			"static_attrs"
+			{
+				"min_viewmodel_offset"					"10 0 -9"
 			}
 		}
 		"weapon_rocketlauncher"
@@ -9946,6 +9955,13 @@
 			"propername"		"1"
 			"image_inventory"		"backpack/workshop/weapons/c_models/c_invasion_wrangler/c_invasion_wrangler"
 			"model_player"		"models/workshop/weapons/c_models/c_invasion_wrangler/c_invasion_wrangler.mdl"
+		}
+		"30811"
+		{
+			"name"		"The Huo Long Heatmaker (Old)"
+			"prefab"		"weapon_long_heatmaker weapon_reskin"
+			"year"			"2012"
+			"model_player"	"models/workshop_partner/weapons/c_models/c_canton/c_canton_old.mdl"
 		}
 	}
 	"specialitems"
