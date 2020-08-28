@@ -13,6 +13,10 @@
 #include "tf_weaponbase_grenadeproj.h"
 
 
+#ifdef CLIENT_DLL
+#define CTFGrenadeCaltropProjectile C_TFGrenadeCaltropProjectile
+#endif
+
 
 //=============================================================================
 //
