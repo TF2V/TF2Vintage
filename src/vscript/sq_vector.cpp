@@ -47,13 +47,13 @@ SQInteger VectorConstruct( HSQUIRRELVM pVM )
 	for ( i=0; i < hndl.GetParamCount() - 1 && i < 3; ++i )
 	{
 		float flValue = hndl.GetFloat( i+2 );
-		(*pVector)[ i ] = flValue;
+		(*pVector)[i] = flValue;
 	}
 
 	if ( i < 3 )
 	{
-		for( i; i<3; ++i )
-			( *pVector )[ i ] = 0;
+		for( ; i<3; ++i )
+			(*pVector)[i] = 0;
 	}
 
 	PostConstructSimple( pVM, pVector, VectorRelease );
@@ -83,9 +83,9 @@ SQInteger VectorGet( HSQUIRRELVM pVM )
 
 	// Accessing x, y or z
 	if ( pString[0] - 'x' < 3 )
-		hndl.Return( ( *pVector )[ pString[0] - 'x' ] );
+		return hndl.Return( (*pVector)[ pString[0] - 'x' ] );
 
-	return 1;
+	return SQ_ERROR;
 }
 
 SQInteger VectorSet( HSQUIRRELVM pVM )
@@ -108,11 +108,11 @@ SQInteger VectorSet( HSQUIRRELVM pVM )
 	{
 		float flValue = hndl.GetFloat( 3 );
 
-		( *pVector )[ pString[0] - 'x' ] = flValue;
-		hndl.Return( flValue );
+		(*pVector)[ pString[0] - 'x' ] = flValue;
+		return hndl.Return( flValue );
 	}
 
-	return 0;
+	return SQ_ERROR;
 }
 
 SQInteger VectorToString( HSQUIRRELVM pVM )
