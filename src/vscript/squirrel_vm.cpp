@@ -52,11 +52,6 @@ extern "C"
 	{
 		return SQ_ERROR;
 	}
-
-	SQInteger sqstd_register_systemlib(HSQUIRRELVM)
-	{
-		return SQ_ERROR;
-	}
 }
 
 
@@ -75,8 +70,6 @@ inline bool operator!=( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lh
 
 class CSquirrelVM : public IScriptVM
 {
-	typedef CSquirrelVM ThisClass;
-	typedef IScriptVM BaseClass;
 	friend struct SQVM;
 public:
 	CSquirrelVM( void );
@@ -485,6 +478,12 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 	// push the parent table to call from
 	if ( hScope )
 	{
+		if ( hScope == INVALID_HSCRIPT )
+		{
+			sq_pop( GetVM(), 1 );
+			return SCRIPT_ERROR;
+		}
+
 		HSQOBJECT &pTable = *(HSQOBJECT *)hScope;
 		if ( pTable == INVALID_HSQOBJECT || !sq_istable( pTable ) )
 		{
@@ -941,7 +940,7 @@ void CSquirrelVM::WriteState( CUtlBuffer *pBuffer )
 	pBuffer->PutInt( SAVE_VERSION );
 	pBuffer->PutInt64( m_nUniqueKeySerial );
 
-	SquirrelStateWriter writer( GetVM(), pBuffer );
+	WriteSquirrelState( GetVM(), pBuffer );
 }
 
 void CSquirrelVM::ReadState( CUtlBuffer *pBuffer )
@@ -957,7 +956,7 @@ void CSquirrelVM::ReadState( CUtlBuffer *pBuffer )
 	int64 serial = pBuffer->GetInt64();
 	m_nUniqueKeySerial = Max( m_nUniqueKeySerial, serial );
 
-	SquirrelStateReader reader( GetVM(), pBuffer );
+	ReadSquirrelState( GetVM(), pBuffer );
 }
 
 bool CSquirrelVM::ConnectDebugger()
@@ -1681,7 +1680,7 @@ SQInteger CSquirrelVM::InstanceIsValid( HSQUIRRELVM pVM )
 
 void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 {
-	static char szMessage[2048];
+	static char szMessage[2048]{};
 
 	va_list va;
 	va_start( va, szMessage );
