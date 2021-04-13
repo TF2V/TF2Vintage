@@ -42,7 +42,7 @@ void CScriptGameEventListener::FireGameEvent( IGameEvent *event )
 	Q_snprintf( szGameEventFunctionName, sizeof(szGameEventFunctionName), "OnGameEvent_%s", event->GetName() );
 
 	if ( sv_debug_script_events.GetBool() )
-		DevMsg( "\t\"%s\"", szGameEventFunctionName );
+		DevMsg( "\t\"%s\"\n", szGameEventFunctionName );
 
 	HSCRIPT hGameEventFunc = g_pScriptVM->LookupFunction( szGameEventFunctionName );
 	if ( hGameEventFunc )
@@ -53,7 +53,7 @@ void CScriptGameEventListener::FireGameEvent( IGameEvent *event )
 		ScriptStatus_t nStatus = g_pScriptVM->Call( hGameEventFunc, NULL, false, NULL, hGameEventTable );
 		if ( nStatus != SCRIPT_DONE )
 		{
-			DevWarning( "%s VScript function did not finish!\n", szGameEventFunctionName );
+			DevWarning( "VScript function '%s' did not finish!\n", szGameEventFunctionName );
 		}
 		g_pScriptVM->ReleaseFunction( hGameEventFunc );
 		g_pScriptVM->ReleaseValue( hGameEventTable );
@@ -78,17 +78,17 @@ void CScriptGameEventListener::SetVScriptEventValues( IGameEvent *event, HSCRIPT
 			{
 				case KeyValues::TYPE_INT:
 					if ( sv_debug_script_events.GetBool() )
-						DevMsg( "\t\t\"%s\"\t\"%i\"", keyName, event->GetInt( keyName ) );
+						DevMsg( "\t\t\"%s\"\t\"%i\"\n", keyName, event->GetInt( keyName ) );
 					g_pScriptVM->SetValue( table, keyName, event->GetInt( keyName ) );
 					break;
 				case KeyValues::TYPE_FLOAT:
 					if ( sv_debug_script_events.GetBool() )
-						DevMsg( "\t\t\"%s\"\t\"%.4f\"", keyName, event->GetFloat( keyName ) );
+						DevMsg( "\t\t\"%s\"\t\"%.4f\"\n", keyName, event->GetFloat( keyName ) );
 					g_pScriptVM->SetValue( table, keyName, event->GetFloat( keyName ) );
 					break;
 				case KeyValues::TYPE_STRING:
 					if ( sv_debug_script_events.GetBool() )
-						DevMsg( "\t\t\"%s\"\t\"%s\"", keyName, event->GetString( keyName ) );
+						DevMsg( "\t\t\"%s\"\t\"%s\"\n", keyName, event->GetString( keyName ) );
 					g_pScriptVM->SetValue( table, keyName, event->GetString( keyName ) );
 					break;
 			}
@@ -113,7 +113,7 @@ bool CScriptGameEventListener::Init()
 			const char *keyName = pSubKey->GetName();
 			const char *type = pSubKey->GetString();
 
-			auto const GetType =[ = ] () -> int {
+			auto const GetType =[ type ] () {
 				for ( int i=0; i < ARRAYSIZE( g_sGameEventTypeMap ); ++i )
 				{
 					if ( Q_stricmp( type, g_sGameEventTypeMap[ i ] ) == 0 )
@@ -137,7 +137,7 @@ bool CScriptGameEventListener::Init()
 					event.m_EventParams.Insert( keyName, KeyValues::TYPE_FLOAT );
 					break;
 				default:
-					DevMsg( "Received unsupported event type '%s' while seting up event listeners", type );
+					DevMsg( "Received unsupported event type '%s' while seting up event listeners\n", type );
 					break;
 			}
 		}
@@ -157,15 +157,13 @@ bool CScriptGameEventListener::Init()
 			return false;
 		}
 
-		int count = 0;	// number new events
 		FOR_EACH_TRUE_SUBKEY( key, pSubKey )
 		{
 			RegisterEvent( pSubKey );
-			count++;
 		}
 
 		if ( sv_debug_script_events.GetBool() )
-			DevMsg( "Event System loaded %i events from file %s.\n", count, filename );
+			DevMsg( "Event System loaded %i events from file %s.\n", m_GameEvents.Count(), filename );
 	}
 
 	// Server events
@@ -180,15 +178,13 @@ bool CScriptGameEventListener::Init()
 			return false;
 		}
 
-		int count = 0;	// number new events
 		FOR_EACH_TRUE_SUBKEY( key, pSubKey )
 		{
 			RegisterEvent( pSubKey );
-			count++;
 		}
 
 		if ( sv_debug_script_events.GetBool() )
-			DevMsg( "Event System loaded %i events from file %s.\n", count, filename );
+			DevMsg( "Event System loaded %i events from file %s.\n", m_GameEvents.Count(), filename );
 	}
 
 	// HLTV events
@@ -203,15 +199,13 @@ bool CScriptGameEventListener::Init()
 			return false;
 		}
 
-		int count = 0;	// number new events
 		FOR_EACH_TRUE_SUBKEY( key, pSubKey )
 		{
 			RegisterEvent( pSubKey );
-			count++;
 		}
 
 		if ( sv_debug_script_events.GetBool() )
-			DevMsg( "Event System loaded %i events from file %s.\n", count, filename );
+			DevMsg( "Event System loaded %i events from file %s.\n", m_GameEvents.Count(), filename );
 	}
 
 	// Mod specific events
@@ -226,15 +220,13 @@ bool CScriptGameEventListener::Init()
 			return false;
 		}
 
-		int count = 0;	// number new events
 		FOR_EACH_TRUE_SUBKEY( key, pSubKey )
 		{
 			RegisterEvent( pSubKey );
-			count++;
 		}
 
 		if ( sv_debug_script_events.GetBool() )
-			DevMsg( "Event System loaded %i events from file %s.\n", count, filename );
+			DevMsg( "Event System loaded %i events from file %s.\n", m_GameEvents.Count(), filename );
 	}
 
 	FOR_EACH_DICT_FAST( m_GameEvents, i )
