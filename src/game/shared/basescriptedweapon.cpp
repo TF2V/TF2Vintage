@@ -62,6 +62,24 @@ CBaseScriptedWeapon::~CBaseScriptedWeapon()
 //-----------------------------------------------------------------------------
 void CBaseScriptedWeapon::Precache()
 {
+#if defined( USES_ECON_ITEMS )
+	// If were we Econ generated then setup our weapon name using it,
+	// else rely on the mapper to name their entities correctly
+	CEconItemDefinition *pItemDef = GetItem()->GetStaticData();
+	if ( pItemDef )
+	{
+		if ( pItemDef->GetVScriptName() )
+			SetClassname( pItemDef->GetVScriptName() );
+	}
+#endif
+
+#if defined( GAME_DLL )
+	// Setup our script ID
+	ValidateScriptScope();
+
+	m_iszVScripts = AllocPooledString( GetClassname() );
+#endif
+
 	// ReadWeaponDataFromFileForSlot *will* fail due to the client not having the file
 	// but it will still create the handle, so we'll use that to manually populate
 	// a weapon info for this scripted classname
