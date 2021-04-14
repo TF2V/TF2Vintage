@@ -4,6 +4,12 @@
 #include "weapon_parse.h"
 #include "basescriptedweapon.h"
 
+typedef struct
+{
+	const char *m_pFlagName;
+	int m_iFlagValue;
+} itemFlags_t;
+
 BEGIN_NETWORK_TABLE_NOBASE( CScriptedWeaponData, DT_ScriptedWeaponData )
 END_NETWORK_TABLE()
 
@@ -133,6 +139,11 @@ bool CBaseScriptedWeapon::Holster( CBaseCombatWeapon *pSwitchingTo )
 	return bResult;
 }
 
+bool CBaseScriptedWeapon::ScriptHolster( HSCRIPT pSwitchingTo )
+{
+	return Holster( (CBaseCombatWeapon *)ToEnt( pSwitchingTo ) );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -147,6 +158,9 @@ void CBaseScriptedWeapon::OnActiveStateChanged( int iOldState )
 void CBaseScriptedWeapon::Equip( CBaseCombatCharacter *pOwner )
 {
 	BaseClass::Equip( pOwner );
+void CBaseScriptedWeapon::ScriptEquip( HSCRIPT pOwner )
+{
+	Equip( (CBaseCombatCharacter *)ToEnt( pOwner ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -164,6 +178,28 @@ void CBaseScriptedWeapon::Detach()
 void CBaseScriptedWeapon::HandleAnimEvent( animevent_t *pEvent )
 {
 	BaseClass::HandleAnimEvent( pEvent );
+}
+#else
+void CBaseScriptedWeapon::OnPreDataChanged( DataUpdateType_t updateType )
+{
+	BaseClass::OnPreDataChanged( updateType );
+	m_nWeaponDataChangedOld = m_nWeaponDataChanged;
+}
+
+void CBaseScriptedWeapon::OnDataChanged( DataUpdateType_t updateType )
+{
+	BaseClass::OnDataChanged( updateType );
+
+	if ( m_nWeaponDataChanged != m_nWeaponDataChangedOld )
+	{
+		WEAPON_FILE_INFO_HANDLE hHandle = LookupWeaponInfoSlot( GetClassname() );
+		Assert( hHandle && hHandle != 0xFFFF );
+
+		*GetFileWeaponInfoFromHandle( hHandle ) = m_WeaponData;
+
+		// setup our data with a late precache
+		BaseClass::Precache();
+	}
 }
 #endif
 

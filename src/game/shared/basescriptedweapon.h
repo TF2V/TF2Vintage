@@ -64,6 +64,11 @@ public:
 	void				ScriptEquip( HSCRIPT pOwner );
 	virtual void		Detach();
 
+#if defined(CLIENT_DLL)
+	virtual void OnPreDataChanged( DataUpdateType_t updateType );
+	virtual void OnDataChanged( DataUpdateType_t updateType );
+#endif
+
 private:
 	CNetworkVarEmbedded( CScriptedWeaponData, m_WeaponData );
 	CNetworkVar( int, m_nWeaponDataChanged );
