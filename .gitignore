@@ -21,6 +21,7 @@ ipch
 *.vcxproj.filters
 *.vcxproj.vpc_crc
 *.sln
+*.pdb
 
 # OSX/Linux build products
 *.mak
