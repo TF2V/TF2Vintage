@@ -78,6 +78,9 @@ void CBaseScriptedWeapon::Precache()
 	ValidateScriptScope();
 
 	m_iszVScripts = AllocPooledString( GetClassname() );
+
+	m_ScriptScope.Init( STRING( m_iszScriptId ) );
+	VScriptRunScript( STRING( m_iszVScripts ), m_ScriptScope, true );
 #endif
 
 	// ReadWeaponDataFromFileForSlot *will* fail due to the client not having the file
@@ -176,6 +179,12 @@ void CBaseScriptedWeapon::OnActiveStateChanged( int iOldState )
 void CBaseScriptedWeapon::Equip( CBaseCombatCharacter *pOwner )
 {
 	BaseClass::Equip( pOwner );
+
+#if defined( GAME_DLL )
+	m_ScriptScope.SetValue( "owner", ToHScript( pOwner ) );
+#endif
+}
+
 void CBaseScriptedWeapon::ScriptEquip( HSCRIPT pOwner )
 {
 	Equip( (CBaseCombatCharacter *)ToEnt( pOwner ) );
@@ -187,6 +196,10 @@ void CBaseScriptedWeapon::ScriptEquip( HSCRIPT pOwner )
 void CBaseScriptedWeapon::Detach()
 {
 	BaseClass::Detach();
+
+#if defined( GAME_DLL )
+	m_ScriptScope.SetValue( "owner", INVALID_HSCRIPT );
+#endif
 }
 
 #if defined( GAME_DLL )
@@ -220,6 +233,25 @@ void CBaseScriptedWeapon::OnDataChanged( DataUpdateType_t updateType )
 	}
 }
 #endif
+
+
+IScriptVM *CScriptedWeaponScopeBase::m_pVM = NULL;
+
+CScriptedWeaponScope::CScriptedWeaponScope()
+{
+	m_FuncMap.SetLessFunc( StringLessThan );
+}
+
+CScriptedWeaponScope::~CScriptedWeaponScope()
+{
+	FOR_EACH_VEC_BACK( m_vecPushedArgs, i )
+	{
+		m_vecPushedArgs[i].Free();
+	}
+	m_vecPushedArgs.Purge();
+
+	Term();
+}
 
 
 BEGIN_STRUCT_SCRIPTDESC( ScriptWeaponInfo_t, "" )

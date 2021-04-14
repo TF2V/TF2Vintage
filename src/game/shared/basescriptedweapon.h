@@ -5,6 +5,7 @@
 #pragma once
 #endif
 
+#include "networkvar.h"
 #include "basecombatweapon_shared.h"
 #include "vscript/ivscript.h"
 
@@ -12,6 +13,110 @@
 #if defined( CLIENT_DLL )
 #define CBaseScriptedWeapon C_BaseScriptedWeapon
 #endif
+
+#define ScriptGetStructMember(pStruct, hScope, memberName, scriptName)		do { ScriptVariant_t value; g_pScriptVM->GetValue( hScope, scriptName, &value ); value.AssignTo( &pStruct->##memberName ); g_pScriptVM->ReleaseValue( value ); } while ( 0 )
+
+
+class CScriptedWeaponScopeBase
+{
+public:
+	static IScriptVM *GetVM( void )
+	{
+		if ( m_pVM )
+		{
+			return m_pVM;
+		}
+		else
+		{
+			extern IScriptVM *g_pScriptVM;
+			return g_pScriptVM;
+		}
+	}
+
+	static void GetVMOverride( IScriptVM *pVM )
+	{
+		m_pVM = pVM;
+	}
+private:
+	static IScriptVM *m_pVM;
+};
+class CScriptedWeaponScope : public CScriptScopeT<CScriptedWeaponScopeBase>
+{
+	typedef CUtlVectorFixed<ScriptVariant_t, 14> CScriptArgArray;
+	typedef CUtlMap<char const *, CScriptFuncHolder> CScriptFuncMap;
+public:
+	CScriptedWeaponScope();
+	~CScriptedWeaponScope();
+
+	template<typename T, typename D>
+	void GetStructData( T *_struct, uint32 offs, D data )
+	{
+		*(D *)( (intp)_struct + offs ) = (D)data;
+	}
+
+	template<typename T, typename D>
+	void GetStructData( T *_struct, uint32 offs, D data, uint32 size )
+	{
+		V_memcpy( (void *)( (uintp)_struct + offs ), data, size );
+	}
+
+	template<typename T>
+	void GetStruct( T *_struct, HSCRIPT hScope )
+	{
+		ScriptStructDescriptor_t *pDesc = _struct->GetScriptDesc();
+
+		FOR_EACH_VEC(pDesc->m_MemberBindings, idx)
+		{
+			ScriptStructMemberBinding_t const &binding = pDesc->m_MemberBindings[idx];
+
+			ScriptVariant_t res;
+			if( GetVM()->GetValue( hScope, binding.m_pszScriptName, &res ) )
+			{
+				switch ( binding.m_nMemberType )
+				{
+					case FIELD_VECTOR:
+					{
+						Vector newVec( res.m_pVector->x, res.m_pVector->y, res.m_pVector->z );
+						GetStructData( _struct, binding.m_unMemberOffs, newVec );
+						break;
+					}
+					case FIELD_CSTRING:
+					{
+						string_t iNewString = AllocPooledString( res.m_pszString );
+						GetStructData( _struct, binding.m_unMemberOffs, STRING( iNewString ), binding.m_unMemberSize );
+						break;
+					}
+					case FIELD_BOOLEAN:
+					{
+						GetStructData( _struct, binding.m_unMemberOffs, res.m_bool );
+						break;
+					}
+					case FIELD_INTEGER:
+					{
+						GetStructData( _struct, binding.m_unMemberOffs, res.m_int );
+						break;
+					}
+					case FIELD_FLOAT:
+					{
+						GetStructData( _struct, binding.m_unMemberOffs, res.m_float );
+						break;
+					}
+					default:
+					{
+						DevWarning( "Unsupported data type (%s) hit building struct data\n", ScriptFieldTypeName( binding.m_nMemberType ) );
+						break;
+					}
+				}
+
+				GetVM()->ReleaseValue( res );
+			}
+		}
+	}
+
+private:
+	CScriptArgArray m_vecPushedArgs;
+	CScriptFuncMap m_FuncMap;
+};
 
 // Pulled from scripts identically to parsing a weapon file,
 // unlike parsing though, defaults aren't provided
@@ -70,6 +175,9 @@ public:
 #endif
 
 private:
+#if defined( GAME_DLL )
+	CScriptedWeaponScope m_ScriptScope;
+#endif
 	CNetworkVarEmbedded( CScriptedWeaponData, m_WeaponData );
 	CNetworkVar( int, m_nWeaponDataChanged );
 #if defined(CLIENT_DLL)
