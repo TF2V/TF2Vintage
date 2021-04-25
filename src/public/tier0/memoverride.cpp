@@ -16,26 +16,23 @@
 #include <windows.h>
 #endif
 
-#include "tier0/dbg.h"
-#include "tier0/memalloc.h"
-#include <string.h>
-#include <stdio.h>
-#include "memdbgoff.h"
-
 #ifdef _WIN32
 // ARG: crtdbg is necessary for certain definitions below,
 // but it also redefines malloc as a macro in release.
 // To disable this, we gotta define _DEBUG before including it.. BLEAH!
 #define _DEBUG 1
 #include "crtdbg.h"
-#ifdef NDEBUG
-#undef _DEBUG
-#endif
-
 // Turn this back off in release mode.
 #ifdef NDEBUG
 #undef _DEBUG
 #endif
+
+#include "tier0/dbg.h"
+#include "tier0/memalloc.h"
+#include <string.h>
+#include <stdio.h>
+#include "memdbgoff.h"
+
 #elif POSIX
 #define __cdecl
 #endif
@@ -68,9 +65,31 @@ const char *MakeModuleFileName()
 	return NULL;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: helper class to detect when static construction has been done by the CRT
+//-----------------------------------------------------------------------------
+class CStaticConstructionCheck
+{
+public:
+	volatile bool m_bConstructed = true;
+};
+
+static CStaticConstructionCheck s_CheckStaticsConstructed;
+
+const char *GetModuleFileName()
+{
+#if !defined(_MSC_VER) || ( _MSC_VER >= 1900 ) //  VC 2015 and above, with the UCRT, will crash if you use a static before it is constructed
+	if ( !s_CheckStaticsConstructed.m_bConstructed )
+		return nullptr;
+#endif
+
+	static const char *pszOwner = MakeModuleFileName();
+	return pszOwner;
+}
+
 static void *AllocUnattributed( size_t nSize )
 {
-	static const char *pszOwner = MakeModuleFileName();
+	static const char *pszOwner = GetModuleFileName();
 
 	if ( !pszOwner )
 		return g_pMemAlloc->Alloc(nSize);
@@ -80,9 +99,19 @@ static void *AllocUnattributed( size_t nSize )
 
 static void *ReallocUnattributed( void *pMem, size_t nSize )
 {
-	static const char *pszOwner = MakeModuleFileName();
+	static const char *pszOwner = GetModuleFileName();
 
 	if ( !pszOwner )
+		return g_pMemAlloc->Realloc(pMem, nSize);
+	else
+		return g_pMemAlloc->Realloc(pMem, nSize, pszOwner, 0);
+}
+
+static void *ReallocUnattributedMultiple( void *pMem, size_t nCount, size_t nSize )
+{
+	const char* pszOwner = GetModuleFileName();
+
+	if (!pszOwner)
 		return g_pMemAlloc->Realloc(pMem, nSize);
 	else
 		return g_pMemAlloc->Realloc(pMem, nSize, pszOwner, 0);
@@ -96,6 +125,11 @@ inline void *AllocUnattributed( size_t nSize )
 }
 
 inline void *ReallocUnattributed( void *pMem, size_t nSize )
+{
+	return g_pMemAlloc->Realloc(pMem, nSize);
+}
+
+inline void* ReallocUnattributedMultiple( void *pMem, size_t nCount, size_t nSize )
 {
 	return g_pMemAlloc->Realloc(pMem, nSize);
 }
@@ -1094,6 +1128,7 @@ void __cdecl _aligned_free_dbg( void * memblock)
     _aligned_free(memblock);
 }
 
+#if _MSC_VER < 1900
 size_t __cdecl _CrtSetDebugFillThreshold( size_t _NewDebugFillThreshold)
 {
 	assert(0);
@@ -1114,6 +1149,7 @@ char * __cdecl _strdup ( const char * string )
 		memcpy( pCopy, string, nSize );
 	return pCopy;
 }
+#endif
 
 #if 0
 _TSCHAR * __cdecl _tfullpath_dbg ( _TSCHAR *UserBuf, const _TSCHAR *path, size_t maxlen, int nBlockUse, const char * szFileName, int nLine )

@@ -51,6 +51,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if _MSC_VER >= 1900
+#include <cmath>
+#endif
+
 #ifdef COMPILER_GCC
 	#include <new>
 #else
