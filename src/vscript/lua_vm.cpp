@@ -11,7 +11,8 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
-#include "lstate.h"
+#include "lj_obj.h"
+#include "lj_state.h"
 #include "lua_vm.h"
 #include "lua_vector.h"
 
@@ -101,7 +102,7 @@ private:
 
 	void						RegisterFunctionGuts( ScriptFunctionBinding_t *pFunction, HSCRIPT hScope = NULL );
 
-	int							GetStackSize( void ) const;
+	int							GetStackSize( void ) const	{ return ( mref(L->maxstack, char) - (char *)L->top ) / sizeof(TValue); }
 
 	//---------------------------------------------------------------------------------------------
 	// LUA Function Callbacks
@@ -186,7 +187,7 @@ HSCRIPT CLuaVM::CompileScript( const char *pszScript, const char *pszId )
 {
 	if ( luaL_loadbuffer( GetVM(), pszScript, V_strlen( pszScript ), pszId ) == 0 )
 	{
-		return (HSCRIPT)lua_ref( GetVM(), true );
+		return (HSCRIPT)luaL_ref( GetVM(), LUA_REGISTRYINDEX );
 	}
 	else
 	{
@@ -205,7 +206,7 @@ ScriptStatus_t CLuaVM::Run( const char *pszScript, bool bWait )
 
 ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, HSCRIPT hScope, bool bWait )
 {
-	lua_getref( GetVM(), (intptr_t)hScript );
+	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
 	int nStatus = lua_pcall( GetVM(), 0, LUA_MULTRET, 0 );
 
 	switch ( nStatus )
@@ -221,7 +222,7 @@ ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, HSCRIPT hScope, bool bWait )
 
 	if ( hScope )
 	{
-		lua_getref( GetVM(), (intptr_t)hScope );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 		if ( lua_istable( GetVM(), -1 ) )
 		{
 
@@ -235,7 +236,7 @@ ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, HSCRIPT hScope, bool bWait )
 
 ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, bool bWait )
 {
-	lua_getref( GetVM(), (intptr_t)hScript );
+	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
 	int nStatus = lua_pcall( GetVM(), 0, LUA_MULTRET, 0 );
 
 	switch ( nStatus )
@@ -254,7 +255,7 @@ ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, bool bWait )
 
 void CLuaVM::ReleaseScript( HSCRIPT hScript )
 {
-	lua_unref( GetVM(), (intptr_t)hScript );
+	luaL_unref( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
 }
 
 HSCRIPT CLuaVM::CreateScope( const char *pszScope, HSCRIPT hParent )
@@ -267,26 +268,26 @@ HSCRIPT CLuaVM::CreateScope( const char *pszScope, HSCRIPT hParent )
 
 	if ( hParent )
 	{
-		lua_getref( GetVM(), (intptr_t)hParent );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hParent );
 		if ( lua_isnil( GetVM(), -1 ) || !lua_istable( GetVM(), -1 ) )
 			return NULL;
 
 		lua_setmetatable( GetVM(), -2 );
 	}
 
-	return (HSCRIPT)lua_ref( GetVM(), true );
+	return (HSCRIPT)luaL_ref( GetVM(), LUA_REGISTRYINDEX );
 }
 
 void CLuaVM::ReleaseScope( HSCRIPT hScript )
 {
-	lua_unref( GetVM(), (intptr_t)hScript );
+	luaL_unref( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
 }
 
 HSCRIPT CLuaVM::LookupFunction( const char *pszFunction, HSCRIPT hScope )
 {
 	if ( hScope )
 	{
-		lua_getref( GetVM(), (intptr_t)hScope );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 		if ( lua_isnil( GetVM(), -1 ) || !lua_istable( GetVM(), -1 ) )
 		{
 			lua_pop( GetVM(), 1 );
@@ -300,7 +301,7 @@ HSCRIPT CLuaVM::LookupFunction( const char *pszFunction, HSCRIPT hScope )
 			return NULL;
 		}
 
-		int nFunction = lua_ref( GetVM(), true );
+		int nFunction = luaL_ref( GetVM(), LUA_REGISTRYINDEX );
 		// pop off the scope reference
 		lua_pop( GetVM(), 1 );
 
@@ -315,13 +316,13 @@ HSCRIPT CLuaVM::LookupFunction( const char *pszFunction, HSCRIPT hScope )
 			return NULL;
 		}
 
-		return (HSCRIPT)lua_ref( GetVM(), true );
+		return (HSCRIPT)luaL_ref( GetVM(), LUA_REGISTRYINDEX );
 	}
 }
 
 void CLuaVM::ReleaseFunction( HSCRIPT hScript )
 {
-	lua_unref( GetVM(), (intptr_t)hScript );
+	luaL_unref( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
 }
 
 ScriptStatus_t CLuaVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t *pArgs, int nArgs, ScriptVariant_t *pReturn, HSCRIPT hScope, bool bWait )
@@ -338,12 +339,12 @@ ScriptStatus_t CLuaVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t *pArg
 	{
 		int nOldStack = GetStackSize();
 
-		lua_getref( GetVM(), (intptr_t)hFunction );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hFunction );
 
 		int nTop = lua_gettop( GetVM() );
 
 		if ( hScope )
-			lua_getref( GetVM(), (intptr_t)hScope );
+			lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 
 		for ( int i = 0; i < nArgs; i++ )
 			PushVariant( GetVM(), pArgs[i] );
@@ -380,7 +381,7 @@ bool CLuaVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 	lua_pushcfunction( L, &CLuaVM::ScriptIndex );
 	lua_setfield( GetVM(), -2, "__index" );
 
-	HSCRIPT hTable = (HSCRIPT)lua_ref( L, true );
+	HSCRIPT hTable = (HSCRIPT)luaL_ref( L, LUA_REGISTRYINDEX );
 
 	// register member functions
 	FOR_EACH_VEC( pClassDesc->m_FunctionBindings, i )
@@ -392,7 +393,7 @@ bool CLuaVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 		RegisterClass( pClassDesc->m_pBaseDesc );
 
 	// this pops the script reference for us
-	lua_unref( L, (intptr_t)hTable );
+	luaL_unref( L, LUA_REGISTRYINDEX, (intptr_t)hTable );
 
 	return true;
 }
@@ -409,12 +410,12 @@ HSCRIPT CLuaVM::RegisterInstance( ScriptClassDesc_t *pDesc, void *pInstance )
 	luaL_getmetatable( GetVM(), pDesc->m_pszScriptName );
 	lua_setmetatable( GetVM(), -2 );
 
-	return (HSCRIPT)lua_ref( GetVM(), true );
+	return (HSCRIPT)luaL_ref( GetVM(), LUA_REGISTRYINDEX );
 }
 
 void *CLuaVM::GetInstanceValue( HSCRIPT hInstance, ScriptClassDesc_t *pExpectedType )
 {
-	lua_getref( GetVM(), (intptr_t)hInstance );
+	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hInstance );
 	if( !lua_isuserdata( GetVM(), -1 ) )
 		return NULL;
 
@@ -439,12 +440,12 @@ void CLuaVM::RemoveInstance( HSCRIPT hScript )
 	if ( !hScript )
 		return;
 
-	lua_getref( GetVM(), (intptr_t)hScript );
+	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
 	ScriptInstance_t *pInstance = (ScriptInstance_t *)lua_touserdata( GetVM(), -1 );
 	lua_pop( GetVM(), 1 );
 
 	delete pInstance;
-	lua_unref( GetVM(), (intptr_t)hScript );
+	luaL_unref( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
 }
 
 void CLuaVM::SetInstanceUniqeId( HSCRIPT hInstance, const char *pszId )
@@ -452,7 +453,7 @@ void CLuaVM::SetInstanceUniqeId( HSCRIPT hInstance, const char *pszId )
 	if ( !hInstance )
 		return;
 
-	lua_getref( GetVM(), (intptr_t)hInstance );
+	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hInstance );
 	ScriptInstance_t *pInstance = (ScriptInstance_t *)lua_touserdata( GetVM(), -1 );
 	V_strncpy( pInstance->m_szUniqueId, pszId, sizeof pInstance->m_szUniqueId );
 	lua_pop( GetVM(), 1 );
@@ -478,7 +479,7 @@ bool CLuaVM::SetValue( HSCRIPT hScope, const char *pszKey, const char *pszValue 
 {
 	if ( hScope )
 	{
-		lua_getref( GetVM(), (intptr_t)hScope );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 		lua_pushstring( GetVM(), pszKey );
 		lua_pushstring( GetVM(), pszValue );
 		lua_settable( GetVM(), -3 );
@@ -499,7 +500,7 @@ bool CLuaVM::SetValue( HSCRIPT hScope, const char *pszKey, const ScriptVariant_t
 {
 	if ( hScope )
 	{
-		lua_getref( GetVM(), (intptr_t)hScope );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 		lua_pushstring( GetVM(), pszKey );
 		PushVariant( GetVM(), value );
 		lua_settable( GetVM(), -3 );
@@ -526,7 +527,7 @@ int CLuaVM::GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pKey, S
 {
 	const int nOldStack = GetStackSize();
 
-	lua_getref( GetVM(), (intptr_t)hScope );
+	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 	lua_pushnil( GetVM() );
 
 	int nCount = 0;
@@ -550,7 +551,7 @@ bool CLuaVM::GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant_t *pVal
 	const int nOldStack = GetStackSize();
 	if ( hScope )
 	{
-		lua_getref( GetVM(), (intptr_t)hScope );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 		lua_getfield( GetVM(), -1, pszKey );
 		if ( lua_isnil( GetVM(), -1 ) )
 		{
@@ -590,7 +591,7 @@ int CLuaVM::GetNumTableEntries( HSCRIPT hScope )
 		return 0;
 
 	int nEntries = 0;
-	lua_getref( GetVM(), (intptr_t)hScope );
+	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 
 	// push first key
 	lua_pushnil( GetVM() );
@@ -614,7 +615,7 @@ void CLuaVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFunction, HSCRIPT h
 	int nIndex = LUA_GLOBALSINDEX;
 	if ( hScope )
 	{
-		lua_getref( GetVM(), (intptr_t)hScope );
+		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
 		if ( lua_type( GetVM(), -1 ) != LUA_TNIL )
 			nIndex = lua_gettop( GetVM() );
 	}
@@ -626,11 +627,6 @@ void CLuaVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFunction, HSCRIPT h
 
 	if ( hScope )
 		lua_pop( GetVM(), 1 );
-}
-
-FORCEINLINE int CLuaVM::GetStackSize( void ) const
-{
-	return ( (char *)GetVM()->stack_last - (char *)GetVM()->top ) / sizeof(TValue);
 }
 
 void CLuaVM::ConvertToVariant( int nIndex, lua_State *L, ScriptVariant_t *pVariant )
@@ -722,7 +718,7 @@ void CLuaVM::PushVariant( lua_State *L, ScriptVariant_t const &pVariant )
 		case FIELD_HSCRIPT:
 		{
 			if ( pVariant.m_hScript )
-				lua_getref( L, (intptr_t)pVariant.m_hScript );
+				lua_rawgeti( L, LUA_REGISTRYINDEX, (intptr_t)pVariant.m_hScript );
 			else
 				lua_pushnil( L );
 
@@ -740,7 +736,7 @@ void CLuaVM::ReleaseVariant( lua_State *pState, ScriptVariant_t &value )
 {
 	if ( value.m_type == FIELD_HSCRIPT )
 	{
-		lua_unref( pState, (intptr_t)value.m_hScript );
+		luaL_unref( pState, LUA_REGISTRYINDEX, (intptr_t)value.m_hScript );
 	}
 	else
 	{
@@ -849,7 +845,7 @@ int CLuaVM::TranslateCall( lua_State *L )
 			case FIELD_HSCRIPT:
 			{
 				lua_pushvalue( L, i+2 );
-				parameters[ i ] = (HSCRIPT)lua_ref( L, true );
+				parameters[ i ] = (HSCRIPT)luaL_ref( L, true );
 				break;
 			}
 			default:
