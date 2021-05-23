@@ -220,37 +220,12 @@ ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, HSCRIPT hScope, bool bWait )
 		}
 	}
 
-	if ( hScope )
-	{
-		lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScope );
-		if ( lua_istable( GetVM(), -1 ) )
-		{
-
-		}
-
-		lua_pop( GetVM(), 1 );
-	}
-
 	return SCRIPT_DONE;
 }
 
 ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, bool bWait )
 {
-	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
-	int nStatus = lua_pcall( GetVM(), 0, LUA_MULTRET, 0 );
-
-	switch ( nStatus )
-	{
-		case LUA_ERRERR:
-		case LUA_ERRMEM:
-		case LUA_ERRRUN:
-		{
-			Warning( "%s", lua_tostring( GetVM(), -1 ) );
-			return SCRIPT_ERROR;
-		}
-	}
-
-	return SCRIPT_DONE;
+	return Run( hScript, NULL, bWait );
 }
 
 void CLuaVM::ReleaseScript( HSCRIPT hScript )
