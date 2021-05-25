@@ -203,16 +203,14 @@ HSCRIPT CLuaVM::CompileScript( const char *pszScript, const char *pszId )
 
 ScriptStatus_t CLuaVM::Run( const char *pszScript, bool bWait )
 {
-	if ( luaL_dostring( GetVM(), pszScript ) )
-		return SCRIPT_DONE;
-
+	Assert( false );
 	return SCRIPT_ERROR;
 }
 
 ScriptStatus_t CLuaVM::Run( HSCRIPT hScript, HSCRIPT hScope, bool bWait )
 {
 	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hScript );
-	int nStatus = lua_pcall( GetVM(), 0, LUA_MULTRET, 0 );
+	int nStatus = lua_pcall( GetVM(), 0, 0, 0 );
 
 	switch ( nStatus )
 	{
