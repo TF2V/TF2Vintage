@@ -1741,17 +1741,18 @@ HSQOBJECT CSquirrelVM::LookupObject( char const *szName, HSCRIPT hScope, bool bR
 }
 
 
-
+//-----------------------------------------------------------------------------
+// Purpose: Return a new instace of CSquirrelVM
+//-----------------------------------------------------------------------------
 IScriptVM *CreateSquirrelVM( void )
 {
 	return new CSquirrelVM();
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Delete CSquirrelVM isntance
+//-----------------------------------------------------------------------------
 void DestroySquirrelVM( IScriptVM *pVM )
 {
-	if( pVM )
-	{
-		pVM->Shutdown();
-		delete pVM;
-	}
+	if( pVM ) delete pVM;
 }

@@ -887,16 +887,18 @@ int CLuaVM::PrintFunc( lua_State *L )
 }
 
 
+//-----------------------------------------------------------------------------
+// Purpose: Return a new instance of CLuaVM
+//-----------------------------------------------------------------------------
 IScriptVM *CreateLuaVM( void )
 {
 	return new CLuaVM();
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Delete CLuaVM instance
+//-----------------------------------------------------------------------------
 void DestroyLuaVM( IScriptVM *pVM )
 {
-	if( pVM )
-	{
-		pVM->Shutdown();
-		delete pVM;
-	}
+	if( pVM ) delete pVM;
 }
