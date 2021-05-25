@@ -57,3 +57,4 @@ vc120.pdb
 *.VC.*
 src/Output-Build.txt
 *.vpc.sentinel
+src/lib/public/lua51.lib
