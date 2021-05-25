@@ -1,7 +1,9 @@
 #include "mathlib/mathlib.h"
 #include "fmtstr.h"
 
+extern "C" {
 #include "lauxlib.h"
+}
 
 #include "lua_vector.h"
 

@@ -9,10 +9,15 @@
 #include "utlhash.h"
 #include "fmtstr.h"
 
+// Since we aren't including these in the build, we
+// need to declare them with C-linkage
+extern "C" {
 #include "lauxlib.h"
 #include "lualib.h"
 #include "lj_obj.h"
 #include "lj_state.h"
+}
+
 #include "lua_vm.h"
 #include "lua_vector.h"
 
