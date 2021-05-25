@@ -518,9 +518,9 @@ public:
 
 	bool				IsCapturingPoint( void );
 
-	const Vector		&EstimateProjectileImpactPosition( CTFWeaponBaseGun *weapon );
-	const Vector		&EstimateProjectileImpactPosition( float pitch, float yaw, float speed );
-	const Vector		&EstimateStickybombProjectileImpactPosition( float pitch, float yaw, float charge );
+	const Vector		EstimateProjectileImpactPosition( CTFWeaponBaseGun *weapon );
+	const Vector		EstimateProjectileImpactPosition( float pitch, float yaw, float speed );
+	const Vector		EstimateStickybombProjectileImpactPosition( float pitch, float yaw, float charge );
 
 	// Taunts.
 	void				Taunt( taunts_t eTaunt = TAUNT_NORMAL, int iConcept = MP_CONCEPT_PLAYER_TAUNT );
