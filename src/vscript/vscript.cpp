@@ -16,7 +16,9 @@ public:
 EXPOSE_SINGLE_INTERFACE( CScriptManager, IScriptManager, VSCRIPT_INTERFACE_VERSION )
 
 
-
+//-----------------------------------------------------------------------------
+// Purpose: Create an isntance of our desired language's VM
+//-----------------------------------------------------------------------------
 IScriptVM *CScriptManager::CreateVM( ScriptLanguage_t language )
 {
 	IScriptVM *pVM = NULL;
@@ -24,6 +26,9 @@ IScriptVM *CScriptManager::CreateVM( ScriptLanguage_t language )
 	{
 		case SL_SQUIRREL:
 			pVM = CreateSquirrelVM();
+			break;
+		case SL_LUA:
+			pVM = CreateLuaVM();
 			break;
 		default:
 			return NULL;
@@ -42,6 +47,9 @@ IScriptVM *CScriptManager::CreateVM( ScriptLanguage_t language )
 	return pVM;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: shutdown and delete the VM instance
+//-----------------------------------------------------------------------------
 void CScriptManager::DestroyVM( IScriptVM *pVM )
 {
 	if ( pVM )
@@ -53,7 +61,8 @@ void CScriptManager::DestroyVM( IScriptVM *pVM )
 			case SL_SQUIRREL:
 				DestroySquirrelVM( pVM );
 				break;
-			default:
+			case SL_LUA:
+				DestroyLuaVM( pVM );
 				break;
 		}
 	}

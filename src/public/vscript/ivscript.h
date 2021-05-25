@@ -1,4 +1,4 @@
-//========== Copyright © 2008, Valve Corporation, All rights reserved. ========
+//========== Copyright ï¿½ 2008, Valve Corporation, All rights reserved. ========
 //
 // Purpose: VScript
 //
@@ -137,7 +137,7 @@ enum ScriptLanguage_t
 	SL_LUA,
 	SL_PYTHON,
 
-	SL_DEFAULT = SL_SQUIRREL
+	SL_DEFAULT = SL_LUA
 };
 
 class IScriptManager : public IAppSystem
