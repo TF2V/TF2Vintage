@@ -64,7 +64,7 @@ typedef struct
 
 
 
-static HSQOBJECT const INVALID_HSQOBJECT = { OT_INVALID, (SQTable *)-1 };
+static HSQOBJECT const INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
 inline bool operator==( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type == rhs._type && _table( lhs ) == _table( rhs ); }
 inline bool operator!=( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type != rhs._type || _table( lhs ) != _table( rhs ); }
 

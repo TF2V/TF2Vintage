@@ -10,10 +10,10 @@ class CSquirrelVM;
 //max number of character for a printed number
 #define NUMBER_MAX_CHAR 50
 
-struct StringTable
+struct SQStringTable
 {
-	StringTable();
-	~StringTable();
+	SQStringTable();
+	~SQStringTable();
 	SQString *Add(const SQChar *,SQInteger len);
 	void Remove(SQString *);
 private:
@@ -24,14 +24,14 @@ private:
 	SQUnsignedInteger _slotused;
 };
 
-struct RefTable {
-	struct RefNode {
+struct SQRefTable {
+	struct SQRefNode {
 		SQObjectPtr obj;
 		SQUnsignedInteger refs;
-		struct RefNode *next;
+		struct SQRefNode *next;
 	};
-	RefTable();
-	~RefTable();
+	SQRefTable();
+	~SQRefTable();
 	void AddRef(SQObject &obj);
 	SQBool Release(SQObject &obj);
 #ifndef NO_GARBAGE_COLLECTOR
@@ -39,15 +39,15 @@ struct RefTable {
 #endif
 	void Finalize();
 private:
-	RefNode *Get(SQObject &obj,SQHash &mainpos,RefNode **prev,bool add);
-	RefNode *Add(SQHash mainpos,SQObject &obj);
+	SQRefNode *Get(SQObject &obj,SQHash &mainpos,SQRefNode **prev,bool add);
+	SQRefNode *Add(SQHash mainpos,SQObject &obj);
 	void Resize(SQUnsignedInteger size);
 	void AllocNodes(SQUnsignedInteger size);
 	SQUnsignedInteger _numofslots;
 	SQUnsignedInteger _slotused;
-	RefNode *_nodes;
-	RefNode *_freelist;
-	RefNode **_buckets;
+	SQRefNode *_nodes;
+	SQRefNode *_freelist;
+	SQRefNode **_buckets;
 };
 
 #define ADD_STRING(ss,str,len) ss->_stringtable->Add(str,len)
@@ -71,8 +71,8 @@ public:
 	SQObjectPtr _metamethodsmap;
 	SQObjectPtrVec *_systemstrings;
 	SQObjectPtrVec *_types;
-	StringTable *_stringtable;
-	RefTable _refs_table;
+	SQStringTable *_stringtable;
+	SQRefTable _refs_table;
 	SQObjectPtr _registry;
 	SQObjectPtr _consts;
 	SQObjectPtr _constructoridx;

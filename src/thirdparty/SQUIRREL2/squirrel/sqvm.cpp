@@ -182,7 +182,7 @@ bool SQVM::NEG_OP(SQObjectPtr &trg,const SQObjectPtr &o)
 bool SQVM::ObjCmp(const SQObjectPtr &o1,const SQObjectPtr &o2,SQInteger &result)
 {
 	if(type(o1)==type(o2)){
-		if(_userpointer(o1)==_userpointer(o2))_RET_SUCCEED(0);
+		if(_rawval(o1)==_rawval(o2))_RET_SUCCEED(0);
 		SQObjectPtr res;
 		switch(type(o1)){
 		case OT_STRING:
@@ -340,8 +340,8 @@ bool SQVM::StartCall(SQClosure *closure,SQInteger target,SQInteger args,SQIntege
 	SQInteger nargs = args;
 	if (paramssize != nargs) {
 		SQInteger ndef = func->_ndefaultparams;
-		if(ndef && nargs < paramssize) {
-			SQInteger diff = paramssize - nargs;
+		SQInteger diff;
+		if(ndef && nargs < paramssize && (diff = paramssize - nargs) <= ndef) {
 			for(SQInteger n = ndef - diff; n < ndef; n++) {
 				_stack._vals[stackbase + (nargs++)] = closure->_defaultparams[n];
 			}
@@ -642,7 +642,7 @@ bool SQVM::CLASS_OP(SQObjectPtr &target,SQInteger baseclass,SQInteger attributes
 bool SQVM::IsEqual(SQObjectPtr &o1,SQObjectPtr &o2,bool &res)
 {
 	if(type(o1) == type(o2)) {
-		res = ((_userpointer(o1) == _userpointer(o2)?true:false));
+		res = ((_rawval(o1) == _rawval(o2)?true:false));
 	}
 	else {
 		if(sq_isnumeric(o1) && sq_isnumeric(o2)) {
@@ -687,7 +687,7 @@ bool SQVM::Execute(SQObjectPtr &closure, SQInteger target, SQInteger nargs, SQIn
 	AutoDec ad(&_nnativecalls);
 	SQInteger traps = 0;
 	//temp_reg vars for OP_CALL
-	SQInteger ct_target = 0;
+	SQInteger ct_target;
 	SQInteger ct_stackbase;
 	bool ct_tailcall; 
 
@@ -738,7 +738,7 @@ exception_restore:
 					CallDebugHook(_SC('l'),arg1);
 					if (g_bSqDebugBreak)
 					{
-						sq_throwerror(this, "terminated by debugger");
+						sq_throwerror(this, _SC("terminated by debugger"));
 						SQ_THROW();
 					}
 				}
@@ -1018,7 +1018,8 @@ query_suspend:
 					if(type(_class(STK(arg1))->_metamethods[MT_NEWMEMBER]) != OT_NULL ) {
 						Push(STK(arg1)); Push(STK(arg2)); Push(STK(arg3));
 						Push((arg0&NEW_SLOT_ATTRIBUTES_FLAG) ? STK(arg2-1) : _null_);
-						int nparams = 4;
+						Push(bstatic);
+						int nparams = 5;
 						if(Call(_class(STK(arg1))->_metamethods[MT_NEWMEMBER], nparams, _top - nparams, temp_reg,SQFalse)) {
 							Pop(nparams);
 							continue;

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2009 Alberto Demichelis
+Copyright (c) 2003-2011 Alberto Demichelis
 
 This software is provided 'as-is', without any 
 express or implied warranty. In no event will the 
@@ -37,6 +37,8 @@ to the following restrictions:
 #define printf	DevMsg
 #endif
 
+static bool g_bSqDebugBreak = false;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,14 +48,22 @@ extern "C" {
 #endif
 
 #if (defined(_WIN64) || defined(_LP64))
+#ifndef _SQ64
 #define _SQ64
 #endif
+#endif
+
 
 #ifdef _SQ64
-#define SQUSEDOUBLE
-typedef int64 SQInteger;
-typedef uint64 SQUnsignedInteger;
-typedef uint64 SQHash; /*should be the same size of a pointer*/
+#ifdef _MSC_VER
+typedef __int64 SQInteger;
+typedef unsigned __int64 SQUnsignedInteger;
+typedef unsigned __int64 SQHash; /*should be the same size of a pointer*/
+#else
+typedef long SQInteger;
+typedef unsigned long SQUnsignedInteger;
+typedef unsigned long SQHash; /*should be the same size of a pointer*/
+#endif
 typedef int SQInt32; 
 #else 
 typedef int SQInteger;
@@ -69,8 +79,12 @@ typedef double SQFloat;
 typedef float SQFloat;
 #endif
 
-#if defined(SQUSEDOUBLE) && !defined(_SQ64)
-typedef int64 SQRawObjectVal; //must be 64bits
+#if defined(SQUSEDOUBLE) && !defined(_SQ64) || !defined(SQUSEDOUBLE) && defined(_SQ64)
+#ifdef _MSC_VER
+typedef __int64 SQRawObjectVal; //must be 64bits
+#else
+typedef long long SQRawObjectVal; //must be 64bits
+#endif
 #define SQ_OBJECT_RAWINIT() { _unVal.raw = 0; }
 #else
 typedef SQUnsignedInteger SQRawObjectVal; //is 32 bits on 32 bits builds and 64 bits otherwise
@@ -154,9 +168,10 @@ typedef char SQChar;
 #define MAX_CHAR 0xFF
 #endif
 
-#define SQUIRREL_VERSION	_SC("Squirrel 2.2.3 stable")
-#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2009 Alberto Demichelis")
+#define SQUIRREL_VERSION	_SC("Squirrel 2.2.5 stable")
+#define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2010 Alberto Demichelis")
 #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
+#define SQUIRREL_VERSION_NUMBER	225
 
 #define SQ_VMSTATE_IDLE			0
 #define SQ_VMSTATE_RUNNING		1
@@ -210,8 +225,7 @@ typedef enum tagSQObjectType{
 	OT_FUNCPROTO =		(_RT_FUNCPROTO|SQOBJECT_REF_COUNTED), //internal usage only
 	OT_CLASS =			(_RT_CLASS|SQOBJECT_REF_COUNTED),
 	OT_INSTANCE =		(_RT_INSTANCE|SQOBJECT_REF_COUNTED|SQOBJECT_DELEGABLE),
-	OT_WEAKREF =		(_RT_WEAKREF|SQOBJECT_REF_COUNTED),
-	OT_INVALID =		0xFFFFFFFF
+	OT_WEAKREF =		(_RT_WEAKREF|SQOBJECT_REF_COUNTED)
 }SQObjectType;
 
 #define ISREFCOUNTED(t) (t&SQOBJECT_REF_COUNTED)
@@ -446,9 +460,6 @@ SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 
 #define SQ_FAILED(res) (res<0)
 #define SQ_SUCCEEDED(res) (res>=0)
-
-
-static bool g_bSqDebugBreak = false;
 
 #ifdef __cplusplus
 } /*extern "C"*/

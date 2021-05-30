@@ -58,7 +58,7 @@ struct SQRefCounted
 	SQRefCounted() { _uiRef = 0; _weakref = NULL; }
 	virtual ~SQRefCounted();
 	SQWeakRef *GetWeakRef(SQObjectType type);
-	SQInteger _uiRef;
+	SQUnsignedInteger _uiRef;
 	struct SQWeakRef *_weakref;
 	virtual void Release()=0;
 };
@@ -124,6 +124,7 @@ struct SQObjectPtr;
 
 #define tofloat(num) ((type(num)==OT_INTEGER)?(SQFloat)_integer(num):_float(num))
 #define tointeger(num) ((type(num)==OT_FLOAT)?(SQInteger)_float(num):_integer(num))
+
 /////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////
 struct SQObjectPtr : public SQObject
@@ -285,6 +286,7 @@ struct SQObjectPtr : public SQObject
 	inline SQObjectPtr& operator=(SQInteger i)
 	{ 
 		__Release(_type,_unVal);
+		SQ_OBJECT_RAWINIT()
 		_unVal.nInteger = i;
 		_type = OT_INTEGER;
 		return *this;
@@ -292,6 +294,7 @@ struct SQObjectPtr : public SQObject
 	inline SQObjectPtr& operator=(SQFloat f)
 	{ 
 		__Release(_type,_unVal);
+		SQ_OBJECT_RAWINIT()
 		_unVal.fFloat = f;
 		_type = OT_FLOAT;
 		return *this;
@@ -323,9 +326,19 @@ struct SQObjectPtr : public SQObject
 	private:
 		SQObjectPtr(const SQChar *){} //safety
 };
+
+inline void _Swap(SQObject &a,SQObject &b)
+{
+	SQObjectType tOldType = a._type;
+	SQObjectValue unOldVal = a._unVal;
+	a._type = b._type;
+	a._unVal = b._unVal;
+	b._type = tOldType;
+	b._unVal = unOldVal;
+}
 /////////////////////////////////////////////////////////////////////////////////////
 #ifndef NO_GARBAGE_COLLECTOR
-#define MARK_FLAG 0x40000000
+#define MARK_FLAG 0x80000000
 struct SQCollectable : public SQRefCounted {
 	SQCollectable *_next;
 	SQCollectable *_prev;

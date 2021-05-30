@@ -102,7 +102,7 @@ void SQSharedState::Init()
 #ifndef NO_GARBAGE_COLLECTOR
 	_gc_chain=NULL;
 #endif
-	sq_new(_stringtable,StringTable);
+	sq_new(_stringtable,SQStringTable);
 	sq_new(_metamethods,SQObjectPtrVec);
 	sq_new(_systemstrings,SQObjectPtrVec);
 	sq_new(_types,SQObjectPtrVec);
@@ -189,13 +189,16 @@ SQSharedState::~SQSharedState()
 #ifndef NO_GARBAGE_COLLECTOR
 	SQCollectable *t = _gc_chain;
 	SQCollectable *nx = NULL;
-	while(t) {
+	if(t) {
 		t->_uiRef++;
-		t->Finalize();
-		nx = t->_next;
-		if(--t->_uiRef == 0)
-			t->Release();
-		t=nx;
+		while(t) {
+			t->Finalize();
+			nx = t->_next;
+			if(nx) nx->_uiRef++;
+			if(--t->_uiRef == 0)
+				t->Release();
+			t = nx;
+		}
 	}
 	Assert(_gc_chain==NULL); //just to proove a theory
 	while(_gc_chain){
@@ -207,7 +210,7 @@ SQSharedState::~SQSharedState()
 	sq_delete(_types,SQObjectPtrVec);
 	sq_delete(_systemstrings,SQObjectPtrVec);
 	sq_delete(_metamethods,SQObjectPtrVec);
-	sq_delete(_stringtable,StringTable);
+	sq_delete(_stringtable,SQStringTable);
 	if(_scratchpad)SQ_FREE(_scratchpad,_scratchpadsize);
 }
 
@@ -271,14 +274,17 @@ SQInteger SQSharedState::CollectGarbage(SQVM *vm)
 	
 	SQCollectable *t = _gc_chain;
 	SQCollectable *nx = NULL;
-	while(t) {
+	if(t) {
 		t->_uiRef++;
-		t->Finalize();
-		nx = t->_next;
-		if(--t->_uiRef == 0)
-			t->Release();
-		t = nx;
-		n++;
+		while(t) {
+			t->Finalize();
+			nx = t->_next;
+			if(nx) nx->_uiRef++;
+			if(--t->_uiRef == 0)
+				t->Release();
+			t = nx;
+			n++;
+		}
 	}
 
 	t = tchain;
@@ -331,29 +337,29 @@ SQChar* SQSharedState::GetScratchPad(SQInteger size)
 	return _scratchpad;
 }
 
-RefTable::RefTable()
+SQRefTable::SQRefTable()
 {
 	AllocNodes(4);
 }
 
-void RefTable::Finalize()
+void SQRefTable::Finalize()
 {
-	RefNode *nodes = _nodes;
+	SQRefNode *nodes = _nodes;
 	for(SQUnsignedInteger n = 0; n < _numofslots; n++) {
 		nodes->obj = _null_;
 		nodes++;
 	}
 }
 
-RefTable::~RefTable()
+SQRefTable::~SQRefTable()
 {
-	SQ_FREE(_buckets,(_numofslots * sizeof(RefNode *)) + (_numofslots * sizeof(RefNode)));
+	SQ_FREE(_buckets,(_numofslots * sizeof(SQRefNode *)) + (_numofslots * sizeof(SQRefNode)));
 }
 
 #ifndef NO_GARBAGE_COLLECTOR
-void RefTable::Mark(SQCollectable **chain)
+void SQRefTable::Mark(SQCollectable **chain)
 {
-	RefNode *nodes = (RefNode *)_nodes;
+	SQRefNode *nodes = (SQRefNode *)_nodes;
 	for(SQUnsignedInteger n = 0; n < _numofslots; n++) {
 		if(type(nodes->obj) != OT_NULL) {
 			SQSharedState::MarkObject(nodes->obj,chain);
@@ -363,19 +369,19 @@ void RefTable::Mark(SQCollectable **chain)
 }
 #endif
 
-void RefTable::AddRef(SQObject &obj)
+void SQRefTable::AddRef(SQObject &obj)
 {
 	SQHash mainpos;
-	RefNode *prev;
-	RefNode *ref = Get(obj,mainpos,&prev,true);
+	SQRefNode *prev;
+	SQRefNode *ref = Get(obj,mainpos,&prev,true);
 	ref->refs++;
 }
 
-SQBool RefTable::Release(SQObject &obj)
+SQBool SQRefTable::Release(SQObject &obj)
 {
 	SQHash mainpos;
-	RefNode *prev;
-	RefNode *ref = Get(obj,mainpos,&prev,false);
+	SQRefNode *prev;
+	SQRefNode *ref = Get(obj,mainpos,&prev,false);
 	if(ref) {
 		if(--ref->refs == 0) {
 			SQObjectPtr o = ref->obj;
@@ -399,10 +405,10 @@ SQBool RefTable::Release(SQObject &obj)
 	return SQFalse;
 }
 
-void RefTable::Resize(SQUnsignedInteger size)
+void SQRefTable::Resize(SQUnsignedInteger size)
 {
-	RefNode **oldbucks = _buckets;
-	RefNode *t = _nodes;
+	SQRefNode **oldbucks = _buckets;
+	SQRefNode *t = _nodes;
 	SQUnsignedInteger oldnumofslots = _numofslots;
 	AllocNodes(size);
 	//rehash
@@ -411,7 +417,7 @@ void RefTable::Resize(SQUnsignedInteger size)
 		if(type(t->obj) != OT_NULL) {
 			//add back;
 			Assert(t->refs != 0);
-			RefNode *nn = Add(::HashObj(t->obj)&(_numofslots-1),t->obj);
+			SQRefNode *nn = Add(::HashObj(t->obj)&(_numofslots-1),t->obj);
 			nn->refs = t->refs; 
 			t->obj = _null_;
 			nfound++;
@@ -419,13 +425,13 @@ void RefTable::Resize(SQUnsignedInteger size)
 		t++;
 	}
 	Assert(nfound == oldnumofslots);
-	SQ_FREE(oldbucks,(oldnumofslots * sizeof(RefNode *)) + (oldnumofslots * sizeof(RefNode)));
+	SQ_FREE(oldbucks,(oldnumofslots * sizeof(SQRefNode *)) + (oldnumofslots * sizeof(SQRefNode)));
 }
 
-RefTable::RefNode *RefTable::Add(SQHash mainpos,SQObject &obj)
+SQRefTable::SQRefNode *SQRefTable::Add(SQHash mainpos,SQObject &obj)
 {
-	RefNode *t = _buckets[mainpos];
-	RefNode *newnode = _freelist;
+	SQRefNode *t = _buckets[mainpos];
+	SQRefNode *newnode = _freelist;
 	newnode->obj = obj;
 	_buckets[mainpos] = newnode;
 	_freelist = _freelist->next;
@@ -435,9 +441,9 @@ RefTable::RefNode *RefTable::Add(SQHash mainpos,SQObject &obj)
 	return newnode;
 }
 
-RefTable::RefNode *RefTable::Get(SQObject &obj,SQHash &mainpos,RefNode **prev,bool add)
+SQRefTable::SQRefNode *SQRefTable::Get(SQObject &obj,SQHash &mainpos,SQRefNode **prev,bool add)
 {
-	RefNode *ref;
+	SQRefNode *ref;
 	mainpos = ::HashObj(obj)&(_numofslots-1);
 	*prev = NULL;
 	for (ref = _buckets[mainpos]; ref; ) {
@@ -457,13 +463,13 @@ RefTable::RefNode *RefTable::Get(SQObject &obj,SQHash &mainpos,RefNode **prev,bo
 	return ref;
 }
 
-void RefTable::AllocNodes(SQUnsignedInteger size)
+void SQRefTable::AllocNodes(SQUnsignedInteger size)
 {
-	RefNode **bucks;
-	RefNode *nodes;
-	bucks = (RefNode **)SQ_MALLOC((size * sizeof(RefNode *)) + (size * sizeof(RefNode)));
-	nodes = (RefNode *)&bucks[size];
-	RefNode *temp = nodes;
+	SQRefNode **bucks;
+	SQRefNode *nodes;
+	bucks = (SQRefNode **)SQ_MALLOC((size * sizeof(SQRefNode *)) + (size * sizeof(SQRefNode)));
+	nodes = (SQRefNode *)&bucks[size];
+	SQRefNode *temp = nodes;
 	SQUnsignedInteger n;
 	for(n = 0; n < size - 1; n++) {
 		bucks[n] = NULL;
@@ -483,33 +489,33 @@ void RefTable::AllocNodes(SQUnsignedInteger size)
 	_numofslots = size;
 }
 //////////////////////////////////////////////////////////////////////////
-//StringTable
+//SQStringTable
 /*
 * The following code is based on Lua 4.0 (Copyright 1994-2002 Tecgraf, PUC-Rio.)
 * http://www.lua.org/copyright.html#4
 * http://www.lua.org/source/4.0.1/src_lstring.c.html
 */
 
-StringTable::StringTable()
+SQStringTable::SQStringTable()
 {
 	AllocNodes(4);
 	_slotused = 0;
 }
 
-StringTable::~StringTable()
+SQStringTable::~SQStringTable()
 {
 	SQ_FREE(_strings,sizeof(SQString*)*_numofslots);
 	_strings = NULL;
 }
 
-void StringTable::AllocNodes(SQInteger size)
+void SQStringTable::AllocNodes(SQInteger size)
 {
 	_numofslots = size;
 	_strings = (SQString**)SQ_MALLOC(sizeof(SQString*)*_numofslots);
 	memset(_strings,0,sizeof(SQString*)*_numofslots);
 }
 
-SQString *StringTable::Add(const SQChar *news,SQInteger len)
+SQString *SQStringTable::Add(const SQChar *news,SQInteger len)
 {
 	if(len<0)
 		len = (SQInteger)scstrlen(news);
@@ -534,7 +540,7 @@ SQString *StringTable::Add(const SQChar *news,SQInteger len)
 	return t;
 }
 
-void StringTable::Resize(SQInteger size)
+void SQStringTable::Resize(SQInteger size)
 {
 	SQInteger oldsize=_numofslots;
 	SQString **oldtable=_strings;
@@ -552,7 +558,7 @@ void StringTable::Resize(SQInteger size)
 	SQ_FREE(oldtable,oldsize*sizeof(SQString*));
 }
 
-void StringTable::Remove(SQString *bs)
+void SQStringTable::Remove(SQString *bs)
 {
 	SQString *s;
 	SQString *prev=NULL;
