@@ -305,9 +305,9 @@ struct ScriptStructMemberBinding_t
 	uint32				m_unMemberOffs;
 	uint32				m_unMemberSize;
 };
-struct ScriptStructDescriptor_t
+struct ScriptStructDesc_t
 {
-	ScriptStructDescriptor_t() : m_pszDescription( 0 ), m_pszStructName( 0 ), m_pszScriptName( 0 ) {}
+	ScriptStructDesc_t() : m_pszDescription( 0 ), m_pszStructName( 0 ), m_pszScriptName( 0 ) {}
 	const char *							m_pszScriptName;
 	const char *							m_pszStructName;
 	const char *							m_pszDescription;
@@ -637,14 +637,22 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 // 
 //-----------------------------------------------------------------------------
 
-#define ALLOW_SCRIPT_STRUCT_ACCESS()										template<typename T> friend ScriptStructDescriptor_t *GetScriptStructDesc(T *);
-#define DECLARE_STRUCT_SCRIPTDESC()											ALLOW_SCRIPT_STRUCT_ACCESS() ScriptStructDescriptor_t *GetScriptDesc(void)
-#define IMPLEMENT_STRUCT_SCRIPT_ACCESSOR(structName)						template<> ScriptStructDescriptor_t *GetScriptStructDesc<structName>(structName *); ScriptStructDescriptor_t *structName::GetScriptDesc(void) { return GetScriptStructDesc(this); } 
+#if defined(MSVC) && (_MSC_VER < 1800)
+#define DEFINE_STRUCT_SCRIPTDESC_FUNCTION( structName ) \
+		ScriptClassDesc_t *GetScriptStructDesc(structName *)
+#else
+#define DEFINE_STRUCT_SCRIPTDESC_FUNCTION( structName ) \
+		template<> ScriptStructDesc_t *GetScriptStructDesc<structName>(structName *)
+#endif
+
+#define ALLOW_SCRIPT_STRUCT_ACCESS()										template<typename T> friend ScriptStructDesc_t *GetScriptStructDesc(T *);
+#define DECLARE_STRUCT_SCRIPTDESC()											ALLOW_SCRIPT_STRUCT_ACCESS() ScriptStructDesc_t *GetScriptDesc(void)
+#define IMPLEMENT_STRUCT_SCRIPT_ACCESSOR(structName)						DEFINE_STRUCT_SCRIPTDESC_FUNCTION(structName); ScriptStructDesc_t *structName::GetScriptDesc(void) { return GetScriptStructDesc(this); } 
 
 #define BEGIN_STRUCT_SCRIPTDESC(structName, description) \
 	IMPLEMENT_STRUCT_SCRIPT_ACCESSOR( structName ) \
-	static ScriptStructDescriptor_t g_##structName##_ScriptDesc; \
-	ScriptStructDescriptor_t *GetScriptStructDesc( structName * ) \
+	static ScriptStructDesc_t g_##structName##_ScriptDesc; \
+	DEFINE_STRUCT_SCRIPTDESC_FUNCTION( structName ) \
 	{ \
 		static bool bInitialized; \
 		if ( bInitialized ) \
@@ -655,7 +663,7 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 		bInitialized = true; \
 		\
 		typedef structName _structName; \
-		ScriptStructDescriptor_t *pDesc = &g_##structName##_ScriptDesc; \
+		ScriptStructDesc_t *pDesc = &g_##structName##_ScriptDesc; \
 		ScriptInitStructDescNamed( pDesc, structName, #structName, description ); \
 
 #define DEFINE_STRUCT_MEMBER(memberType, memberName)						ScriptAddMemberToStructDesc( pDesc, _structName, memberType, memberName );
@@ -670,7 +678,7 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 //-----------------------------------------------------------------------------
 
 template<typename T>
-ScriptStructDescriptor_t *GetScriptStructDesc(T *);
+ScriptStructDesc_t *GetScriptStructDesc(T *);
 
 #define GetScriptDescForStruct( structName ) GetScriptStructDesc( ( structName *)NULL )
 
