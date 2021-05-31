@@ -145,9 +145,6 @@ public:
 	SQObjectPtr &GetUp(SQInteger n);
 	SQObjectPtr &GetAt(SQInteger n);
 
-	CSquirrelVM *GetVScript() { return _sharedstate->_vscript; }
-	void SetVScript(CSquirrelVM *pVM) { _sharedstate->_vscript=pVM; }
-
 	void SetQuerySuspendFn( SQQuerySuspendFn qs_fn ) { _qs_fn=qs_fn; }
 	int				 _qs_cnt;
 	SQQuerySuspendFn _qs_fn;

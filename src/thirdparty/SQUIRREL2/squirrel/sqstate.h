@@ -106,7 +106,7 @@ public:
 	SQPRINTFUNCTION _printfunc;
 	bool _debuginfo;
 	bool _notifyallexceptions;
-	CSquirrelVM *_vscript;
+	SQUserPointer _up;
 private:
 	SQChar *_scratchpad;
 	SQInteger _scratchpadsize;

@@ -68,6 +68,14 @@ static HSQOBJECT const INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
 inline bool operator==( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type == rhs._type && _table( lhs ) == _table( rhs ); }
 inline bool operator!=( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type != rhs._type || _table( lhs ) != _table( rhs ); }
 
+static CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
+{
+	return static_cast<CSquirrelVM *>( _ss( pVM )->_up );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Squirrel scripting engine implementation
+//-----------------------------------------------------------------------------
 class CSquirrelVM : public IScriptVM
 {
 	friend struct SQVM;
@@ -201,7 +209,7 @@ bool CSquirrelVM::Init( void )
 {
 	m_pVirtualMachine = sq_open( 1024 );
 	
-	m_pVirtualMachine->SetVScript( this );
+	m_pVirtualMachine->_sharedstate->_up = this;
 	m_pVirtualMachine->SetQuerySuspendFn( &CSquirrelVM::QueryContinue );
 	
 	sq_setprintfunc( GetVM(), &CSquirrelVM::PrintFunc );
@@ -1414,7 +1422,7 @@ SQInteger CSquirrelVM::ExternalReleaseHook( SQUserPointer data, SQInteger size )
 SQInteger CSquirrelVM::GetDeveloper( HSQUIRRELVM pVM )
 {
 	StackHandler hndl( pVM );
-	return hndl.Return( pVM->GetVScript()->developer.GetInt() );
+	return hndl.Return( GetVScript( pVM )->developer.GetInt() );
 }
 
 SQInteger CSquirrelVM::GetFunctionSignature( HSQUIRRELVM pVM )
@@ -1603,7 +1611,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 			}
 			case FIELD_VECTOR:
 			{
-				sq_pushobject( pVM, pVM->GetVScript()->m_VectorClass );
+				sq_pushobject( pVM, GetVScript( pVM )->m_VectorClass );
 
 				sq_createinstance( pVM, -1 );
 				sq_setinstanceup( pVM, -1, (SQUserPointer)returnValue.m_pVector );
@@ -1636,7 +1644,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 		parameters[i].Free();
 	}
 
-	HSQOBJECT pErrorString = pVM->GetVScript()->m_ErrorString;
+	HSQOBJECT pErrorString = GetVScript( pVM )->m_ErrorString;
 	if ( !sq_isnull( pErrorString ) )
 	{
 		if ( sq_isstring( pErrorString ) )
@@ -1644,7 +1652,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 		else
 			sq_throwerror( pVM, "Internal error" );
 
-		pVM->GetVScript()->m_ErrorString = _null_;
+		GetVScript( pVM )->m_ErrorString = _null_;
 		return SQ_ERROR;
 	}
 
@@ -1684,7 +1692,7 @@ void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 
 	va_list va;
 	va_start( va, szMessage );
-	V_vsnprintf( szMessage, sizeof szMessage, fmt, va );
+	V_vsnprintf( szMessage, sizeof( szMessage ), fmt, va );
 	va_end( va );
 
 	Msg( "%s", szMessage );
@@ -1692,7 +1700,7 @@ void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 
 int CSquirrelVM::QueryContinue( HSQUIRRELVM pVM )
 {
-	CSquirrelVM *pVScript = pVM->GetVScript();
+	CSquirrelVM *pVScript = GetVScript( pVM );
 	const float flStartTime = pVScript->m_flTimeStartedCall;
 	if ( !pVScript->m_pDbgServer && flStartTime != 0.0f )
 	{
