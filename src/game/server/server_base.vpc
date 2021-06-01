@@ -66,6 +66,14 @@ $Configuration
 	}
 }
 
+$CustomBuildStep "nut"
+{
+	$CommandLine	"$SRCDIR\devtools\srcsrv\perl\bin\perl.exe $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_$(InputName)> $(InputDir)$(InputName)_nut.h" [$WINDOWS]
+	$CommandLine	"perl $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_$(InputName)> $(InputDir)$(InputName)_nut.h" [$POSIX]
+	$Description	"$(InputFileName) produces $(InputName)_nut.h"
+	$Outputs		"$(InputDir)$(InputName)_nut.h"
+}
+
 $Project
 {
 	$Folder "Replay"

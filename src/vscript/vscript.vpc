@@ -49,6 +49,18 @@ $Project "VScript"
 	$Folder	"Source Files"
 	{
 		$File   "vscript_init.nut"
+		{
+			$Configuration
+			{
+				$CustomBuildStep
+				{
+					$CommandLine	"$SRCDIR\devtools\srcsrv\perl\bin\perl.exe $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_init> $(InputDir)$(InputName)_nut.h" [$WINDOWS]
+					$CommandLine	"perl $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_init> $(InputDir)$(InputName)_nut.h" [$POSIX]
+					$Description	"$(InputFileName) produces $(InputName)_nut.h"
+					$Outputs		"$(InputDir)$(InputName)_nut.h"
+				}
+			}
+		}
 		$File   "vscript.cpp"
 		$File   "squirrel_vm.cpp"
 		$File   "sq_vector.cpp"
@@ -65,7 +77,6 @@ $Project "VScript"
 
 	$Folder	"Header Files"
 	{
-		$File   "vscript_init_nut.h"
 		$File   "squirrel_vm.h"
 		$File   "sq_vector.h"
 		$File   "sq_vmstate.h"
