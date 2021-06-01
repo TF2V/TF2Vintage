@@ -56,23 +56,23 @@ void SQLexer::Init(SQSharedState *ss, SQLEXREADFUNC rg, SQUserPointer up,Compile
 	ADD_KEYWORD(case, TK_CASE);
 	ADD_KEYWORD(default, TK_DEFAULT);
 	ADD_KEYWORD(this, TK_THIS);
-	ADD_KEYWORD(parent,TK_PARENT);
-	ADD_KEYWORD(class,TK_CLASS);
-	ADD_KEYWORD(extends,TK_EXTENDS);
-	ADD_KEYWORD(constructor,TK_CONSTRUCTOR);
-	ADD_KEYWORD(instanceof,TK_INSTANCEOF);
-	ADD_KEYWORD(vargc,TK_VARGC);
-	ADD_KEYWORD(vargv,TK_VARGV);
-	ADD_KEYWORD(true,TK_TRUE);
-	ADD_KEYWORD(false,TK_FALSE);
-	ADD_KEYWORD(static,TK_STATIC);
-	ADD_KEYWORD(enum,TK_ENUM);
-	ADD_KEYWORD(const,TK_CONST);
+	ADD_KEYWORD(parent, TK_PARENT);
+	ADD_KEYWORD(class, TK_CLASS);
+	ADD_KEYWORD(extends, TK_EXTENDS);
+	ADD_KEYWORD(constructor, TK_CONSTRUCTOR);
+	ADD_KEYWORD(instanceof, TK_INSTANCEOF);
+	ADD_KEYWORD(vargc, TK_VARGC);
+	ADD_KEYWORD(vargv, TK_VARGV);
+	ADD_KEYWORD(true, TK_TRUE);
+	ADD_KEYWORD(false, TK_FALSE);
+	ADD_KEYWORD(static, TK_STATIC);
+	ADD_KEYWORD(enum, TK_ENUM);
+	ADD_KEYWORD(const, TK_CONST);
 
 	_readf = rg;
 	_up = up;
 	_lasttokenline = _currentline = 1;
-	_currentcolumn = 0;
+	_lasttokencolumn = _currentcolumn = 0;
 	_prevtoken = -1;
 	Next();
 }
@@ -121,6 +121,7 @@ void SQLexer::LexBlockComment()
 SQInteger SQLexer::Lex()
 {
 	_lasttokenline = _currentline;
+	_lasttokencolumn = _currentcolumn;
 	while(CUR_CHAR != SQUIRREL_EOB) {
 		switch(CUR_CHAR){
 		case _SC('\t'): case _SC('\r'): case _SC(' '): NEXT(); continue;
@@ -162,7 +163,7 @@ SQInteger SQLexer::Lex()
 			else if ( CUR_CHAR == _SC('-') ) { NEXT(); RETURN_TOKEN(TK_NEWSLOT); }
 			else if ( CUR_CHAR == _SC('<') ) { NEXT(); RETURN_TOKEN(TK_SHIFTL); }
 			else if ( CUR_CHAR == _SC('/') ) { NEXT(); RETURN_TOKEN(TK_ATTR_OPEN); }
-			//else if ( CUR_CHAR == _SC('[') ) { NEXT(); ReadMultilineString(); RETURN_TOKEN(TK_STRING_LITERAL); }
+			else if ( CUR_CHAR == _SC('|') ) { NEXT(); RETURN_TOKEN(TK_ATTR_OPEN); }
 			else { RETURN_TOKEN('<') }
 		case _SC('>'):
 			NEXT();
@@ -215,7 +216,8 @@ SQInteger SQLexer::Lex()
 			else { NEXT(); RETURN_TOKEN(TK_AND); }
 		case _SC('|'):
 			NEXT();
-			if (CUR_CHAR != _SC('|')){ RETURN_TOKEN('|') }
+			if (CUR_CHAR == _SC('>')){ RETURN_TOKEN(TK_ATTR_CLOSE) }
+			else if (CUR_CHAR != _SC('|')){ RETURN_TOKEN('|') }
 			else { NEXT(); RETURN_TOKEN(TK_OR); }
 		case _SC(':'):
 			NEXT();
