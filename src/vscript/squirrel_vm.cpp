@@ -278,12 +278,11 @@ void CSquirrelVM::Shutdown( void )
 		sq_pushnull( GetVM() );
 		sq_setroottable( GetVM() );
 
-		DisconnectDebugger();
-
 		sq_close( m_pVirtualMachine );
 		m_pVirtualMachine = NULL;
 	}
 
+	DisconnectDebugger();
 	m_ScriptClasses.Purge();
 }
 
