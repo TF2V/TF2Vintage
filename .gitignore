@@ -58,3 +58,4 @@ vc120.pdb
 src/Output-Build.txt
 *.vpc.sentinel
 src/lib/public/lua51.lib
+vscript*_nut.h
