@@ -933,6 +933,12 @@ query_suspend:
 				{Raise_Error(_SC("cannot apply instanceof between a %s and a %s"),GetTypeName(STK(arg1)),GetTypeName(STK(arg2))); SQ_THROW();}
 				TARGET = _instance(STK(arg2))->InstanceOf(_class(STK(arg1)))?_true_:_false_;
 				continue;
+			case _OP_DYNAMICCAST:
+				if(type(STK(arg1)) != OT_CLASS)
+				{Raise_Error(_SC("cannot apply instanceof between a %s and a %s"),GetTypeName(STK(arg1)),GetTypeName(STK(arg2))); SQ_THROW();}
+				if(type(STK(arg2)) == OT_INSTANCE && _instance(STK(arg2))->InstanceOf(_class(STK(arg1)))) {TARGET=_instance(STK(arg2));}
+				else {TARGET.Null();}
+				continue;
 			case _OP_AND: 
 				if(IsFalse(STK(arg2))) {
 					TARGET = STK(arg2);

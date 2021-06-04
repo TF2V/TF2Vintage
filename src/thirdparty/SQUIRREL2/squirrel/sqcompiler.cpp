@@ -169,7 +169,7 @@ public:
 				Statement();
 				if(_lex._prevtoken != _SC('}')) OptionalSemicolon();
 			}
-			CleanStack(stacksize);
+			_fs->SetStackSize(stacksize);
 			_fs->AddLineInfos(_lex._currentline, _lineinfo, true);
 			_fs->AddInstruction(_OP_RETURN, 0xFF);
 			_fs->SetStackSize(0);
@@ -290,8 +290,13 @@ public:
 			}
 			break;
 		default:
-			CommaExpr();
-			_fs->PopTarget();
+			if ( _token >= TK_DYNAMIC_T && _token <= TK_NATIVEPTR_T ) {
+				LocalDeclStatement();
+			}
+			else {
+				CommaExpr();
+				_fs->PopTarget();
+			}
 			break;
 		}
 		_fs->SnoozeOpt();
@@ -452,6 +457,8 @@ public:
 			}
 		case TK_IN: BIN_EXP(_OP_EXISTS, &SQCompiler::BitwiseOrExp); break;
 		case TK_INSTANCEOF: BIN_EXP(_OP_INSTANCEOF, &SQCompiler::BitwiseOrExp); break;
+		case TK_IS_OPERATOR: BIN_EXP(_OP_INSTANCEOF, &SQCompiler::BitwiseOrExp); break;
+		case TK_AS_OPERATOR: BIN_EXP(_OP_DYNAMICCAST, &SQCompiler::BitwiseOrExp); break;
 		default:
 			return;
 		}
@@ -829,9 +836,30 @@ public:
 					Lex(); CommaExpr(); Expect(_SC(']'));
 					Expect(_SC('=')); Expression();
 					break;
-				default :
+				case TK_DYNAMIC_T:
+				case TK_VOID_T:
+				case TK_BOOLEAN_T:
+				case TK_CHAR8_T:
+				case TK_BYTE8_T:
+				case TK_INT16_T:
+				case TK_UINT16_T:
+				case TK_INT32_T:
+				case TK_UINT32_T:
+				case TK_INT64_T:
+				case TK_UINT64_T:
+				case TK_FLOAT32_T:
+				case TK_DOUBLE64_T:
+				case TK_STRING_T:
+				case TK_NATIVEPTR_T:{
+					Lex();
 					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_IDENTIFIER)));
 					Expect(_SC('=')); Expression();
+					}
+					break;
+				default:{
+					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_IDENTIFIER)));
+					Expect(_SC('=')); Expression();
+					}
 			}
 
 			if(_token == separator) Lex();//optional comma/semicolon
@@ -843,10 +871,10 @@ public:
 			unsigned char flags = (hasattrs?NEW_SLOT_ATTRIBUTES_FLAG:0)|(isstatic?NEW_SLOT_STATIC_FLAG:0);
 			SQInteger table = _fs->TopTarget(); //<<BECAUSE OF THIS NO COMMON EMIT FUNC IS POSSIBLE
 			_fs->AddInstruction(_OP_NEWSLOTA, flags, table, key, val);
-			//_fs->PopTarget();
 		}
-		if(separator == _SC(',')) //hack recognizes a table from the separator
+		if(separator == _SC(',')) { //hack recognizes a table from the separator
 			_fs->SetIntructionParam(tpos, 1, nkeys);
+		}
 		Lex();
 	}
 	void LocalDeclStatement()
@@ -865,7 +893,6 @@ public:
 			}
 			_fs->PopTarget();
 			_fs->PushLocalVariable(varname);
-		
 		} while(_token == _SC(','));
 	}
 	void IfStatement()

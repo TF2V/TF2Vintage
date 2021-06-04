@@ -71,7 +71,8 @@ SQInstructionDesc g_InstrDesc[]={
 	{_SC("_OP_POPTRAP")},
 	{_SC("_OP_THROW")},
 	{_SC("_OP_CLASS")},
-	{_SC("_OP_NEWSLOTA")}
+	{_SC("_OP_NEWSLOTA")},
+	{_SC("_OP_DYNAMICCAST")}
 };
 #endif
 void DumpLiteral(SQObjectPtr &o)
@@ -186,16 +187,16 @@ void SQFuncState::Dump(SQFunctionProto *func)
 					SQObjectPtr val,key,refo;
 					while(((refidx=_table(_literals)->Next(false,refo,key,val))!= -1) && (_integer(val) != lidx)) {
 						refo = refidx;	
+					}
+					DumpLiteral(key);
+					scprintf(_SC("\n"));
 				}
-				DumpLiteral(key);
-				scprintf(_SC("\n"));
-			}
 			}
 		}
 		else if(inst.op==_OP_LOADFLOAT) {
 			scprintf(_SC("[%03d] %15s %d %f %d %d\n"),n,g_InstrDesc[inst.op].name,inst._arg0,*((SQFloat*)&inst._arg1),inst._arg2,inst._arg3);
 		}
-		else if(inst.op==_OP_ARITH){
+		else if(inst.op==_OP_ARITH) {
 			scprintf(_SC("[%03d] %15s %d %d %d %c\n"),n,g_InstrDesc[inst.op].name,inst._arg0,inst._arg1,inst._arg2,inst._arg3);
 		}
 		else 

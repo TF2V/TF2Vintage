@@ -72,6 +72,28 @@ struct SQVM;
 #define TK_CONST 324
 #define TK___LINE__ 325
 #define TK___FILE__ 326
+#define TK_AS_OPERATOR 327
+#define TK_IS_OPERATOR 328
+
+#define TK_DYNAMIC_T	329
+#define TK_VOID_T		330
+#define TK_BOOLEAN_T	331
+#define TK_CHAR8_T		332
+#define TK_BYTE8_T		333
+#define TK_INT16_T		334
+#define TK_UINT16_T		335
+#define TK_INT32_T		336
+#define TK_UINT32_T		337
+#define TK_INT64_T		338
+#define TK_UINT64_T		339
+#define TK_FLOAT32_T	340
+#define TK_DOUBLE64_T	341
+#define TK_STRING_T		342
+#define TK_OBJECT_T		343
+#define TK_NATIVEPTR_T	344
+
+#define _isbuiltintype( tk ) ( TK_DYNAMIC_T <= tk && tk <= TK_NATIVEPTR_T )
+#define _tokentometatype( tk ) ((SQMetaType)(tk - TK_DYNAMIC_T))
 
 
 typedef void(*CompilerErrorFunc)(void *ud, const SQChar *s);
