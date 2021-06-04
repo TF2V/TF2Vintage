@@ -737,8 +737,9 @@ public:
 			Lex();ParseTableOrClass(_SC(','));
 				 }
 			break;
-		case TK_FUNCTION: FunctionExp(_token);break;
-		case TK_CLASS: Lex(); ClassExp();break;
+		case TK_FUNCTION: FunctionExp(_token); break;
+		case _SC('@'): FunctionExp(_token,true); break;
+		case TK_CLASS: Lex(); ClassExp(); break;
 		case _SC('-'): UnaryOP(_OP_NEG); break;
 		case _SC('!'): UnaryOP(_OP_NOT); break;
 		case _SC('~'): UnaryOP(_OP_BWNOT); break;
@@ -830,8 +831,8 @@ public:
 					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(id));
 					CreateFunction(id);
 					_fs->AddInstruction(_OP_CLOSURE, _fs->PushTarget(), _fs->_functions.size() - 1, 0);
-								  }
-								  break;
+					}
+					break;
 				case _SC('['):
 					Lex(); CommaExpr(); Expect(_SC(']'));
 					Expect(_SC('=')); Expression();
@@ -1223,10 +1224,10 @@ public:
 		_fs->SetIntructionParams(jmppos, 0, (_fs->GetCurrentPos() - jmppos), 0);
 		CleanStack(stacksize);
 	}
-	void FunctionExp(SQInteger ftype)
+	void FunctionExp(SQInteger ftype,bool lambda=false)
 	{
 		Lex(); Expect(_SC('('));
-		CreateFunction(_null_);
+		CreateFunction(_null_,lambda);
 		_fs->AddInstruction(_OP_CLOSURE, _fs->PushTarget(), _fs->_functions.size() - 1, ftype == TK_FUNCTION?0:1);
 	}
 	void ClassExp()
@@ -1283,9 +1284,8 @@ public:
 			_fs->AddInstruction(_OP_INCL, _fs->PushTarget(), src, 0, token == TK_MINUSMINUS?-1:1);
 		}
 	}
-	void CreateFunction(SQObject &name)
+	void CreateFunction(SQObject &name,bool lambda=false)
 	{
-		
 		SQFuncState *funcstate = _fs->PushChildState(_ss(_vm));
 		funcstate->_name = name;
 		SQObject paramname;
@@ -1335,7 +1335,13 @@ public:
 		
 		SQFuncState *currchunk = _fs;
 		_fs = funcstate;
-		Statement();
+		if ( lambda ) {
+			Expression();
+			_fs->AddInstruction(_OP_RETURN, 1, _fs->PushTarget());
+		}
+		else {
+			Statement();
+		}
 		funcstate->AddLineInfos(_lex._prevtoken == _SC('\n')?_lex._lasttokenline:_lex._currentline, _lineinfo, true);
         funcstate->AddInstruction(_OP_RETURN, -1);
 		funcstate->SetStackSize(0);
