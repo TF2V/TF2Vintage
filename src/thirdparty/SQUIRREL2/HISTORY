@@ -1,3 +1,9 @@
+***version 2.2.6       ***
+-added lambdas, exp := '@' '(' paramlist ')' exp
+-introduced dynamic casting, exp := instanceexp 'as' classexp, stat := instanceexp 'is' classexp
+-added __LINE__ and __FILE__ constants for debugging
+
+***2012-01-14          ***
 ***version 2.2.5 stable***
 -sq_getsize() now returns userdatasize for classes and instances
 -added parameter 'isstatic' to _newmember metamethod(thx G.Meyer)
