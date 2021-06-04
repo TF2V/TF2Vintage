@@ -68,7 +68,7 @@ static HSQOBJECT const INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
 inline bool operator==( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type == rhs._type && _table( lhs ) == _table( rhs ); }
 inline bool operator!=( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type != rhs._type || _table( lhs ) != _table( rhs ); }
 
-static CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
+inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
 {
 	return static_cast<CSquirrelVM *>( _ss( pVM )->_up );
 }
