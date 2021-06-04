@@ -49,11 +49,10 @@ class SQCompiler
 {
 public:
 	SQCompiler(SQVM *v, SQLEXREADFUNC rg, SQUserPointer up, const SQChar* sourcename, bool raiseerror, bool lineinfo)
+		: _vm(v), _lineinfo(lineinfo), _raiseerror(raiseerror)
 	{
-		_vm=v;
 		_lex.Init(_ss(v), rg, up,ThrowError,this);
 		_sourcename = SQString::Create(_ss(v), sourcename);
-		_lineinfo = lineinfo;_raiseerror = raiseerror;
 		compilererror = NULL;
 	}
 	static void ThrowError(void *ud, const SQChar *s) {
@@ -202,39 +201,39 @@ public:
 		switch(_token){
 		case _SC(';'):	Lex();					break;
 		case TK_IF:		IfStatement();			break;
-		case TK_WHILE:		WhileStatement();		break;
+		case TK_WHILE:	WhileStatement();		break;
 		case TK_DO:		DoWhileStatement();		break;
-		case TK_FOR:		ForStatement();			break;
-		case TK_FOREACH:	ForEachStatement();		break;
+		case TK_FOR:	ForStatement();			break;
+		case TK_FOREACH:ForEachStatement();		break;
 		case TK_SWITCH:	SwitchStatement();		break;
-		case TK_LOCAL:		LocalDeclStatement();	break;
+		case TK_LOCAL:	LocalDeclStatement();	break;
 		case TK_RETURN:
 		case TK_YIELD: {
-			SQOpcode op;
-			if(_token == TK_RETURN) {
-				op = _OP_RETURN;
-				
+				SQOpcode op;
+				if(_token == TK_RETURN) {
+					op = _OP_RETURN;
+				}
+				else {
+					op = _OP_YIELD;
+					_fs->_bgenerator = true;
+				}
+				Lex();
+				if(!IsEndOfStatement()) {
+					SQInteger retexp = _fs->GetCurrentPos()+1;
+					CommaExpr();
+					if(op == _OP_RETURN && _fs->_traps > 0)
+						_fs->AddInstruction(_OP_POPTRAP, _fs->_traps, 0);
+					_fs->_returnexp = retexp;
+					_fs->AddInstruction(op, 1, _fs->PopTarget());
+				}
+				else{ 
+					if(op == _OP_RETURN && _fs->_traps > 0)
+						_fs->AddInstruction(_OP_POPTRAP, _fs->_traps ,0);
+					_fs->_returnexp = -1;
+					_fs->AddInstruction(op, 0xFF); 
+				}
 			}
-			else {
-				op = _OP_YIELD;
-				_fs->_bgenerator = true;
-			}
-			Lex();
-			if(!IsEndOfStatement()) {
-				SQInteger retexp = _fs->GetCurrentPos()+1;
-				CommaExpr();
-				if(op == _OP_RETURN && _fs->_traps > 0)
-					_fs->AddInstruction(_OP_POPTRAP, _fs->_traps, 0);
-				_fs->_returnexp = retexp;
-				_fs->AddInstruction(op, 1, _fs->PopTarget());
-			}
-			else{ 
-				if(op == _OP_RETURN && _fs->_traps > 0)
-					_fs->AddInstruction(_OP_POPTRAP, _fs->_traps ,0);
-				_fs->_returnexp = -1;
-				_fs->AddInstruction(op, 0xFF); 
-			}
-			break;}
+			break;
 		case TK_BREAK:
 			if(_fs->_breaktargets.size() <= 0)Error(_SC("'break' has to be in a loop block"));
 			if(_fs->_breaktargets.top() > 0){
@@ -262,7 +261,7 @@ public:
 		case TK_ENUM:
 			EnumStatement();
 			break;
-		case _SC('{'):{
+		case _SC('{'): {
 				SQInteger stacksize = _fs->GetStackSize();
 				Lex();
 				Statements();
@@ -278,8 +277,7 @@ public:
 			CommaExpr();
 			_fs->AddInstruction(_OP_THROW, _fs->PopTarget());
 			break;
-		case TK_CONST:
-			{
+		case TK_CONST:{
 			Lex();
 			SQObject id = Expect(TK_IDENTIFIER);
 			Expect('=');
@@ -577,16 +575,17 @@ public:
 						SQInteger ttarget = _fs->PushTarget();
 						_fs->AddInstruction(_OP_PREPCALL, closure, key, table, ttarget);
 					}
-					else{
+					else {
 						_fs->AddInstruction(_OP_MOVE, _fs->PushTarget(), 0);
 					}
 				}
-				else
+				else {
 					_fs->AddInstruction(_OP_MOVE, _fs->PushTarget(), 0);
+				}
 				_exst._deref = DEREF_NO_DEREF;
 				Lex();
 				FunctionCallArgs();
-				 }
+				}
 				break;
 			default: return;
 			}
@@ -705,9 +704,10 @@ public:
 			}
 			Lex();
 			break;
-		case TK_TRUE: case TK_FALSE:
+		case TK_TRUE: case TK_FALSE: {
 			_fs->AddInstruction(_OP_LOADBOOL, _fs->PushTarget(),_token == TK_TRUE?1:0);
 			Lex();
+			}
 			break;
 		case _SC('['): {
 				_fs->AddInstruction(_OP_NEWARRAY, _fs->PushTarget());
@@ -742,7 +742,19 @@ public:
 		case TK_PLUSPLUS :PrefixIncDec(_token); break;
 		case TK_DELETE : DeleteExpr(); break;
 		case TK_DELEGATE : DelegateExpr(); break;
-		case _SC('('): Lex(); CommaExpr(); Expect(_SC(')'));
+		case _SC('('): Lex(); CommaExpr(); Expect(_SC(')')); break;
+		case TK___LINE__:
+			if((_lex._nvalue & (~0x7FFFFFFF)) == 0) { //does it fit in 32 bits?
+				_fs->AddInstruction(_OP_LOADINT, _fs->PushTarget(),_lex._currentline);
+			}
+			else {
+				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetNumericConstant(_lex._currentline));
+			}
+			Lex();
+			break;
+		case TK___FILE__:
+			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(_sourcename));
+			Lex();
 			break;
 		default: Error(_SC("expression expected"));
 		}
