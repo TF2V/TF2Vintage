@@ -631,7 +631,7 @@ SquirrelStateReader::~SquirrelStateReader()
 
 void SquirrelStateReader::BeginRead( void )
 {
-	m_pBuffer->GetInt();
+	DbgVerify( m_pBuffer->GetInt() == OT_THREAD );
 
 	_ss( m_pVM )->_gc_disableDepth++;
 
