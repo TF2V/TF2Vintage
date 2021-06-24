@@ -2,7 +2,9 @@
 	see copyright notice in squirrel.h
 */
 #include "sqpcheader.h"
+#if defined(VSCRIPT_DLL_EXPORT)
 #include "tier0/memdbgon.h"
+#endif
 
 void *sq_vm_malloc(SQUnsignedInteger size){ return malloc(size); }
 

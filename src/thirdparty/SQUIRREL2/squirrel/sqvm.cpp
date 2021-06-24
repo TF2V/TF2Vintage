@@ -13,8 +13,9 @@
 #include "squserdata.h"
 #include "sqarray.h"
 #include "sqclass.h"
-
+#if defined(VSCRIPT_DLL_EXPORT)
 #include "memdbgon.h"
+#endif
 
 #define TOP() (_stack._vals[_top-1])
 
@@ -654,22 +655,6 @@ bool SQVM::CLOSURE_OP(SQObjectPtr &target, SQFunctionProto *func)
 	target = closure;
 	return true;
 
-}
-
-bool SQVM::GETVARGV_OP(SQObjectPtr &target,SQObjectPtr &index,CallInfo *ci)
-{
-	if(ci->_vargs.size == 0) {
-		Raise_Error(_SC("the function doesn't have var args"));
-		return false;
-	}
-	if(!sq_isnumeric(index)){
-		Raise_Error(_SC("indexing 'vargv' with %s"),GetTypeName(index));
-		return false;
-	}
-	SQInteger idx = tointeger(index);
-	if(idx < 0 || idx >= ci->_vargs.size){ Raise_Error(_SC("vargv index out of range")); return false; }
-	target = _vargsstack[ci->_vargs.base+idx];
-	return true;
 }
 
 bool SQVM::CLASS_OP(SQObjectPtr &target,SQInteger baseclass,SQInteger attributes)

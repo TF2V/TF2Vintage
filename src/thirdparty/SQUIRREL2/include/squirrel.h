@@ -204,6 +204,8 @@ typedef struct tagSQFunctionInfo {
     SQInteger line;
 }SQFunctionInfo;
 
+static SQBool g_bSqDebugBreak = 0;
+
 /*vm*/
 SQUIRREL_API HSQUIRRELVM sq_open(SQInteger initialstacksize);
 SQUIRREL_API HSQUIRRELVM sq_newthread(HSQUIRRELVM friendvm, SQInteger initialstacksize);
