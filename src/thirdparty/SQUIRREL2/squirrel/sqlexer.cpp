@@ -234,7 +234,7 @@ SQInteger SQLexer::Lex()
 			else { NEXT(); RETURN_TOKEN(TK_AND); }
 		case _SC('|'):
 			NEXT();
-			if (CUR_CHAR == _SC('>')){ RETURN_TOKEN(TK_ATTR_CLOSE) }
+			if (CUR_CHAR == _SC('>')){ NEXT(); RETURN_TOKEN(TK_ATTR_CLOSE); }
 			else if (CUR_CHAR != _SC('|')){ RETURN_TOKEN('|') }
 			else { NEXT(); RETURN_TOKEN(TK_OR); }
 		case _SC(':'):
