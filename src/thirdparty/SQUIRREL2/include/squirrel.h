@@ -28,8 +28,6 @@ THE SOFTWARE.
 #define printf	DevMsg
 #endif
 
-static bool g_bSqDebugBreak = false;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -69,7 +67,7 @@ struct SQOuter;
 
 #include "sqconfig.h"
 
-#define SQUIRREL_VERSION    _SC("Squirrel 3.1 stable")
+#define SQUIRREL_VERSION    _SC("Squirrel 3.2 VScript")
 #define SQUIRREL_COPYRIGHT  _SC("Copyright (C) 2003-2016 Alberto Demichelis")
 #define SQUIRREL_AUTHOR     _SC("Alberto Demichelis")
 #define SQUIRREL_VERSION_NUMBER 310
