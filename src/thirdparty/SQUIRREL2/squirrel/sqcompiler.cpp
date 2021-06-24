@@ -125,7 +125,7 @@ public:
 				Error(_SC("expected '%c'"), tok);
 			}
 		}
-		SQObjectPtr ret;
+		SQObject ret;
 		switch(tok)
 		{
 		case TK_IDENTIFIER:
