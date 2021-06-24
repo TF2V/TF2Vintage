@@ -2,14 +2,13 @@
 #include "tier1/fmtstr.h"
 #include "tier1/strtools.h"
 
-#include "sqplus.h"
+#include "squirrel.h"
 #include "sqobject.h"
 #include "sq_vector.h"
-using namespace SqPlus;
 
 
 #define sq_checkvector(vm, vector) \
-	if ( vector == nullptr ) { sq_throwerror( vm, "Null vector" ); return SQ_ERROR; }
+	if ( vector == nullptr ) { return sq_throwerror( vm, "Null vector" ); }
 
 #define sq_pushvector(vm, vector) \
 	sq_getclass( vm, -1 ); \
@@ -20,18 +19,20 @@ using namespace SqPlus;
 
 Vector GetVectorByValue( HSQUIRRELVM pVM, int nIndex )
 {
-	StackHandler hndl( pVM );
 	// support vector = vector + 15
-	if ( hndl.GetType( nIndex ) & SQOBJECT_NUMERIC )
+	if ( sq_gettype( pVM, nIndex ) & SQOBJECT_NUMERIC )
 	{
-		float flValue = hndl.GetFloat( nIndex );
+		SQFloat flValue = 0;
+		sq_getfloat( pVM, nIndex, &flValue );
 		return Vector( flValue );
 	}
 
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( nIndex, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, nIndex, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	if ( pVector == nullptr )
 	{
-		hndl.ThrowError( "Null vector" );
+		sq_throwerror( pVM, "Null vector" );
 		return Vector();
 	}
 
@@ -40,14 +41,12 @@ Vector GetVectorByValue( HSQUIRRELVM pVM, int nIndex )
 
 SQInteger VectorConstruct( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
 	Vector *pVector = new Vector;
 
-	int i;
-	for ( i=0; i < hndl.GetParamCount() - 1 && i < 3; ++i )
+	int i, _top = sq_gettop( pVM );
+	for ( i=0; i < _top - 1 && i < 3; ++i )
 	{
-		float flValue = hndl.GetFloat( i+2 );
-		(*pVector)[i] = flValue;
+		sq_getfloat( pVM, i + 2, &( *pVector )[i] );
 	}
 
 	if ( i < 3 )
@@ -56,45 +55,27 @@ SQInteger VectorConstruct( HSQUIRRELVM pVM )
 			(*pVector)[i] = 0;
 	}
 
-	PostConstructSimple( pVM, pVector, VectorRelease );
+	sq_setinstanceup( pVM, 1, pVector );
+	sq_setreleasehook( pVM, 1, &VectorRelease );
 
 	return SQ_OK;
 }
 
 SQInteger VectorRelease( SQUserPointer up, SQInteger size )
 {
-	SQ_DELETE_CLASS( Vector );
+	delete (Vector *)up;
+	return SQ_OK;
 }
 
 SQInteger VectorGet( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	const SQChar *pString = hndl.GetString( 2 );
-	// Are we using the table accessor correctly?
-	if ( pString == NULL || *pString == '\0' )
-		return SQ_ERROR;
-
-	// Error on using additional characters
-	if ( pString[1] != '\0' )
-		return SQ_ERROR;
-
-	// Accessing x, y or z
-	if ( pString[0] - 'x' < 3 )
-		return hndl.Return( (*pVector)[ pString[0] - 'x' ] );
-
-	return SQ_ERROR;
-}
-
-SQInteger VectorSet( HSQUIRRELVM pVM )
-{
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
-	sq_checkvector( pVM, pVector );
-
-	const SQChar *pString = hndl.GetString( 2 );
+	const SQChar *pString = NULL;
+	sq_getstring( pVM, 2, &pString );
 	// Are we using the table accessor correctly?
 	if ( pString == NULL || *pString == '\0' )
 		return SQ_ERROR;
@@ -106,10 +87,39 @@ SQInteger VectorSet( HSQUIRRELVM pVM )
 	// Accessing x, y or z
 	if ( pString[0] - 'x' < 3 )
 	{
-		float flValue = hndl.GetFloat( 3 );
+		sq_pushfloat( pVM, ( *pVector )[pString[0] - 'x'] );
+		return 1;
+	}
+
+	return SQ_ERROR;
+}
+
+SQInteger VectorSet( HSQUIRRELVM pVM )
+{
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
+	sq_checkvector( pVM, pVector );
+
+	const SQChar *pString = NULL;
+	sq_getstring( pVM, 2, &pString );
+	// Are we using the table accessor correctly?
+	if ( pString == NULL || *pString == '\0' )
+		return SQ_ERROR;
+
+	// Error on using additional characters
+	if ( pString[1] != '\0' )
+		return SQ_ERROR;
+
+	// Accessing x, y or z
+	if ( pString[0] - 'x' < 3 )
+	{
+		SQFloat flValue = 0;
+		sq_getfloat( pVM, 3, &flValue );
 
 		(*pVector)[ pString[0] - 'x' ] = flValue;
-		return hndl.Return( flValue );
+		sq_pushfloat( pVM, flValue );
+		return 1;
 	}
 
 	return SQ_ERROR;
@@ -117,46 +127,50 @@ SQInteger VectorSet( HSQUIRRELVM pVM )
 
 SQInteger VectorToString( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	return hndl.Return( CFmtStr("(vector : (%f, %f, %f))", VectorExpand( *pVector ) ));
+	sq_pushstring( pVM, CFmtStr("(vector : (%f, %f, %f))", VectorExpand( *pVector ) ), -1 );
+	return 1;
 }
 
 SQInteger VectorTypeInfo( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	return hndl.Return( "Vector" );
+	sq_pushstring( pVM, "Vector", -1 );
+	return 1;
 }
 
 SQInteger VectorEquals( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
+	SQUserPointer up = NULL, tag = NULL;
 
-	Vector *pLHS = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pLHS = (Vector *)up;
 	sq_checkvector( pVM, pLHS );
 
-	Vector *pRHS = (Vector *)hndl.GetInstanceUp( 2, 0 );
+	sq_getinstanceup( pVM, 2, &up, &tag );
+	Vector *pRHS = (Vector *)up;
 	sq_checkvector( pVM, pRHS );
 
-	return hndl.Return( VectorsAreEqual( *pLHS, *pRHS, 0.01 ) );
+	sq_pushbool( pVM, VectorsAreEqual( *pLHS, *pRHS, 0.01 ) );
+	return 1;
 }
 
 SQInteger VectorIterate( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	if ( hndl.GetParamCount() < 2 )
+	if ( sq_gettop( pVM ) < 2 )
 		return SQ_ERROR;
 
-	char const *szAccessor;
-	if ( hndl.GetType( 2 ) == OT_NULL )
+	SQChar const *szAccessor = NULL;
+	if ( sq_gettype( pVM, 2 ) == OT_NULL )
 	{
 		szAccessor = "w";
 	}
 	else
 	{
-		szAccessor = hndl.GetString( 2 );
+		sq_getstring( pVM, 2, &szAccessor );
 		if ( !szAccessor || !*szAccessor )
 			return SQ_ERROR;
 	}
@@ -172,7 +186,7 @@ SQInteger VectorIterate( HSQUIRRELVM pVM )
 
 	// Accessing x, y or z
 	if ( szAccessor[0] - 'x' < 3 )
-		hndl.Return( results[ szAccessor[0] - 'x' ] );
+		sq_pushstring( pVM, results[ szAccessor[0] - 'x' ], -1 );
 	else
 		sq_pushnull( pVM );
 
@@ -237,70 +251,85 @@ SQInteger VectorDivide( HSQUIRRELVM pVM )
 
 SQInteger VectorToKeyValue( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	return hndl.Return( CFmtStr( "(vector : (%f, %f, %f))", VectorExpand( *pVector ) ) );
+	sq_pushstring( pVM, CFmtStr( "(vector : (%f, %f, %f))", VectorExpand( *pVector ) ), -1 );
+	return 1;
 }
 
 SQInteger VectorLength( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	return hndl.Return( pVector->Length() );
+	sq_pushfloat( pVM, pVector->Length() );
+	return 1;
 }
 
 SQInteger VectorLengthSqr( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	return hndl.Return( pVector->LengthSqr() );
+	sq_pushfloat( pVM, pVector->LengthSqr() );
+	return 1;
 }
 
 SQInteger VectorLength2D( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	return hndl.Return( pVector->Length2D() );
+	sq_pushfloat( pVM, pVector->Length2D() );
+	return 1;
 }
 
 SQInteger VectorLength2DSqr( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	return hndl.Return( pVector->Length2DSqr() );
+	sq_pushfloat( pVM, pVector->Length2DSqr() );
+	return 1;
 }
 
 SQInteger VectorDotProduct( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	
-	Vector *pLHS = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pLHS = (Vector *)up;
 	sq_checkvector( pVM, pLHS );
 
-	Vector *pRHS = (Vector *)hndl.GetInstanceUp( 2, 0 );
+	sq_getinstanceup( pVM, 2, &up, &tag );
+	Vector *pRHS = (Vector *)up;
 	sq_checkvector( pVM, pRHS );
 
-	return hndl.Return( pLHS->Dot( *pRHS ) );
+	sq_pushfloat( pVM, pLHS->Dot( *pRHS ) );
+	return 1;
 }
 
 SQInteger VectorCrossProduct( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
+	SQUserPointer up = NULL, tag = NULL;
 
-	Vector *pLHS = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pLHS = (Vector *)up;
 	sq_checkvector( pVM, pLHS );
 
-	Vector *pRHS = (Vector *)hndl.GetInstanceUp( 2, 0 );
+	sq_getinstanceup( pVM, 2, &up, &tag );
+	Vector *pRHS = (Vector *)up;
 	sq_checkvector( pVM, pRHS );
 
 	// Create a new vector so we can keep the values of the other
@@ -314,13 +343,15 @@ SQInteger VectorCrossProduct( HSQUIRRELVM pVM )
 
 SQInteger VectorNormalize( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	Vector *pVector = (Vector *)hndl.GetInstanceUp( 1, 0 );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, &tag );
+	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
 	const float flLength = VectorNormalize( *pVector );
 
-	return hndl.Return( flLength );
+	sq_pushfloat( pVM, flLength );
+	return 1;
 }
 
 

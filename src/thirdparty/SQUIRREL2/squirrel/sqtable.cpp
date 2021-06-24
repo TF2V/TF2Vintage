@@ -20,10 +20,11 @@ SQTable::SQTable(SQSharedState *ss,SQInteger nInitialSize)
 
 void SQTable::Remove(const SQObjectPtr &key)
 {
-	
+
 	_HashNode *n = _Get(key, HashObj(key) & (_numofnodes - 1));
 	if (n) {
-		n->val = n->key = _null_;
+		n->val.Null();
+		n->key.Null();
 		_usednodes--;
 		Rehash(false);
 	}
@@ -33,8 +34,9 @@ void SQTable::AllocNodes(SQInteger nSize)
 {
 	_HashNode *nodes=(_HashNode *)SQ_MALLOC(sizeof(_HashNode)*nSize);
 	for(SQInteger i=0;i<nSize;i++){
-		new (&nodes[i]) _HashNode;
-		nodes[i].next=NULL;
+		_HashNode &n = nodes[i];
+		new (&n) _HashNode;
+		n.next=NULL;
 	}
 	_numofnodes=nSize;
 	_nodes=nodes;
@@ -63,7 +65,7 @@ void SQTable::Rehash(bool force)
 		if (type(old->key) != OT_NULL)
 			NewSlot(old->key,old->val);
 	}
-	for(SQInteger k=0;k<oldsize;k++) 
+	for(SQInteger k=0;k<oldsize;k++)
 		nold[k].~_HashNode();
 	SQ_FREE(nold,oldsize*sizeof(_HashNode));
 }
@@ -71,11 +73,34 @@ void SQTable::Rehash(bool force)
 SQTable *SQTable::Clone()
 {
 	SQTable *nt=Create(_opt_ss(this),_numofnodes);
+#ifdef _FAST_CLONE
+	_HashNode *basesrc = _nodes;
+	_HashNode *basedst = nt->_nodes;
+	_HashNode *src = _nodes;
+	_HashNode *dst = nt->_nodes;
+	SQInteger n = 0;
+	for(n = 0; n < _numofnodes; n++) {
+		dst->key = src->key;
+		dst->val = src->val;
+		if(src->next) {
+			Assert(src->next > basesrc);
+			dst->next = basedst + (src->next - basesrc);
+			Assert(dst != dst->next);
+		}
+		dst++;
+		src++;
+	}
+	Assert(_firstfree > basesrc);
+	Assert(_firstfree != NULL);
+	nt->_firstfree = basedst + (_firstfree - basesrc);
+	nt->_usednodes = _usednodes;
+#else
 	SQInteger ridx=0;
 	SQObjectPtr key,val;
 	while((ridx=Next(true,ridx,key,val))!=-1){
 		nt->NewSlot(key,val);
 	}
+#endif
 	nt->SetDelegate(_delegate);
 	return nt;
 }
@@ -111,7 +136,7 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 		n = _firstfree;  /* get a free place */
 		SQHash mph = HashObj(mp->key) & (_numofnodes - 1);
 		_HashNode *othern;  /* main position of colliding node */
-		
+
 		if (mp > n && (othern = &_nodes[mph]) != mp){
 			/* yes; move colliding node into free position */
 			while (othern->next != mp){
@@ -122,8 +147,8 @@ bool SQTable::NewSlot(const SQObjectPtr &key,const SQObjectPtr &val)
 			n->key = mp->key;
 			n->val = mp->val;/* copy colliding node into free pos. (mp->next also goes) */
 			n->next = mp->next;
-			mp->key = _null_;
-			mp->val = _null_;
+			mp->key.Null();
+			mp->val.Null();
 			mp->next = NULL;  /* now `mp' is free */
 		}
 		else{
@@ -179,7 +204,7 @@ bool SQTable::Set(const SQObjectPtr &key, const SQObjectPtr &val)
 
 void SQTable::_ClearNodes()
 {
-	for(SQInteger i = 0;i < _numofnodes; i++) { _nodes[i].key = _null_; _nodes[i].val = _null_; }
+	for(SQInteger i = 0;i < _numofnodes; i++) { _HashNode &n = _nodes[i]; n.key.Null(); n.val.Null(); }
 }
 
 void SQTable::Finalize()

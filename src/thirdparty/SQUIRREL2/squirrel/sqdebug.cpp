@@ -15,10 +15,11 @@ SQRESULT sq_getfunctioninfo(HSQUIRRELVM v,SQInteger level,SQFunctionInfo *fi)
 		SQVM::CallInfo &ci = v->_callsstack[cssize-level-1];
 		if(sq_isclosure(ci._closure)) {
 			SQClosure *c = _closure(ci._closure);
-			SQFunctionProto *proto = _funcproto(c->_function);
+			SQFunctionProto *proto = c->_function;
 			fi->funcid = proto;
 			fi->name = type(proto->_name) == OT_STRING?_stringval(proto->_name):_SC("unknown");
-			fi->source = type(proto->_name) == OT_STRING?_stringval(proto->_sourcename):_SC("unknown");
+			fi->source = type(proto->_sourcename) == OT_STRING?_stringval(proto->_sourcename):_SC("unknown");
+			fi->line = proto->_lineinfos[0]._line;
 			return SQ_OK;
 		}
 	}
@@ -33,7 +34,7 @@ SQRESULT sq_stackinfos(HSQUIRRELVM v, SQInteger level, SQStackInfos *si)
 		SQVM::CallInfo &ci = v->_callsstack[cssize-level-1];
 		switch (type(ci._closure)) {
 		case OT_CLOSURE:{
-			SQFunctionProto *func = _funcproto(_closure(ci._closure)->_function);
+			SQFunctionProto *func = _closure(ci._closure)->_function;
 			if (type(func->_name) == OT_STRING)
 				si->funcname = _stringval(func->_name);
 			if (type(func->_sourcename) == OT_STRING)
@@ -59,26 +60,27 @@ void SQVM::Raise_Error(const SQChar *s, ...)
 {
 	va_list vl;
 	va_start(vl, s);
-	scvsprintf(_sp(rsl((SQInteger)scstrlen(s)+(NUMBER_MAX_CHAR*2))), s, vl);
+	SQInteger buffersize = (SQInteger)scstrlen(s)+(NUMBER_MAX_CHAR*2);
+	scvsprintf(_sp(sq_rsl(buffersize)),buffersize, s, vl);
 	va_end(vl);
 	_lasterror = SQString::Create(_ss(this),_spval,-1);
 }
 
-void SQVM::Raise_Error(SQObjectPtr &desc)
+void SQVM::Raise_Error(const SQObjectPtr &desc)
 {
 	_lasterror = desc;
 }
 
-SQString *SQVM::PrintObjVal(const SQObject &o)
+SQString *SQVM::PrintObjVal(const SQObjectPtr &o)
 {
 	switch(type(o)) {
 	case OT_STRING: return _string(o);
 	case OT_INTEGER:
-		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)), _SC("%d"), _integer(o));
+		scsprintf(_sp(sq_rsl(NUMBER_MAX_CHAR+1)),sq_rsl(NUMBER_MAX_CHAR), _PRINT_INT_FMT, _integer(o));
 		return SQString::Create(_ss(this), _spval);
 		break;
 	case OT_FLOAT:
-		scsprintf(_sp(rsl(NUMBER_MAX_CHAR+1)), _SC("%.14g"), _float(o));
+		scsprintf(_sp(sq_rsl(NUMBER_MAX_CHAR+1)), sq_rsl(NUMBER_MAX_CHAR), _SC("%.14g"), _float(o));
 		return SQString::Create(_ss(this), _spval);
 		break;
 	default:
@@ -86,7 +88,7 @@ SQString *SQVM::PrintObjVal(const SQObject &o)
 	}
 }
 
-void SQVM::Raise_IdxError(SQObject &o)
+void SQVM::Raise_IdxError(const SQObjectPtr &o)
 {
 	SQObjectPtr oval = PrintObjVal(o);
 	Raise_Error(_SC("the index '%.50s' does not exist"), _stringval(oval));
@@ -95,14 +97,14 @@ void SQVM::Raise_IdxError(SQObject &o)
 void SQVM::Raise_CompareError(const SQObject &o1, const SQObject &o2)
 {
 	SQObjectPtr oval1 = PrintObjVal(o1), oval2 = PrintObjVal(o2);
-	Raise_Error(_SC("comparsion between '%.50s' and '%.50s'"), _stringval(oval1), _stringval(oval2));
+	Raise_Error(_SC("comparison between '%.50s' and '%.50s'"), _stringval(oval1), _stringval(oval2));
 }
 
 
 void SQVM::Raise_ParamTypeError(SQInteger nparam,SQInteger typemask,SQInteger type)
 {
 	SQObjectPtr exptypes = SQString::Create(_ss(this), _SC(""), -1);
-	SQInteger found = 0;	
+	SQInteger found = 0;
 	for(SQInteger i=0; i<16; i++)
 	{
 		SQInteger mask = 0x00000001 << i;

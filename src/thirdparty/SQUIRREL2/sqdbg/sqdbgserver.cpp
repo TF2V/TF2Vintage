@@ -5,9 +5,9 @@
 #include <sqstdblob.h>
 #include "sqrdbg.h"
 #include "sqdbgserver.h"
-#if defined(VSCRIPT_DLL_EXPORT)
+
 #include "memdbgon.h"
-#endif
+
 
 #ifndef _UNICODE
 #define scstrcpy strcpy
@@ -29,7 +29,7 @@ XMLEscape g_escapes[]={
 const SQChar *IntToString(int n)
 {
 	static SQChar temp[256];
-	scsprintf(temp,_SC("%d"),n);
+	scsprintf(temp,255,_SC("%d"),n);
 	return temp;
 }
 
@@ -606,7 +606,7 @@ void SQDbgServer::BeginElement(const SQChar *name)
 		}
 	}
 	_scratchstring.resize(2+scstrlen(name));
-	scsprintf(&_scratchstring[0],_SC("<%s"),name);
+	scsprintf(&_scratchstring[0],_scratchstring.size(),_SC("<%s"),name);
 	SendChunk(&_scratchstring[0]);
 }
 
@@ -616,7 +616,7 @@ void SQDbgServer::Attribute(const SQChar *name,const SQChar *value)
 	Assert(!self->haschildren); //cannot have attributes if already has children
 	const SQChar *escval = escape_xml(value);
 	_scratchstring.resize(5+scstrlen(name)+scstrlen(escval));
-	scsprintf(&_scratchstring[0],_SC(" %s=\"%s\""),name,escval);
+	scsprintf(&_scratchstring[0],_scratchstring.size(),_SC(" %s=\"%s\""),name,escval);
 	SendChunk(&_scratchstring[0]);
 }
 
@@ -626,7 +626,7 @@ void SQDbgServer::EndElement(const SQChar *name)
 	Assert(scstrcmp(self->name,name) == 0);
 	if(self->haschildren) {
 		_scratchstring.resize(4+scstrlen(name));
-		scsprintf(&_scratchstring[0],_SC("</%s>"),name);
+		scsprintf(&_scratchstring[0],_scratchstring.size(),_SC("</%s>"),name);
 		SendChunk(&_scratchstring[0]);
 
 	}

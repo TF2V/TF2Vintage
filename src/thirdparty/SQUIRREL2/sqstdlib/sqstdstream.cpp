@@ -13,7 +13,7 @@
 	SQStream *self = NULL; \
 	if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)SQSTD_STREAM_TYPE_TAG))) \
 		return sq_throwerror(v,_SC("invalid type tag")); \
-	if(!self->IsValid())  \
+	if(!self || !self->IsValid())  \
 		return sq_throwerror(v,_SC("the stream is invalid"));
 
 SQInteger _stream_readblob(HSQUIRRELVM v)
@@ -47,49 +47,49 @@ SQInteger _stream_readn(HSQUIRRELVM v)
 		SQInteger i;
 		SAFE_READN(&i, sizeof(i));
 		sq_pushinteger(v, i);
-			  }
+				}
 		break;
 	case 'i': {
 		SQInt32 i;
 		SAFE_READN(&i, sizeof(i));
 		sq_pushinteger(v, i);
-			  }
+				}
 		break;
 	case 's': {
 		short s;
 		SAFE_READN(&s, sizeof(short));
 		sq_pushinteger(v, s);
-			  }
+				}
 		break;
 	case 'w': {
 		unsigned short w;
 		SAFE_READN(&w, sizeof(unsigned short));
 		sq_pushinteger(v, w);
-			  }
+				}
 		break;
 	case 'c': {
 		char c;
 		SAFE_READN(&c, sizeof(char));
 		sq_pushinteger(v, c);
-			  }
+				}
 		break;
 	case 'b': {
 		unsigned char c;
 		SAFE_READN(&c, sizeof(unsigned char));
 		sq_pushinteger(v, c);
-			  }
+				}
 		break;
 	case 'f': {
 		float f;
 		SAFE_READN(&f, sizeof(float));
 		sq_pushfloat(v, f);
-			  }
+				}
 		break;
 	case 'd': {
 		double d;
 		SAFE_READN(&d, sizeof(double));
 		sq_pushfloat(v, (SQFloat)d);
-			  }
+				}
 		break;
 	default:
 		return sq_throwerror(v, _SC("invalid format"));
@@ -123,56 +123,56 @@ SQInteger _stream_writen(HSQUIRRELVM v)
 		sq_getinteger(v, 2, &ti);
 		i = ti;
 		self->Write(&i, sizeof(SQInteger));
-			  }
+				}
 		break;
 	case 'i': {
 		SQInt32 i;
 		sq_getinteger(v, 2, &ti);
 		i = (SQInt32)ti;
 		self->Write(&i, sizeof(SQInt32));
-			  }
+				}
 		break;
 	case 's': {
 		short s;
 		sq_getinteger(v, 2, &ti);
 		s = (short)ti;
 		self->Write(&s, sizeof(short));
-			  }
+				}
 		break;
 	case 'w': {
 		unsigned short w;
 		sq_getinteger(v, 2, &ti);
 		w = (unsigned short)ti;
 		self->Write(&w, sizeof(unsigned short));
-			  }
+				}
 		break;
 	case 'c': {
 		char c;
 		sq_getinteger(v, 2, &ti);
 		c = (char)ti;
 		self->Write(&c, sizeof(char));
-				  }
+					}
 		break;
 	case 'b': {
 		unsigned char b;
 		sq_getinteger(v, 2, &ti);
 		b = (unsigned char)ti;
 		self->Write(&b, sizeof(unsigned char));
-			  }
+				}
 		break;
 	case 'f': {
 		float f;
 		sq_getfloat(v, 2, &tf);
 		f = (float)tf;
 		self->Write(&f, sizeof(float));
-			  }
+				}
 		break;
 	case 'd': {
 		double d;
 		sq_getfloat(v, 2, &tf);
 		d = tf;
 		self->Write(&d, sizeof(double));
-			  }
+				}
 		break;
 	default:
 		return sq_throwerror(v, _SC("invalid format"));
@@ -233,7 +233,12 @@ SQInteger _stream_eos(HSQUIRRELVM v)
 	return 1;
 }
 
-static SQRegFunction _stream_methods[] = {
+	SQInteger _stream__cloned(HSQUIRRELVM v)
+	{
+		return sq_throwerror(v,_SC("this object cannot be cloned"));
+	}
+
+static const SQRegFunction _stream_methods[] = {
 	_DECL_STREAM_FUNC(readblob,2,_SC("xn")),
 	_DECL_STREAM_FUNC(readn,2,_SC("xn")),
 	_DECL_STREAM_FUNC(writeblob,-2,_SC("xx")),
@@ -243,7 +248,8 @@ static SQRegFunction _stream_methods[] = {
 	_DECL_STREAM_FUNC(len,1,_SC("x")),
 	_DECL_STREAM_FUNC(eos,1,_SC("x")),
 	_DECL_STREAM_FUNC(flush,1,_SC("x")),
-	{0,0}
+	_DECL_STREAM_FUNC(_cloned,0,NULL),
+	{NULL,(SQFUNCTION)0,0,NULL}
 };
 
 void init_streamclass(HSQUIRRELVM v)
@@ -256,19 +262,19 @@ void init_streamclass(HSQUIRRELVM v)
 		sq_settypetag(v,-1,(SQUserPointer)SQSTD_STREAM_TYPE_TAG);
 		SQInteger i = 0;
 		while(_stream_methods[i].name != 0) {
-			SQRegFunction &f = _stream_methods[i];
+			const SQRegFunction &f = _stream_methods[i];
 			sq_pushstring(v,f.name,-1);
 			sq_newclosure(v,f.f,0);
 			sq_setparamscheck(v,f.nparamscheck,f.typemask);
-			sq_createslot(v,-3);
+			sq_newslot(v,-3,SQFalse);
 			i++;
 		}
-		sq_createslot(v,-3);
+		sq_newslot(v,-3,SQFalse);
 		sq_pushroottable(v);
 		sq_pushstring(v,_SC("stream"),-1);
 		sq_pushstring(v,_SC("std_stream"),-1);
 		sq_get(v,-4);
-		sq_createslot(v,-3);
+		sq_newslot(v,-3,SQFalse);
 		sq_pop(v,1);
 	}
 	else {
@@ -277,13 +283,13 @@ void init_streamclass(HSQUIRRELVM v)
 	sq_pop(v,1);
 }
 
-SQRESULT declare_stream(HSQUIRRELVM v,const SQChar* name,SQUserPointer typetag,const SQChar* reg_name,SQRegFunction *methods,SQRegFunction *globals)
+SQRESULT declare_stream(HSQUIRRELVM v,const SQChar* name,SQUserPointer typetag,const SQChar* reg_name,const SQRegFunction *methods,const SQRegFunction *globals)
 {
 	if(sq_gettype(v,-1) != OT_TABLE)
 		return sq_throwerror(v,_SC("table expected"));
 	SQInteger top = sq_gettop(v);
 	//create delegate
-    init_streamclass(v);
+	init_streamclass(v);
 	sq_pushregistrytable(v);
 	sq_pushstring(v,reg_name,-1);
 	sq_pushstring(v,_SC("std_stream"),-1);
@@ -292,26 +298,26 @@ SQRESULT declare_stream(HSQUIRRELVM v,const SQChar* name,SQUserPointer typetag,c
 		sq_settypetag(v,-1,typetag);
 		SQInteger i = 0;
 		while(methods[i].name != 0) {
-			SQRegFunction &f = methods[i];
+			const SQRegFunction &f = methods[i];
 			sq_pushstring(v,f.name,-1);
 			sq_newclosure(v,f.f,0);
 			sq_setparamscheck(v,f.nparamscheck,f.typemask);
 			sq_setnativeclosurename(v,-1,f.name);
-			sq_createslot(v,-3);
+			sq_newslot(v,-3,SQFalse);
 			i++;
 		}
-		sq_createslot(v,-3);
+		sq_newslot(v,-3,SQFalse);
 		sq_pop(v,1);
-		
+
 		i = 0;
 		while(globals[i].name!=0)
 		{
-			SQRegFunction &f = globals[i];
+			const SQRegFunction &f = globals[i];
 			sq_pushstring(v,f.name,-1);
 			sq_newclosure(v,f.f,0);
 			sq_setparamscheck(v,f.nparamscheck,f.typemask);
 			sq_setnativeclosurename(v,-1,f.name);
-			sq_createslot(v,-3);
+			sq_newslot(v,-3,SQFalse);
 			i++;
 		}
 		//register the class in the target table
@@ -320,7 +326,7 @@ SQRESULT declare_stream(HSQUIRRELVM v,const SQChar* name,SQUserPointer typetag,c
 		sq_pushstring(v,reg_name,-1);
 		sq_get(v,-2);
 		sq_remove(v,-2);
-		sq_createslot(v,-3);
+		sq_newslot(v,-3,SQFalse);
 
 		sq_settop(v,top);
 		return SQ_OK;

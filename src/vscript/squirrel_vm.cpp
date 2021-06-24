@@ -18,14 +18,13 @@
 #include "sqstdaux.h"
 #include "sqstdstring.h"
 #include "sqstdmath.h"
-#include "sqplus.h"
 #include "sqrdbg.h"
 #include "sqobject.h"
 #include "sqstate.h"
 #include "sqvm.h"
 #include "sqtable.h"
-#include "sqclosure.h"
 #include "sqfuncproto.h"
+#include "sqclosure.h"
 #include "sqclass.h"
 #include "sqstring.h"
 #include "squtils.h"
@@ -63,15 +62,9 @@ typedef struct
 } ScriptInstance_t;
 
 
-
 static HSQOBJECT const INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
 inline bool operator==( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type == rhs._type && _table( lhs ) == _table( rhs ); }
 inline bool operator!=( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type != rhs._type || _table( lhs ) != _table( rhs ); }
-
-inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
-{
-	return static_cast<CSquirrelVM *>( _ss( pVM )->_up );
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Squirrel scripting engine implementation
@@ -138,7 +131,7 @@ public:
 	};
 	void				WriteState( CUtlBuffer *pBuffer );
 	void				ReadState( CUtlBuffer *pBuffer );
-	void				DumpState() {}
+	void				DumpState();
 
 	bool				ConnectDebugger();
 	void				DisconnectDebugger();
@@ -173,6 +166,7 @@ private:
 	static SQInteger			InstanceToString( HSQUIRRELVM pVM );
 	static SQInteger			InstanceIsValid( HSQUIRRELVM pVM );
 	static void					PrintFunc( HSQUIRRELVM, const SQChar *, ... );
+	static void					ErrorFunc( HSQUIRRELVM, const SQChar *, ... );
 	static int					QueryContinue( HSQUIRRELVM );
 
 	//---------------------------------------------------------------------------------------------
@@ -196,6 +190,12 @@ private:
 	float m_flTimeStartedCall;
 };
 
+inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
+{
+	return static_cast<CSquirrelVM *>( sq_getsharedforeignptr(pVM) );
+}
+
+
 CSquirrelVM::CSquirrelVM( void )
 	: m_pVirtualMachine( NULL ), developer( "developer" ), m_nUniqueKeySerial( 0 ), m_pDbgServer( NULL )
 {
@@ -209,10 +209,10 @@ bool CSquirrelVM::Init( void )
 {
 	m_pVirtualMachine = sq_open( 1024 );
 	
-	m_pVirtualMachine->_sharedstate->_up = this;
+	sq_setsharedforeignptr( GetVM(), this );
 	m_pVirtualMachine->SetQuerySuspendFn( &CSquirrelVM::QueryContinue );
 	
-	sq_setprintfunc( GetVM(), &CSquirrelVM::PrintFunc );
+	sq_setprintfunc( GetVM(), &CSquirrelVM::PrintFunc, &CSquirrelVM::ErrorFunc );
 
 	// register libraries
 	sq_pushroottable( GetVM() );
@@ -942,8 +942,6 @@ int CSquirrelVM::GetNumTableEntries( HSCRIPT hScope )
 
 void CSquirrelVM::WriteState( CUtlBuffer *pBuffer )
 {
-	sq_collectgarbage( GetVM() );
-
 	pBuffer->PutInt( SAVE_VERSION );
 	pBuffer->PutInt64( m_nUniqueKeySerial );
 
@@ -958,12 +956,15 @@ void CSquirrelVM::ReadState( CUtlBuffer *pBuffer )
 		return;
 	}
 
-	sq_collectgarbage( GetVM() );
-
 	int64 serial = pBuffer->GetInt64();
 	m_nUniqueKeySerial = Max( m_nUniqueKeySerial, serial );
 
 	ReadSquirrelState( GetVM(), pBuffer );
+}
+
+void CSquirrelVM::DumpState()
+{
+	DumpSquirrelState( GetVM() );
 }
 
 bool CSquirrelVM::ConnectDebugger()
@@ -1208,7 +1209,7 @@ void CSquirrelVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFunction, Scri
 		return;
 	}
 
-	char szParamCheck[ MAX_FUNCTION_PARAMS+1 ];
+	char szParamCheck[ MAX_FUNCTION_PARAMS+1 ]{0};
 	szParamCheck[0] = '.';
 
 	char *pCurrent = &szParamCheck[1];
@@ -1382,10 +1383,9 @@ void CSquirrelVM::RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBindi
 
 SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-
-	SQUserPointer pData = hndl.GetUserData( hndl.GetParamCount() );
-	ScriptClassDesc_t *pClassDesc = ( *(ScriptClassDesc_t **)pData );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getuserdata( pVM, sq_gettop( pVM ), &up, &tag );
+	ScriptClassDesc_t *pClassDesc = ( *(ScriptClassDesc_t **)up );
 
 	ScriptInstance_t *pInstance = new ScriptInstance_t;
 	pInstance->m_pClassDesc = pClassDesc;
@@ -1420,27 +1420,28 @@ SQInteger CSquirrelVM::ExternalReleaseHook( SQUserPointer data, SQInteger size )
 
 SQInteger CSquirrelVM::GetDeveloper( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	return hndl.Return( GetVScript( pVM )->developer.GetInt() );
+	sq_pushinteger( pVM, GetVScript( pVM )->developer.GetInt() );
+	return 1;
 }
 
 SQInteger CSquirrelVM::GetFunctionSignature( HSQUIRRELVM pVM )
 {
 	static char szSignature[512];
 
-	StackHandler hndl( pVM );
-	if ( hndl.GetParamCount() != 3 )
-		return hndl.Return();
+	if ( sq_gettop( pVM ) != 3 )
+		return 0;
 
-	HSQOBJECT pObject = hndl.GetObjectHandle( 2 );
+	HSQOBJECT pObject = _null_;
+	sq_getstackobj( pVM, 2, &pObject );
 	if ( !sq_isclosure( pObject ) )
-		return hndl.Return();
+		return 0;
 
 	V_memset( szSignature, 0, sizeof szSignature );
 
-	char const *pszName = hndl.GetString( 3 );
+	char const *pszName = NULL;
+	sq_getstring( pVM, 1, &pszName );
 	SQClosure *pClosure = _closure( pObject );
-	SQFunctionProto *pPrototype = _funcproto( pClosure->_function );
+	SQFunctionProto *pPrototype = pClosure->_function;
 
 	char const *pszFuncName;
 	if ( pszName && *pszName )
@@ -1470,43 +1471,51 @@ SQInteger CSquirrelVM::GetFunctionSignature( HSQUIRRELVM pVM )
 
 	V_strncat( szSignature, ")", sizeof szSignature );
 
-	return hndl.Return( szSignature );
+	sq_pushstring( pVM, szSignature, -1 );
+	return 1;
 }
 
 SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
 	CUtlVectorFixed<ScriptVariant_t, MAX_FUNCTION_PARAMS> parameters;
 
-	SQUserPointer pData = hndl.GetUserData( hndl.GetParamCount() );
+	SQUserPointer pData = NULL;
+	sq_getuserdata( pVM, sq_gettop( pVM ), &pData, NULL );
 	ScriptFunctionBinding_t *pFuncBinding = ( *(ScriptFunctionBinding_t **)pData );
 	CUtlVector<ScriptDataType_t> const &fnParams = pFuncBinding->m_desc.m_Parameters;
 
 	parameters.SetCount( fnParams.Count() );
 
-	const int nArguments = Max( fnParams.Count(), hndl.GetParamCount() );
+	const int nArguments = Max( fnParams.Count(), sq_gettop( pVM ) );
 	for ( int i=0; i < nArguments; ++i )
 	{
 		switch ( fnParams.Element( i ) )
 		{
 			case FIELD_INTEGER:
 			{
-				parameters[i] = hndl.GetInt( i+2 );
+				SQInteger i = 0;
+				sq_getinteger( pVM, i+2, &i );
+				parameters[i] = i;
 				break;
 			}
 			case FIELD_FLOAT:
 			{
-				parameters[i] = hndl.GetFloat( i+2 );
+				SQFloat f = 0.0;
+				sq_getfloat( pVM, i+2, &f );
+				parameters[i] = f;
 				break;
 			}
 			case FIELD_BOOLEAN:
 			{
-				parameters[i] = hndl.GetBool( i+2 ) == SQTrue;
+				SQBool b = SQFalse;
+				sq_getbool( pVM, i+2, &b );
+				parameters[i] = b == SQTrue;
 				break;
 			}
 			case FIELD_CHARACTER:
 			{
-				char const *pChar = hndl.GetString( i+2 );
+				char const *pChar = NULL;
+				sq_getstring( pVM, i+2, &pChar );
 				if ( pChar == NULL )
 					pChar = "\0";
 
@@ -1515,21 +1524,25 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 			}
 			case FIELD_CSTRING:
 			{
-				parameters[i] = hndl.GetString( i+2 );
+				char const *pszString = NULL;
+				sq_getstring( pVM, i+2, &pszString );
+				parameters[i] = pszString;
 				break;
 			}
 			case FIELD_VECTOR:
 			{
-				SQUserPointer pInstance = hndl.GetInstanceUp( i+2, VECTOR_TYPE_TAG );
+				SQUserPointer pInstance = NULL;
+				sq_getinstanceup( pVM, i+2, &pInstance, VECTOR_TYPE_TAG );
 				if ( pInstance == NULL )
-					return hndl.ThrowError( "Vector argument expected" );
+					return sq_throwerror( pVM, "Vector argument expected" );
 
 				parameters[i] = (Vector *)pInstance;
 				break;
 			}
 			case FIELD_HSCRIPT:
 			{
-				HSQOBJECT pObject = hndl.GetObjectHandle( i+2 );
+				HSQOBJECT pObject = _null_;
+				sq_getstackobj( pVM, i+2, &pObject );
 				if ( sq_isnull( pObject ) )
 				{
 					parameters[i] = (HSCRIPT)NULL;
@@ -1554,16 +1567,18 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 	SQUserPointer pContext = NULL;
 	if ( pFuncBinding->m_flags & SF_MEMBER_FUNC )
 	{
-		ScriptInstance_t *pInstance = (ScriptInstance_t *)hndl.GetInstanceUp( 1, NULL );
+		SQUserPointer up = NULL, tag = NULL;
+		sq_getinstanceup( pVM, 1, &up, tag );
+		ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
 		if ( pInstance == NULL || pInstance->m_pInstance == NULL )
-			return hndl.ThrowError( "Accessed null instance" );
+			return sq_throwerror( pVM, "Accessed null instance" );
 
 		IScriptInstanceHelper *pHelper = pInstance->m_pClassDesc->pHelper;
 		if ( pHelper )
 		{
 			pContext = pHelper->GetProxied( pInstance->m_pInstance );
 			if ( pContext == NULL )
-				return hndl.ThrowError( "Accessed null instance" );
+				return sq_throwerror( pVM, "Accessed null instance" );
 		}
 		else
 		{
@@ -1660,9 +1675,9 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 
 SQInteger CSquirrelVM::InstanceToString( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-
-	ScriptInstance_t *pInstance = (ScriptInstance_t *)hndl.GetInstanceUp( 1, NULL );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, tag );
+	ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
 	if ( pInstance && pInstance->m_pInstance )
 	{
 		IScriptInstanceHelper *pHelper = pInstance->m_pClassDesc->pHelper;
@@ -1670,19 +1685,28 @@ SQInteger CSquirrelVM::InstanceToString( HSQUIRRELVM pVM )
 		{
 			char szInstance[64];
 			if ( pHelper->ToString( pInstance->m_pInstance, szInstance, sizeof( szInstance ) ) )
-				return hndl.Return( szInstance );
+			{
+				sq_pushstring( pVM, szInstance, -1 );
+				return 1;
+			}
 		}
 	}
 
-	HSQOBJECT pObject = hndl.GetObjectHandle( 1 );
-	return hndl.Return( CFmtStr( "(instance : 0x%p)", pObject._unVal.pInstance ) );
+	HSQOBJECT pObject = _null_;
+	sq_getstackobj( pVM, 1, &pObject );
+	sq_pushstring( pVM, CFmtStr( "(instance : 0x%p)", pObject._unVal.pInstance ), -1 );
+
+	return 1;
 }
 
 SQInteger CSquirrelVM::InstanceIsValid( HSQUIRRELVM pVM )
 {
-	StackHandler hndl( pVM );
-	ScriptInstance_t *pInstance = (ScriptInstance_t *)hndl.GetInstanceUp( 1, NULL );
-	return hndl.Return( pInstance && pInstance->m_pInstance );
+	SQUserPointer up = NULL, tag = NULL;
+	sq_getinstanceup( pVM, 1, &up, tag );
+	ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
+	sq_pushbool( pVM, pInstance && pInstance->m_pInstance );
+
+	return 1;
 }
 
 void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
@@ -1697,6 +1721,18 @@ void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 	Msg( "%s", szMessage );
 }
 
+void CSquirrelVM::ErrorFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
+{
+	static char szMessage[2048]{};
+
+	va_list va;
+	va_start( va, szMessage );
+	V_vsnprintf( szMessage, sizeof( szMessage ), fmt, va );
+	va_end( va );
+
+	Warning( "%s", szMessage );
+}
+
 int CSquirrelVM::QueryContinue( HSQUIRRELVM pVM )
 {
 	CSquirrelVM *pVScript = GetVScript( pVM );
@@ -1706,7 +1742,7 @@ int CSquirrelVM::QueryContinue( HSQUIRRELVM pVM )
 		const float flTimeDelta = Plat_FloatTime() - flStartTime;
 		if ( flTimeDelta > 0.03f )
 		{
-			scprintf(_sqT("Script running too long, terminating\n"));
+			scprintf(_SC("Script running too long, terminating\n"));
 			return SQ_QUERY_BREAK;
 		}
 	}
@@ -1715,7 +1751,7 @@ int CSquirrelVM::QueryContinue( HSQUIRRELVM pVM )
 
 HSQOBJECT CSquirrelVM::LookupObject( char const *szName, HSCRIPT hScope, bool bRefCount )
 {
-	HSQOBJECT pObject ={OT_NULL, NULL};
+	HSQOBJECT pObject = _null_;
 	if ( hScope )
 	{
 		if ( hScope == INVALID_HSCRIPT )

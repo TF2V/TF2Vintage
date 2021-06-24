@@ -38,8 +38,8 @@ static SQInteger math_abs(HSQUIRRELVM v)
 {
 	SQInteger n;
 	sq_getinteger(v,2,&n);
-	sq_pushinteger(v,(SQInteger)abs((int)n)); 
-	return 1; 
+	sq_pushinteger(v,(SQInteger)abs((int)n));
+	return 1;
 }
 
 SINGLE_ARG_FUNC(sqrt)
@@ -59,7 +59,7 @@ SINGLE_ARG_FUNC(ceil)
 SINGLE_ARG_FUNC(exp)
 
 #define _DECL_FUNC(name,nparams,tycheck) {_SC(#name),math_##name,nparams,tycheck}
-static SQRegFunction mathlib_funcs[] = {
+static const SQRegFunction mathlib_funcs[] = {
 	_DECL_FUNC(sqrt,2,_SC(".n")),
 	_DECL_FUNC(sin,2,_SC(".n")),
 	_DECL_FUNC(cos,2,_SC(".n")),
@@ -78,8 +78,9 @@ static SQRegFunction mathlib_funcs[] = {
 	_DECL_FUNC(rand,1,NULL),
 	_DECL_FUNC(fabs,2,_SC(".n")),
 	_DECL_FUNC(abs,2,_SC(".n")),
-	{0,0},
+	{NULL,(SQFUNCTION)0,0,NULL}
 };
+#undef _DECL_FUNC
 
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
@@ -88,19 +89,19 @@ static SQRegFunction mathlib_funcs[] = {
 SQRESULT sqstd_register_mathlib(HSQUIRRELVM v)
 {
 	SQInteger i=0;
-	while(mathlib_funcs[i].name!=0)	{
+	while(mathlib_funcs[i].name!=0) {
 		sq_pushstring(v,mathlib_funcs[i].name,-1);
 		sq_newclosure(v,mathlib_funcs[i].f,0);
 		sq_setparamscheck(v,mathlib_funcs[i].nparamscheck,mathlib_funcs[i].typemask);
 		sq_setnativeclosurename(v,-1,mathlib_funcs[i].name);
-		sq_createslot(v,-3);
+		sq_newslot(v,-3,SQFalse);
 		i++;
 	}
 	sq_pushstring(v,_SC("RAND_MAX"),-1);
 	sq_pushinteger(v,RAND_MAX);
-	sq_createslot(v,-3);
+	sq_newslot(v,-3,SQFalse);
 	sq_pushstring(v,_SC("PI"),-1);
 	sq_pushfloat(v,(SQFloat)M_PI);
-	sq_createslot(v,-3);
+	sq_newslot(v,-3,SQFalse);
 	return SQ_OK;
 }

@@ -15,7 +15,9 @@
 #define SETUP_BLOB(v) \
 	SQBlob *self = NULL; \
 	{ if(SQ_FAILED(sq_getinstanceup(v,1,(SQUserPointer*)&self,(SQUserPointer)SQSTD_BLOB_TYPE_TAG))) \
-		return SQ_ERROR; }
+		return sq_throwerror(v,_SC("invalid type tag"));  } \
+	if(!self || !self->IsValid())  \
+		return sq_throwerror(v,_SC("the blob is invalid"));
 
 
 static SQInteger _blob_resize(HSQUIRRELVM v)
@@ -112,10 +114,11 @@ static SQInteger _blob__typeof(HSQUIRRELVM v)
 	return 1;
 }
 
-static SQInteger _blob_releasehook(SQUserPointer p, SQInteger size)
+static SQInteger _blob_releasehook(SQUserPointer p, SQInteger SQ_UNUSED_ARG(size))
 {
 	SQBlob *self = (SQBlob*)p;
-	delete self;
+	self->~SQBlob();
+	sq_free(self,sizeof(SQBlob));
 	return 1;
 }
 
@@ -127,17 +130,39 @@ static SQInteger _blob_constructor(HSQUIRRELVM v)
 		sq_getinteger(v, 2, &size);
 	}
 	if(size < 0) return sq_throwerror(v, _SC("cannot create blob with negative size"));
-	SQBlob *b = new SQBlob(size);
+	//SQBlob *b = new SQBlob(size);
+
+	SQBlob *b = new (sq_malloc(sizeof(SQBlob)))SQBlob(size);
 	if(SQ_FAILED(sq_setinstanceup(v,1,b))) {
-		delete b;
-		return sq_throwerror(v, _SC("cannot create blob with negative size"));
+		b->~SQBlob();
+		sq_free(b,sizeof(SQBlob));
+		return sq_throwerror(v, _SC("cannot create blob"));
+	}
+	sq_setreleasehook(v,1,_blob_releasehook);
+	return 0;
+}
+
+static SQInteger _blob__cloned(HSQUIRRELVM v)
+{
+	SQBlob *other = NULL;
+	{
+		if(SQ_FAILED(sq_getinstanceup(v,2,(SQUserPointer*)&other,(SQUserPointer)SQSTD_BLOB_TYPE_TAG)))
+			return SQ_ERROR;
+	}
+	//SQBlob *thisone = new SQBlob(other->Len());
+	SQBlob *thisone = new (sq_malloc(sizeof(SQBlob)))SQBlob(other->Len());
+	memcpy(thisone->GetBuf(),other->GetBuf(),thisone->Len());
+	if(SQ_FAILED(sq_setinstanceup(v,1,thisone))) {
+		thisone->~SQBlob();
+		sq_free(thisone,sizeof(SQBlob));
+		return sq_throwerror(v, _SC("cannot clone blob"));
 	}
 	sq_setreleasehook(v,1,_blob_releasehook);
 	return 0;
 }
 
 #define _DECL_BLOB_FUNC(name,nparams,typecheck) {_SC(#name),_blob_##name,nparams,typecheck}
-static SQRegFunction _blob_methods[] = {
+static const SQRegFunction _blob_methods[] = {
 	_DECL_BLOB_FUNC(constructor,-1,_SC("xn")),
 	_DECL_BLOB_FUNC(resize,2,_SC("xn")),
 	_DECL_BLOB_FUNC(swap2,1,_SC("x")),
@@ -146,7 +171,8 @@ static SQRegFunction _blob_methods[] = {
 	_DECL_BLOB_FUNC(_get,2,_SC("xn")),
 	_DECL_BLOB_FUNC(_typeof,1,_SC("x")),
 	_DECL_BLOB_FUNC(_nexti,2,_SC("x")),
-	{0,0,0,0}
+	_DECL_BLOB_FUNC(_cloned,2,_SC("xx")),
+	{NULL,(SQFUNCTION)0,0,NULL}
 };
 
 
@@ -157,7 +183,7 @@ static SQInteger _g_blob_casti2f(HSQUIRRELVM v)
 {
 	SQInteger i;
 	sq_getinteger(v,2,&i);
-	sq_pushfloat(v,*((SQFloat *)&i));
+	sq_pushfloat(v,*((const SQFloat *)&i));
 	return 1;
 }
 
@@ -165,7 +191,7 @@ static SQInteger _g_blob_castf2i(HSQUIRRELVM v)
 {
 	SQFloat f;
 	sq_getfloat(v,2,&f);
-	sq_pushinteger(v,*((SQInteger *)&f));
+	sq_pushinteger(v,*((const SQInteger *)&f));
 	return 1;
 }
 
@@ -198,13 +224,13 @@ static SQInteger _g_blob_swapfloat(HSQUIRRELVM v)
 }
 
 #define _DECL_GLOBALBLOB_FUNC(name,nparams,typecheck) {_SC(#name),_g_blob_##name,nparams,typecheck}
-static SQRegFunction bloblib_funcs[]={
+static const SQRegFunction bloblib_funcs[]={
 	_DECL_GLOBALBLOB_FUNC(casti2f,2,_SC(".n")),
 	_DECL_GLOBALBLOB_FUNC(castf2i,2,_SC(".n")),
 	_DECL_GLOBALBLOB_FUNC(swap2,2,_SC(".n")),
 	_DECL_GLOBALBLOB_FUNC(swap4,2,_SC(".n")),
 	_DECL_GLOBALBLOB_FUNC(swapfloat,2,_SC(".n")),
-	{0,0}
+	{NULL,(SQFUNCTION)0,0,NULL}
 };
 
 SQRESULT sqstd_getblob(HSQUIRRELVM v,SQInteger idx,SQUserPointer *ptr)

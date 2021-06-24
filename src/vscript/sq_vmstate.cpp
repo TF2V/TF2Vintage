@@ -201,25 +201,8 @@ SquirrelStateWriter::~SquirrelStateWriter()
 
 void SquirrelStateWriter::BeginWrite( void )
 {
-	m_pBuffer->PutInt( OT_THREAD );
-	m_pBuffer->PutPtr( m_pVM );
-
-	if ( m_pVM->_uiRef & MARK_FLAG )
-		return;
-	m_pVM->_uiRef |= MARK_FLAG;
-
-	WriteObject( m_pVM->_roottable );
-
-	m_pBuffer->PutInt( m_pVM->_top );
-	m_pBuffer->PutInt( m_pVM->_stackbase );
-
-	m_pBuffer->PutUnsignedInt( m_pVM->_stack.size() );
-	for( uint i=0; i < m_pVM->_stack.size(); i++ ) 
-		WriteObject( m_pVM->_stack[i] );
-
-	m_pBuffer->PutUnsignedInt( m_pVM->_vargsstack.size() );
-	for( uint i=0; i < m_pVM->_vargsstack.size(); i++ ) 
-		WriteObject( m_pVM->_vargsstack[i] );
+	sq_collectgarbage( m_pVM );
+	WriteVM( m_pVM );
 }
 
 void SquirrelStateWriter::WriteObject( SQObjectPtr const &obj )
@@ -322,7 +305,7 @@ void SquirrelStateWriter::WriteObject( SQObjectPtr const &obj )
 void SquirrelStateWriter::WriteGenerator( SQGenerator *pGenerator )
 {
 	ExecuteNTimes( 1, Msg( "Save load of generators not well tested. caveat emptor\n" ) );
-	WriteObject(pGenerator->_closure);
+	WriteObject( pGenerator->_closure );
 
 	m_pBuffer->PutInt( OT_GENERATOR );
 	m_pBuffer->PutPtr( pGenerator );
@@ -336,10 +319,6 @@ void SquirrelStateWriter::WriteGenerator( SQGenerator *pGenerator )
 	m_pBuffer->PutUnsignedInt( pGenerator->_stack.size() );
 	for( uint i=0; i < pGenerator->_stack.size(); i++ )
 		WriteObject( pGenerator->_stack[i] );
-
-	m_pBuffer->PutUnsignedInt( pGenerator->_vargsstack.size() );
-	for( uint i=0; i < pGenerator->_vargsstack.size(); i++ )
-		WriteObject( pGenerator->_vargsstack[i] );
 }
 
 void SquirrelStateWriter::WriteClosure( SQClosure *pClosure )
@@ -352,15 +331,14 @@ void SquirrelStateWriter::WriteClosure( SQClosure *pClosure )
 	pClosure->_uiRef |= MARK_FLAG;
 
 	WriteObject( pClosure->_function );
-
 	WriteObject( pClosure->_env );
 
-	m_pBuffer->PutUnsignedInt( pClosure->_outervalues.size() );
-	for( uint i=0; i < pClosure->_outervalues.size(); i++ )
+	m_pBuffer->PutUnsignedInt( pClosure->_function->_noutervalues );
+	for( int i=0; i < pClosure->_function->_noutervalues; i++ )
 		WriteObject( pClosure->_outervalues[i] );
 
-	m_pBuffer->PutUnsignedInt( pClosure->_defaultparams.size() );
-	for( uint i=0; i < pClosure->_defaultparams.size(); i++ )
+	m_pBuffer->PutUnsignedInt( pClosure->_function->_ndefaultparams );
+	for( int i=0; i < pClosure->_function->_ndefaultparams; i++ )
 		WriteObject( pClosure->_defaultparams[i] );
 }
 
@@ -465,10 +443,6 @@ void SquirrelStateWriter::WriteVM( HSQUIRRELVM pVM )
 	m_pBuffer->PutUnsignedInt( pVM->_stack.size() );
 	for( uint i=0; i < pVM->_stack.size(); ++i ) 
 		WriteObject( pVM->_stack[i] );
-
-	m_pBuffer->PutUnsignedInt( pVM->_vargsstack.size() );
-	for( uint i=0; i < pVM->_vargsstack.size(); ++i ) 
-		WriteObject( pVM->_vargsstack[i] );
 }
 
 void SquirrelStateWriter::WriteArray( SQArray *pArray )
@@ -576,8 +550,8 @@ void SquirrelStateWriter::WriteClass( SQClass *pClass )
 			WriteObject( pClass->_methods[i].attrs );
 		}
 
-		m_pBuffer->PutUnsignedInt( pClass->_metamethods.size() );
-		for( uint i=0; i < pClass->_metamethods.size(); ++i ) 
+		m_pBuffer->PutUnsignedInt( MT_LAST );
+		for( uint i=0; i < MT_LAST; ++i ) 
 			WriteObject( pClass->_metamethods[i] );
 	}
 }
@@ -626,11 +600,13 @@ void SquirrelStateWriter::WriteInstance( SQInstance *pInstance )
 SquirrelStateReader::~SquirrelStateReader()
 {
 	s_Pointers.Purge();
+	_ss( m_pVM )->_gc_disableDepth--;
 	sq_collectgarbage( m_pVM );
 }
 
 void SquirrelStateReader::BeginRead( void )
 {
+	sq_collectgarbage( m_pVM );
 	DbgVerify( m_pBuffer->GetInt() == OT_THREAD );
 
 	_ss( m_pVM )->_gc_disableDepth++;
@@ -647,12 +623,6 @@ void SquirrelStateReader::BeginRead( void )
 	m_pVM->_stack.resize( stackSize );
 	for( int i=0; i < stackSize; i++ ) 
 		ReadObject( &m_pVM->_stack[i] );
-	
-	stackSize = m_pBuffer->GetUnsignedInt();
-	for( int i=0; i < stackSize; i++ )
-		ReadObject( &m_pVM->_vargsstack[i] );
-
-	_ss( m_pVM )->_gc_disableDepth--;
 }
 
 bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
@@ -865,11 +835,6 @@ SQGenerator *SquirrelStateReader::ReadGenerator()
 	for ( uint i=0; i < nLength; ++i ) 
 		ReadObject( &pGenerator->_stack[i] );
 
-	nLength = m_pBuffer->GetUnsignedInt();
-	pGenerator->_vargsstack.resize( nLength );
-	for ( uint i=0; i < nLength; ++i ) 
-		ReadObject( &pGenerator->_vargsstack[i] );
-
 	return pGenerator;
 }
 
@@ -881,19 +846,21 @@ SQClosure *SquirrelStateReader::ReadClosure()
 
 	SQObjectPtr obj;
 	ReadObject( &obj );
+	SQObjectPtr root;
+	ReadObject( &root );
 
-	pClosure = SQClosure::Create( _ss( m_pVM ), _funcproto( obj ) );
+	pClosure = SQClosure::Create( _ss( m_pVM ), _funcproto( obj ), _weakref( root ) );
 	MapPtr( pOld, pClosure );
 
-	ReadObject( &pClosure->_env );
+	SQObjectPtr env( pClosure->_env );
+	ReadObject( &env );
+	pClosure->_env = _weakref( env );
 
 	uint nLength = m_pBuffer->GetUnsignedInt();
-	pClosure->_outervalues.resize( nLength );
 	for ( uint i=0; i < nLength; ++i ) 
 		ReadObject( &pClosure->_outervalues[i] );
 
 	nLength = m_pBuffer->GetUnsignedInt();
-	pClosure->_defaultparams.resize( nLength );
 	for ( uint i=0; i < nLength; ++i ) 
 		ReadObject( &pClosure->_defaultparams[i] );
 
@@ -1048,7 +1015,6 @@ SQClass *SquirrelStateReader::ReadClass()
 		}
 
 		nLength = m_pBuffer->GetUnsignedInt();
-		pClass->_metamethods.resize( nLength );
 		for ( uint i=0; i < nLength; ++i ) 
 			ReadObject( &pClass->_metamethods[i] );
 
@@ -1183,4 +1149,9 @@ SQInstance *SquirrelStateReader::ReadInstance()
 	}
 
 	return pInstance;
+}
+
+void DumpSquirrelState( HSQUIRRELVM pVM ) 
+{
+
 }

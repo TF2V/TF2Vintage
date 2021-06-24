@@ -136,6 +136,7 @@ $Project "VScript"
 
 		$Folder "Public Header Files"
 		{
+			$File   "$SRCDIR\thirdparty\SQUIRREL2\include\sqconfig.h"
 			$File   "$SRCDIR\thirdparty\SQUIRREL2\include\sqstdaux.h"
 			$File   "$SRCDIR\thirdparty\SQUIRREL2\include\sqstdio.h"
 			$File   "$SRCDIR\thirdparty\SQUIRREL2\include\sqstdmath.h"
@@ -167,23 +168,6 @@ $Project "VScript"
 			$File   "$SRCDIR\thirdparty\luajit\src\lua.h"
 			$File   "$SRCDIR\thirdparty\luajit\src\luaconf.h"
 			$File   "$SRCDIR\thirdparty\luajit\src\luajit.h"
-		}
-
-		$Folder "VM ASM"
-		{
-			$File   "$SRCDIR\thirdparty\luajit\src\host\buildvm.c" \
-				"$SRCDIR\thirdparty\luajit\src\host\buildvm_asm.c"     \
-				"$SRCDIR\thirdparty\luajit\src\host\buildvm_fold.c"    \
-				"$SRCDIR\thirdparty\luajit\src\host\buildvm_lib.c"     \
-				"$SRCDIR\thirdparty\luajit\src\host\buildvm_peobj.c"   \
-				"$SRCDIR\thirdparty\luajit\src\host\minilua.c"         \
-				"$SRCDIR\thirdparty\luajit\dynasm\dynasm.lua"
-			{
-				$Configuration
-				{
-					$ExcludedFromBuild	"Yes"
-				}
-			}
 		}
 	}
 

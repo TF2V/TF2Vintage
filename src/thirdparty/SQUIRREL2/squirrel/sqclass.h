@@ -1,17 +1,16 @@
-/*	see copyright notice in squirrel.h */
+/*  see copyright notice in squirrel.h */
 #ifndef _SQCLASS_H_
 #define _SQCLASS_H_
 
 struct SQInstance;
 
 struct SQClassMember {
-	SQClassMember(){}
-	SQClassMember(const SQClassMember &o) {
-		val = o.val;
-		attrs = o.attrs;
-	}
 	SQObjectPtr val;
 	SQObjectPtr attrs;
+	void Null() {
+		val.Null();
+		attrs.Null();
+	}
 };
 
 typedef sqvector<SQClassMember> SQClassMemberVec;
@@ -50,16 +49,25 @@ public:
 		}
 		return false;
 	}
+	bool GetConstructor(SQObjectPtr &ctor)
+	{
+		if(_constructoridx != -1) {
+			ctor = _methods[_constructoridx].val;
+			return true;
+		}
+		return false;
+	}
 	bool SetAttributes(const SQObjectPtr &key,const SQObjectPtr &val);
 	bool GetAttributes(const SQObjectPtr &key,SQObjectPtr &outval);
 	void Lock() { _locked = true; if(_base) _base->Lock(); }
-	void Release() { 
+	void Release() {
 		if (_hook) { _hook(_typetag,0);}
-		sq_delete(this, SQClass);	
+		sq_delete(this, SQClass);
 	}
 	void Finalize();
 #ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable ** );
+	SQObjectType GetType() {return OT_CLASS;}
 #endif
 	SQInteger Next(const SQObjectPtr &refpos, SQObjectPtr &outkey, SQObjectPtr &outval);
 	SQInstance *CreateInstance();
@@ -67,25 +75,26 @@ public:
 	SQClass *_base;
 	SQClassMemberVec _defaultvalues;
 	SQClassMemberVec _methods;
-	SQObjectPtrVec _metamethods;
+	SQObjectPtr _metamethods[MT_LAST];
 	SQObjectPtr _attributes;
 	SQUserPointer _typetag;
 	SQRELEASEHOOK _hook;
 	bool _locked;
+	SQInteger _constructoridx;
 	SQInteger _udsize;
 };
 
 #define calcinstancesize(_theclass_) \
-	(_theclass_->_udsize + sizeof(SQInstance) + (sizeof(SQObjectPtr)*(_theclass_->_defaultvalues.size()>0?_theclass_->_defaultvalues.size()-1:0)))
+	(_theclass_->_udsize + sq_aligning(sizeof(SQInstance) +  (sizeof(SQObjectPtr)*(_theclass_->_defaultvalues.size()>0?_theclass_->_defaultvalues.size()-1:0))))
 
-struct SQInstance : public SQDelegable 
+struct SQInstance : public SQDelegable
 {
 	void Init(SQSharedState *ss);
 	SQInstance(SQSharedState *ss, SQClass *c, SQInteger memsize);
 	SQInstance(SQSharedState *ss, SQInstance *c, SQInteger memsize);
 public:
 	static SQInstance* Create(SQSharedState *ss,SQClass *theclass) {
-		
+
 		SQInteger size = calcinstancesize(theclass);
 		SQInstance *newinst = (SQInstance *)SQ_MALLOC(size);
 		new (newinst) SQInstance(ss, theclass,size);
@@ -121,7 +130,7 @@ public:
 	bool Set(const SQObjectPtr &key,const SQObjectPtr &val) {
 		SQObjectPtr idx;
 		if(_class->_members->Get(key,idx) && _isfield(idx)) {
-            _values[_member_idx(idx)] = val;
+			_values[_member_idx(idx)] = val;
 			return true;
 		}
 		return false;
@@ -136,8 +145,9 @@ public:
 		SQ_FREE(this, size);
 	}
 	void Finalize();
-#ifndef NO_GARBAGE_COLLECTOR 
+#ifndef NO_GARBAGE_COLLECTOR
 	void Mark(SQCollectable ** );
+	SQObjectType GetType() {return OT_INSTANCE;}
 #endif
 	bool InstanceOf(SQClass *trg);
 	bool GetMetaMethod(SQVM *v,SQMetaMethod mm,SQObjectPtr &res);
