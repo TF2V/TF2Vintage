@@ -86,7 +86,7 @@ void sqstd_printcallstack(HSQUIRRELVM v)
 					SQBool bval;
 					sq_getbool(v,-1,&bval);
 					pf(v,_SC("[%s] %s\n"),name,bval == SQTrue ? _SC("true"):_SC("false"));
-								}
+					}
 					break;
 				default: Assert(0); break;
 				}
