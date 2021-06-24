@@ -6,10 +6,7 @@
 #endif
 
 
-#include "ivscript.h"
-
 extern IScriptVM *CreateLuaVM( void );
-
 
 extern void DestroyLuaVM( IScriptVM *pVM );
 

@@ -809,7 +809,7 @@ bool CSquirrelVM::SetValue( HSCRIPT hScope, const char *pszKey, const ScriptVari
 
 void CSquirrelVM::CreateTable( ScriptVariant_t &Table )
 {
-	HSQOBJECT pObject;
+	HSQOBJECT pObject = INVALID_HSQOBJECT;
 	sq_newtable( GetVM() );
 
 	sq_getstackobj( GetVM(), -1, &pObject );

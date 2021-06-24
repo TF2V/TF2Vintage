@@ -52,6 +52,7 @@ private:
 };
 
 
+CUtlMap<void *, void *> s_Pointers( DefLessFunc( void * ) );
 class SquirrelStateReader
 {
 public:
@@ -60,6 +61,11 @@ public:
 	~SquirrelStateReader();
 
 	void BeginRead( void );
+
+	void MapPtr( void *pOld, void *pNew )
+	{
+		s_Pointers.Insert( pOld, pNew );
+	}
 
 private:
 	bool ReadObject( SQObjectPtr *pObj, const char *pszName = NULL );
@@ -76,52 +82,30 @@ private:
 	SQFunctionProto *ReadFuncProto();
 	SQWeakRef *ReadWeakRef();
 
+	HSQOBJECT LookupObject( char const *szName );
+
+	template <typename T>
+	bool BeginRead( T **ppOld, T **ppNew, CUtlBuffer *pBuffer )
+	{
+		*ppOld = (T *)pBuffer->GetPtr();
+		if ( *ppOld )
+		{
+			int iNew = s_Pointers.Find( *ppOld );
+			if ( iNew != s_Pointers.InvalidIndex() )
+			{
+				*ppNew = (T *)s_Pointers[iNew];
+				return false;
+			}
+		}
+
+		*ppNew = NULL;
+		return true;
+	}
+
 	HSQUIRRELVM m_pVM;
 	CUtlBuffer *m_pBuffer;
 };
 
-
-
-static CUtlMap<void *, void *> s_Pointers( DefLessFunc(void *) );
-template <typename T>
-static bool BeginRead( T **ppOld, T **ppNew, CUtlBuffer *pBuffer )
-{
-	*ppOld = (T *)pBuffer->GetPtr();
-	if ( *ppOld )
-	{
-		int iNew = s_Pointers.Find( *ppOld );
-		if ( iNew != s_Pointers.InvalidIndex() )
-		{
-			*ppNew = (T *)s_Pointers[iNew];
-			return false;
-		}
-	}
-
-	*ppNew = NULL;
-	return true;
-}
-static void MapPtr( void *pOld, void *pNew )
-{
-	s_Pointers.Insert( pOld, pNew );
-}
-
-static HSQOBJECT LookupObject( char const *szName, HSQUIRRELVM pVM )
-{
-	SQObjectPtr pObject = _null_;
-	
-	sq_pushroottable( pVM );
-
-	sq_pushstring( pVM, szName, -1 );
-	if ( sq_get( pVM, -2 ) == SQ_OK )
-	{
-		sq_getstackobj( pVM, -1, &pObject );
-		sq_pop( pVM, 1 );
-	}
-
-	sq_pop( pVM, 1 );
-
-	return pObject;
-}
 
 static const char *SQTypeToString( SQObjectType sqType )
 {
@@ -717,7 +701,7 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 			_instance( object ) = ReadInstance();
 			if ( _instance( object ) == NULL )
 			{
-				HSQOBJECT existingObject = LookupObject( pszName, m_pVM );
+				HSQOBJECT existingObject = LookupObject( pszName );
 				if ( sq_isinstance( existingObject ) )
 					_instance( object ) = _instance( existingObject );	
 			}
@@ -760,7 +744,7 @@ HSQUIRRELVM SquirrelStateReader::ReadVM()
 SQTable *SquirrelStateReader::ReadTable()
 {
 	SQTable *pOld, *pTable;
-	if ( !::BeginRead( &pOld, &pTable, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pTable, m_pBuffer ) )
 		return pTable;
 
 	pTable = SQTable::Create( _ss( m_pVM ), 0 );
@@ -798,7 +782,7 @@ SQTable *SquirrelStateReader::ReadTable()
 SQArray *SquirrelStateReader::ReadArray()
 {
 	SQArray *pOld, *pArray;
-	if ( !::BeginRead( &pOld, &pArray, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pArray, m_pBuffer ) )
 		return pArray;
 
 	pArray = SQArray::Create( _ss( m_pVM ), 0 );
@@ -821,7 +805,7 @@ SQArray *SquirrelStateReader::ReadArray()
 SQGenerator *SquirrelStateReader::ReadGenerator()
 {
 	SQGenerator *pOld, *pGenerator;
-	if ( !::BeginRead( &pOld, &pGenerator, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pGenerator, m_pBuffer ) )
 		return pGenerator;
 
 	SQObjectPtr obj;
@@ -841,7 +825,7 @@ SQGenerator *SquirrelStateReader::ReadGenerator()
 SQClosure *SquirrelStateReader::ReadClosure()
 {
 	SQClosure *pOld, *pClosure;
-	if ( !::BeginRead( &pOld, &pClosure, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pClosure, m_pBuffer ) )
 		return pClosure;
 
 	SQObjectPtr obj;
@@ -870,7 +854,7 @@ SQClosure *SquirrelStateReader::ReadClosure()
 SQNativeClosure *SquirrelStateReader::ReadNativeClosure()
 {
 	SQNativeClosure *pOld, *pClosure;
-	if ( !::BeginRead( &pOld, &pClosure, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pClosure, m_pBuffer ) )
 		return pClosure;
 
 	SQObjectPtr key;
@@ -915,7 +899,7 @@ static SQInteger SqReadFunc(SQUserPointer up, SQUserPointer data, SQInteger size
 SQFunctionProto *SquirrelStateReader::ReadFuncProto()
 {
 	SQFunctionProto *pOld, *pPrototype;
-	if ( !::BeginRead( &pOld, &pPrototype, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pPrototype, m_pBuffer ) )
 		return pPrototype;
 
 	SQObjectPtr result;
@@ -953,7 +937,7 @@ SQWeakRef *SquirrelStateReader::ReadWeakRef()
 SQClass *SquirrelStateReader::ReadClass()
 {
 	SQClass *pOld, *pClass;
-	if ( !::BeginRead( &pOld, &pClass, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pClass, m_pBuffer ) )
 		return pClass;
 
 	bool isNative = m_pBuffer->GetInt() != 0;
@@ -1028,7 +1012,7 @@ SQClass *SquirrelStateReader::ReadClass()
 SQInstance *SquirrelStateReader::ReadInstance()
 {
 	SQInstance *pOld, *pInstance;
-	if ( !::BeginRead( &pOld, &pInstance, m_pBuffer ) )
+	if ( !BeginRead( &pOld, &pInstance, m_pBuffer ) )
 		return pInstance;
 
 	SQObjectPtr obj;
@@ -1124,7 +1108,7 @@ SQInstance *SquirrelStateReader::ReadInstance()
 
 					if ( pData->m_pInstance == NULL )
 					{
-						HSQOBJECT existingObject = LookupObject( _stringval( pData->m_instanceUniqueId ), m_pVM );
+						HSQOBJECT existingObject = LookupObject( _stringval( pData->m_instanceUniqueId ) );
 						if ( !sq_isnull( existingObject ) )
 						{
 							if ( sq_isinstance( existingObject ) && _class( existingObject ) == pInstance->_class )
@@ -1150,6 +1134,25 @@ SQInstance *SquirrelStateReader::ReadInstance()
 
 	return pInstance;
 }
+
+HSQOBJECT SquirrelStateReader::LookupObject( char const *szName )
+{
+	HSQOBJECT pObject = _null_;
+
+	sq_pushroottable( m_pVM );
+
+	sq_pushstring( m_pVM, szName, -1 );
+	if ( sq_get( m_pVM, -2 ) == SQ_OK )
+	{
+		sq_getstackobj( m_pVM, -1, &pObject );
+		sq_pop( m_pVM, 1 );
+	}
+
+	sq_pop( m_pVM, 1 );
+
+	return pObject;
+}
+
 
 void DumpSquirrelState( HSQUIRRELVM pVM ) 
 {
