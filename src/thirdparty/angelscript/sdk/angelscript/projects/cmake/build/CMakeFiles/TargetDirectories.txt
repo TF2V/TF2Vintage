@@ -1,0 +1,6 @@
+D:/Documents/GitHub/TF2VintageUpstream/src/thirdparty/angelscript/sdk/angelscript/projects/cmake/build/CMakeFiles/angelscript.dir
+D:/Documents/GitHub/TF2VintageUpstream/src/thirdparty/angelscript/sdk/angelscript/projects/cmake/build/CMakeFiles/install/local.dir
+D:/Documents/GitHub/TF2VintageUpstream/src/thirdparty/angelscript/sdk/angelscript/projects/cmake/build/CMakeFiles/install.dir
+D:/Documents/GitHub/TF2VintageUpstream/src/thirdparty/angelscript/sdk/angelscript/projects/cmake/build/CMakeFiles/edit_cache.dir
+D:/Documents/GitHub/TF2VintageUpstream/src/thirdparty/angelscript/sdk/angelscript/projects/cmake/build/CMakeFiles/rebuild_cache.dir
+D:/Documents/GitHub/TF2VintageUpstream/src/thirdparty/angelscript/sdk/angelscript/projects/cmake/build/CMakeFiles/list_install_components.dir
