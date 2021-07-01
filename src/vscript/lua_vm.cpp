@@ -20,7 +20,7 @@ extern "C" {
 }
 #include "lua_vector.h"
 
-COMPILE_TIME_ASSERT( sizeof( intptr_t ) == sizeof( int ) );
+COMPILE_TIME_ASSERT( sizeof( intp ) == sizeof( int ) );
 
 typedef struct
 {
@@ -32,6 +32,8 @@ typedef struct
 
 class CLuaVM : public IScriptVM
 {
+	typedef CLuaVM ThisClass;
+	typedef IScriptVM BaseClass;
 	friend struct lua_State;
 public:
 	CLuaVM( void );

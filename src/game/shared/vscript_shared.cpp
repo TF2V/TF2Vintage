@@ -40,7 +40,6 @@ HSCRIPT VScriptCompileScript( const char *pszScriptName, bool bWarnMissing )
 		".nut",	// SL_SQUIRREL
 		".lua", // SL_LUA
 		".py",  // SL_PYTHON
-		".as",  // SL_ANGELSCRIPT
 	};
 
 	const char *pszVMExtension = pszExtensions[ g_pScriptVM->GetLanguage() ];

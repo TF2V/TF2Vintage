@@ -4,27 +4,43 @@
 //	Project Script
 //-----------------------------------------------------------------------------
 
-$Macro SRCDIR		".."
+$macro SRCDIR		".."
 $Macro OUTBINDIR	"$SRCDIR\..\game\bin"
 
-$Include "$SRCDIR\vpc_scripts\source_dll_base.vpc"
+$include "$SRCDIR\vpc_scripts\source_dll_base.vpc"
 
 $Macro LUALIBDIR	"..\..\..\lib\public"			[$WINDOWS && !$POSIX]
 $Macro LUALIBDIR	"..\..\..\lib\pibluc\linux32"	[$POSIX]
 $Macro LUALIB		"lua51.lib"						[$WINDOWS && !$POSIX]
-$Macro LUALIB		"libluajit.a"					[$POSIX]
+$Macro LUALIB		"libluajit-5.1.a"				[$POSIX]
 
 $Configuration
 {
 	$Compiler
 	{
-		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL2\include;$SRCDIR\thirdparty\SQUIRREL2\squirrel;$SRCDIR\thirdparty\luajit\src;$SRCDIR\thirdparty\angelscript\sdk\angelscript\include;$SRCDIR\thirdparty\angelscript\sdk\angelscript\source;$SRCDIR\thirdparty\angelscript\sdk\add_on"
-		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;AS_NO_EXCEPTIONS;AS_CAN_USE_CPP11"
+		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL2\include;$SRCDIR\thirdparty\SQUIRREL2\squirrel;$SRCDIR\thirdparty\SQUIRREL2\sqplus;$SRCDIR\thirdparty\luajit\src"
+		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT"
 		$WarningLevel					"Level 3 (/W3)"
 	}
-	$Linker
+
+	$PreBuildEvent
 	{
-		$IgnoreSpecificLibrary			"$BASE;msvcrt"
+		$CommandLine	"$BASE" "\n" \
+						"cd $SRCDIR\thirdparty\luajit\src" "\n" \
+						"if not exist $LUALIB (" "\n"
+		$CommandLine	"$BASEcall msvcbuild.bat static debug"	[$WINDOWS && !$POSIX]
+		$CommandLine	"$BASEmake static"					[$POSIX]
+		$CommandLine	"$BASE" "\n" \
+						")" "\n" \
+						"if ERRORLEVEL 1 goto BuildEventFailed" "\n" \
+						"copy $LUALIB $LUALIBDIR\$LUALIB" "\n" \
+						"if ERRORLEVEL 1 goto BuildEventFailed" "\n" \
+						"goto BuildEventOK" "\n" \
+						":BuildEventFailed" "\n" \
+						"echo *** ERROR! PreBuildStep FAILED for $(ProjectName)! ***" "\n" \
+						"del /q $QUOTE$(TargetDir)$(TargetFileName)$QUOTE" "\n" \
+						"exit 1" "\n" \
+						":BuildEventOK" "\n"
 	}
 }
 
@@ -51,7 +67,6 @@ $Project "VScript"
 		$File   "sq_vmstate.cpp"
 		$File	"lua_vm.cpp"
 		$File	"lua_vector.cpp"
-		$File	"vangelscript.cpp"
 	}
 
 	$Folder	"Public Header Files"
@@ -67,7 +82,6 @@ $Project "VScript"
 		$File   "sq_vmstate.h"
 		$File	"lua_vm.h"
 		$File	"lua_vector.h"
-		$File	"vangelscript.h"
 	}
 
 	$Folder "Squirrel Lang"
@@ -157,62 +171,12 @@ $Project "VScript"
 		}
 	}
 
-	$Folder "AngelScript"
-	{
-		$Folder "Source Files"
-		{
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\contextmgr\contextmgr.cpp"                 \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\datetime\datetime.cpp"                     \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\debugger\debugger.cpp"                     \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptany\scriptany.cpp"                   \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptarray\scriptarray.cpp"               \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptbuilder\scriptbuilder.cpp"           \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptdictionary\scriptdictionary.cpp"     \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scripthandle\scripthandle.cpp"             \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scripthelper\scripthelper.cpp"             \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptmath\scriptmath.cpp"                 \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptstdstring\scriptstdstring.cpp"       \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptstdstring\scriptstdstring_utils.cpp" \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\serializer\serializer.cpp"                 \
-					"$SRCDIR\thirdparty\angelscript\sdk\add_on\weakref\weakref.cpp"
-					{
-						$Configuration
-						{
-							$Compiler
-							{
-								$AdditionalOptions					"$BASE /EHsc"
-							}
-						}
-					}
-		}
-
-		$Folder "Header Files"
-		{
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\angelscript\include\angelscript.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\contextmgr\contextmgr.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\datetime\datetime.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\debugger\debugger.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptany\scriptany.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptarray\scriptarray.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptbuilder\scriptbuilder.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptdictionary\scriptdictionary.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scripthandle\scripthandle.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scripthelper\scripthelper.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptmath\scriptmath.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\scriptstdstring\scriptstdstring.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\serializer\serializer.h"
-			$File	"$SRCDIR\thirdparty\angelscript\sdk\add_on\weakref\weakref.h"
-		}
-	}
-
 	$Folder	"Link Libraries" 
 	{
 		$Lib 	mathlib
 		$Lib 	tier1
 		$Lib 	vstdlib
 		$Lib	lua51			[$WINDOWS]
-		$Lib	libluajit		[$POSIX]
-		$Lib	angelscript		[$WINDOWS]
-		$Lib	libangelscript	[$POSIX]
+		$Lib	libluajit-5.1	[$POSIX]
 	}
 }

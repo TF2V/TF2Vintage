@@ -754,10 +754,6 @@ bool VScriptServerInit()
 			{
 				scriptLanguage = SL_LUA;
 			}
-			else if( !Q_stricmp(pszScriptLanguage, "angelscript") )
-			{
-				scriptLanguage = SL_ANGELSCRIPT;
-			}
 			else
 			{
 				DevWarning("-scriptlang does not recognize a language named '%s'. virtual machine did NOT start.\n", pszScriptLanguage );
