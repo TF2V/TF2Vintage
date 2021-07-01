@@ -19,7 +19,7 @@ $Configuration
 	$Compiler
 	{
 		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL2\include;$SRCDIR\thirdparty\SQUIRREL2\squirrel;$SRCDIR\thirdparty\luajit\src;$SRCDIR\thirdparty\angelscript\sdk\angelscript\include;$SRCDIR\thirdparty\angelscript\sdk\angelscript\source;$SRCDIR\thirdparty\angelscript\sdk\add_on"
-		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;AS_NO_EXCEPTIONS"
+		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;AS_NO_EXCEPTIONS;AS_CAN_USE_CPP11"
 		$WarningLevel					"Level 3 (/W3)"
 	}
 	$Linker
