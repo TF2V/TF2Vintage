@@ -49,21 +49,21 @@ public:
 	~CScriptedWeaponScope();
 
 	template<typename T, typename D>
-	void GetStructData( T *_struct, uint32 offs, D data )
+	void GetStructData( T *pStruct, ptrdiff_t nOffs, D data )
 	{
-		*(D *)( (intp)_struct + offs ) = (D)data;
+		*(D *)( (intptr_t)pStruct + nOffs ) = (D)data;
 	}
 
 	template<typename T, typename D>
-	void GetStructData( T *_struct, uint32 offs, D data, uint32 size )
+	void GetStructData( T *pStruct, ptrdiff_t nOffs, D data, size_t unSize )
 	{
-		V_memcpy( (void *)( (uintp)_struct + offs ), data, size );
+		V_memcpy( (void *)( (intptr_t)pStruct + nOffs ), data, unSize );
 	}
 
 	template<typename T>
-	void GetStruct( T *_struct, HSCRIPT hScope )
+	void GetStruct( T *pStruct, HSCRIPT hScope )
 	{
-		ScriptStructDescriptor_t *pDesc = _struct->GetScriptDesc();
+		ScriptStructDesc_t *pDesc = pStruct->GetScriptDesc();
 
 		FOR_EACH_VEC(pDesc->m_MemberBindings, idx)
 		{
@@ -77,28 +77,28 @@ public:
 					case FIELD_VECTOR:
 					{
 						Vector newVec( res.m_pVector->x, res.m_pVector->y, res.m_pVector->z );
-						GetStructData( _struct, binding.m_unMemberOffs, newVec );
+						GetStructData( pStruct, binding.m_unMemberOffs, newVec );
 						break;
 					}
 					case FIELD_CSTRING:
 					{
 						string_t iNewString = AllocPooledString( res.m_pszString );
-						GetStructData( _struct, binding.m_unMemberOffs, STRING( iNewString ), binding.m_unMemberSize );
+						GetStructData( pStruct, binding.m_unMemberOffs, STRING( iNewString ), binding.m_unMemberSize );
 						break;
 					}
 					case FIELD_BOOLEAN:
 					{
-						GetStructData( _struct, binding.m_unMemberOffs, res.m_bool );
+						GetStructData( pStruct, binding.m_unMemberOffs, res.m_bool );
 						break;
 					}
 					case FIELD_INTEGER:
 					{
-						GetStructData( _struct, binding.m_unMemberOffs, res.m_int );
+						GetStructData( pStruct, binding.m_unMemberOffs, res.m_int );
 						break;
 					}
 					case FIELD_FLOAT:
 					{
-						GetStructData( _struct, binding.m_unMemberOffs, res.m_float );
+						GetStructData( pStruct, binding.m_unMemberOffs, res.m_float );
 						break;
 					}
 					default:
@@ -118,8 +118,7 @@ private:
 	CScriptFuncMap m_FuncMap;
 };
 
-// Pulled from scripts identically to parsing a weapon file,
-// unlike parsing though, defaults aren't provided
+// Pulled from scripts identically to parsing a weapon file
 struct ScriptWeaponInfo_t : public FileWeaponInfo_t
 {
 	DECLARE_STRUCT_SCRIPTDESC();
