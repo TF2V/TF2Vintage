@@ -37,7 +37,10 @@ IScriptVM *CScriptManager::CreateVM( ScriptLanguage_t language )
 	if ( pVM )
 	{
 		if ( !pVM->Init() )
+		{
+			delete pVM;
 			return NULL;
+		}
 
 		ScriptRegisterFunction( pVM, RandomFloat, "Generate a random floating point number within a range, inclusive" );
 		ScriptRegisterFunction( pVM, RandomInt, "Generate a random integer within a range, inclusive" );
