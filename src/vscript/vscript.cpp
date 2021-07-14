@@ -9,8 +9,8 @@
 class CScriptManager : public CTier1AppSystem<IScriptManager>
 {
 public:
-	IScriptVM *CreateVM( ScriptLanguage_t language = SL_DEFAULT );
-	void DestroyVM( IScriptVM *pVM );
+	IScriptVM *CreateVM( ScriptLanguage_t language = SL_DEFAULT ) OVERRIDE;
+	void DestroyVM( IScriptVM *pVM ) OVERRIDE;
 };
 
 EXPOSE_SINGLE_INTERFACE( CScriptManager, IScriptManager, VSCRIPT_INTERFACE_VERSION )
