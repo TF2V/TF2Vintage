@@ -143,40 +143,4 @@ void CTFGameRules::RegisterScriptFunctions( void )
 #if defined( GAME_DLL )
 	g_pScriptVM->RegisterInstance( &g_ConvarsVScript, "Convars" );
 #endif
-
-	char root[ MAX_PATH ]{};
-	V_strcpy_safe( root, "scripts\\vscripts" );
-	Q_FixSlashes( root );
-
-	FileFindHandle_t fh;
-	char const *path = g_pFullFileSystem->FindFirst( root, &fh );
-	while ( path )
-	{
-		CScriptScope hTable{};
-		if ( g_pFullFileSystem->FindIsDirectory( fh ) && path[0] != '.' )
-			break;
-
-		HSCRIPT hScript = VScriptCompileScript( path, true );
-
-		char className[96]{};
-		V_FileBase( path, className, sizeof className );
-		if ( hTable.Init( className ) )
-		{
-			if ( hTable.Run( hScript ) == SCRIPT_ERROR )
-			{
-				Warning( "Error running script named %s\n", className );
-				AssertMsg( 0, "Error running script" );
-			}
-		}
-		else
-		{
-			Warning( "Unable to create script scope for %s\n", className );
-		}
-
-		g_pScriptVM->ReleaseScript( hScript );
-
-		path = g_pFullFileSystem->FindNext( fh );
-	}
-
-	g_pFullFileSystem->FindClose( fh );
 }
