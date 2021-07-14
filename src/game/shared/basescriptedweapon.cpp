@@ -211,22 +211,27 @@ void CBaseScriptedWeapon::HandleAnimEvent( animevent_t *pEvent )
 	BaseClass::HandleAnimEvent( pEvent );
 }
 #else
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 void CBaseScriptedWeapon::OnPreDataChanged( DataUpdateType_t updateType )
 {
 	BaseClass::OnPreDataChanged( updateType );
 	m_nWeaponDataChangedOld = m_nWeaponDataChanged;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 void CBaseScriptedWeapon::OnDataChanged( DataUpdateType_t updateType )
 {
 	BaseClass::OnDataChanged( updateType );
 
 	if ( m_nWeaponDataChanged != m_nWeaponDataChangedOld )
 	{
-		WEAPON_FILE_INFO_HANDLE hHandle = LookupWeaponInfoSlot( GetClassname() );
-		Assert( hHandle && hHandle != 0xFFFF );
+		Assert( LookupWeaponInfoSlot( GetClassname() ) != 0xFFFF );
 
-		*GetFileWeaponInfoFromHandle( hHandle ) = m_WeaponData;
+		m_WeaponData.UpdateWeaponInfo();
 
 		// setup our data with a late precache
 		BaseClass::Precache();
@@ -307,7 +312,8 @@ bool CScriptedWeaponData::BInit( CScriptedWeaponScope &scope, FileWeaponInfo_t *
 	if( !scope.IsInitialized() )
 		return false;
 
-	m_pWeaponInfo = (ScriptWeaponInfo_t *)pWeaponInfo;
+	m_pWeaponInfo = pWeaponInfo;
+	m_ScriptWeaponInfo.GetForModify() = *(ScriptWeaponInfo_t *)pWeaponInfo;
 
 	ScriptVariant_t info;
 	scope.GetValue( "WeaponData", &info );
@@ -318,16 +324,16 @@ bool CScriptedWeaponData::BInit( CScriptedWeaponScope &scope, FileWeaponInfo_t *
 		return false;
 	}
 
-	scope.GetStruct( m_pWeaponInfo, info.m_hScript );
-	m_pWeaponInfo->bParsedScript = true;
+	scope.GetStruct( &m_ScriptWeaponInfo.GetForModify(), info.m_hScript );
+	m_ScriptWeaponInfo.GetForModify().bParsedScript = true;
 
 	if ( Q_strcmp( "None", m_pWeaponInfo->szAmmo1 ) == 0 )
-		m_pWeaponInfo->szAmmo1[0] = '\0';
+		m_ScriptWeaponInfo.GetForModify().szAmmo1[0] = '\0';
 	if ( Q_strcmp( "None", m_pWeaponInfo->szAmmo2 ) == 0 )
-		m_pWeaponInfo->szAmmo2[0] = '\0';
+		m_ScriptWeaponInfo.GetForModify().szAmmo2[0] = '\0';
 
-	m_pWeaponInfo->iAmmoType = GetAmmoDef()->Index( m_pWeaponInfo->szAmmo1 );
-	m_pWeaponInfo->iAmmo2Type = GetAmmoDef()->Index( m_pWeaponInfo->szAmmo2 );
+	m_ScriptWeaponInfo.GetForModify().iAmmoType = GetAmmoDef()->Index( m_ScriptWeaponInfo->szAmmo1 );
+	m_ScriptWeaponInfo.GetForModify().iAmmo2Type = GetAmmoDef()->Index( m_ScriptWeaponInfo->szAmmo2 );
 
 	ScriptVariant_t sounds;
 	if( scope.GetVM()->GetValue( info, "SoundData", &sounds ) )
@@ -335,7 +341,7 @@ bool CScriptedWeaponData::BInit( CScriptedWeaponScope &scope, FileWeaponInfo_t *
 		ScriptShootSound_t weaponSounds;
 		scope.GetStruct( &weaponSounds, sounds.m_hScript );
 
-		V_memcpy( m_pWeaponInfo->aShootSounds, weaponSounds.aShootSounds, NUM_SHOOT_SOUND_TYPES*MAX_WEAPON_STRING );
+		V_memcpy( m_ScriptWeaponInfo.GetForModify().aShootSounds, weaponSounds.aShootSounds, NUM_SHOOT_SOUND_TYPES*MAX_WEAPON_STRING );
 
 		scope.ReleaseValue( sounds );
 	}
@@ -355,7 +361,7 @@ bool CScriptedWeaponData::BInit( CScriptedWeaponScope &scope, FileWeaponInfo_t *
 				for ( int j=0; j<ARRAYSIZE( g_ItemFlags ); ++j )
 				{
 					if ( Q_strcmp( bits[i], g_ItemFlags[j].m_pFlagName ) == 0 )
-						m_pWeaponInfo->iFlags |= g_ItemFlags[j].m_iFlagValue;
+						m_ScriptWeaponInfo.GetForModify().iFlags |= g_ItemFlags[j].m_iFlagValue;
 				}
 			}
 		}
@@ -365,6 +371,7 @@ bool CScriptedWeaponData::BInit( CScriptedWeaponScope &scope, FileWeaponInfo_t *
 
 	scope.ReleaseValue( info );
 
+	*m_pWeaponInfo = m_ScriptWeaponInfo.Get();
 	NetworkStateChanged();
 
 	return true;

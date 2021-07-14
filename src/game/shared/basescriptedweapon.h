@@ -122,6 +122,23 @@ private:
 struct ScriptWeaponInfo_t : public FileWeaponInfo_t
 {
 	DECLARE_STRUCT_SCRIPTDESC();
+	ScriptWeaponInfo_t()
+		: FileWeaponInfo_t()
+	{
+		Q_strncpy( szPrintName, WEAPON_PRINTNAME_MISSING, MAX_WEAPON_STRING );
+		iDefaultClip1 = iMaxClip1 = -1;
+		iDefaultClip2 = iMaxClip2 = -1;
+		iFlags = ITEM_FLAG_LIMITINWORLD;
+		bShowUsageHint = false;
+		bAutoSwitchTo = true;
+		bAutoSwitchFrom = true;
+		m_bBuiltRightHanded = true;
+		m_bAllowFlipping = true;
+		m_bMeleeWeapon = false;
+		Q_strncpy( szAmmo1, "", sizeof( szAmmo1 ) );
+		Q_strncpy( szAmmo2, "", sizeof( szAmmo2 ) );
+		iRumbleEffect = -1;
+	}
 };
 class CScriptedWeaponData
 {
@@ -130,12 +147,18 @@ public:
 	DECLARE_EMBEDDED_NETWORKVAR();
 
 	bool BInit( CScriptedWeaponScope &scope, FileWeaponInfo_t *pWeaponInfo );
-	operator FileWeaponInfo_t const &( ) const { Assert( m_pWeaponInfo ); return *m_pWeaponInfo; }
-	FileWeaponInfo_t *operator->() { Assert( m_pWeaponInfo ); return m_pWeaponInfo; }
+	void UpdateWeaponInfo( void ) { *m_pWeaponInfo = m_ScriptWeaponInfo.Get(); }
+	operator FileWeaponInfo_t const &() const { Assert( m_pWeaponInfo ); return *m_pWeaponInfo; }
+	FileWeaponInfo_t const *operator->() const { Assert( m_pWeaponInfo ); return m_pWeaponInfo; }
 
 private:
-	ScriptWeaponInfo_t *m_pWeaponInfo;
+	CNetworkVar( ScriptWeaponInfo_t, m_ScriptWeaponInfo );
+	FileWeaponInfo_t *m_pWeaponInfo;
 };
+
+inline void NetworkVarConstruct( ScriptWeaponInfo_t &var ) {
+	Construct( &var );
+}
 
 class CBaseScriptedWeapon : public CBaseCombatWeapon
 {
