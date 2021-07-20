@@ -22,26 +22,6 @@ $Configuration
 		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT"
 		$WarningLevel					"Level 3 (/W3)"
 	}
-
-	$PreBuildEvent
-	{
-		$CommandLine	"$BASE" "\n" \
-						"cd $SRCDIR\thirdparty\luajit\src" "\n" \
-						"if not exist $LUALIB (" "\n"
-		$CommandLine	"$BASEcall msvcbuild.bat static debug"	[$WINDOWS && !$POSIX]
-		$CommandLine	"$BASEmake static"					[$POSIX]
-		$CommandLine	"$BASE" "\n" \
-						")" "\n" \
-						"if ERRORLEVEL 1 goto BuildEventFailed" "\n" \
-						"copy $LUALIB $LUALIBDIR\$LUALIB" "\n" \
-						"if ERRORLEVEL 1 goto BuildEventFailed" "\n" \
-						"goto BuildEventOK" "\n" \
-						":BuildEventFailed" "\n" \
-						"echo *** ERROR! PreBuildStep FAILED for $(ProjectName)! ***" "\n" \
-						"del /q $QUOTE$(TargetDir)$(TargetFileName)$QUOTE" "\n" \
-						"exit 1" "\n" \
-						":BuildEventOK" "\n"
-	}
 }
 
 $Project "VScript"
@@ -175,8 +155,7 @@ $Project "VScript"
 	{
 		$Lib 	mathlib
 		$Lib 	tier1
-		$Lib 	vstdlib
 		$Lib	lua51			[$WINDOWS]
-		$Lib	libluajit-5.1	[$POSIX]
+		$Lib	libluajit		[$POSIX]
 	}
 }
