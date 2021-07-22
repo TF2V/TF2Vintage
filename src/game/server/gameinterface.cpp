@@ -673,7 +673,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		char szCwd[1024];
 		engine->GetGameDir( szCwd, MAX_PATH );
 
-		static CDllDemandLoader s_VScript( CFmtStr( "%s/tf2vintage/bin/vscript.dll", szCwd ) );
+		static CDllDemandLoader s_VScript( CFmtStr( "%s/bin/vscript.dll", szCwd ) );
 	#else
 		static CDllDemandLoader s_VScript( "vscript.dll" );
 	#endif
