@@ -45,6 +45,7 @@ private:
 	void WriteUserPointer( SQUserPointer pUserPointer );
 	void WriteFuncProto( SQFunctionProto *pFuncProto );
 	void WriteWeakRef( SQWeakRef *pWeakRef );
+	void WriteOuter( SQOuter *pOuter );
 	bool FindKeyForObject( const SQObjectPtr &table, void *p, SQObjectPtr &key );
 
 	HSQUIRRELVM m_pVM;
@@ -81,6 +82,7 @@ private:
 	SQUserPointer *ReadUserPointer();
 	SQFunctionProto *ReadFuncProto();
 	SQWeakRef *ReadWeakRef();
+	SQOuter *ReadOuter();
 
 	HSQOBJECT LookupObject( char const *szName );
 
@@ -173,7 +175,7 @@ SquirrelStateWriter::~SquirrelStateWriter()
 {
 	{
 		SQCollectable *t = _ss( m_pVM )->_gc_chain;
-		while(t) 
+		while (t)
 		{
 			t->UnMark();
 			t = t->_next;
@@ -195,28 +197,28 @@ void SquirrelStateWriter::WriteObject( SQObjectPtr const &obj )
 	{
 		case OT_NULL:
 		{
-			m_pBuffer->PutInt( OT_NULL ); 
+			m_pBuffer->PutInt( OT_NULL );
 			break;
 		}
 		case OT_INTEGER:
 		{
-			m_pBuffer->PutInt( OT_INTEGER ); 
+			m_pBuffer->PutInt( OT_INTEGER );
 			m_pBuffer->PutInt( _integer( obj ) );
 			break;
 		}
 		case OT_FLOAT:
 		{
-			m_pBuffer->PutInt( OT_FLOAT ); 
+			m_pBuffer->PutInt( OT_FLOAT );
 			m_pBuffer->PutFloat( _float( obj ) );
 			break;
 		}
-		case OT_BOOL:			
+		case OT_BOOL:
 		{
-			m_pBuffer->PutInt( OT_BOOL ); 
+			m_pBuffer->PutInt( OT_BOOL );
 			m_pBuffer->PutInt( _integer( obj ) );
 			break;
 		}
-		case OT_STRING:			
+		case OT_STRING:
 		{
 			WriteString( _string( obj ) );
 			break;
@@ -340,9 +342,9 @@ void SquirrelStateWriter::WriteNativeClosure( SQNativeClosure *pNativeClosure )
 
 void SquirrelStateWriter::WriteString( SQString *pString )
 {
-	m_pBuffer->PutInt( OT_STRING ); 
+	m_pBuffer->PutInt( OT_STRING );
 	m_pBuffer->PutInt( pString->_len );
-	m_pBuffer->PutString( pString->_val );	
+	m_pBuffer->PutString( pString->_val );
 }
 
 void SquirrelStateWriter::WriteUserData( SQUserData *pUserData )
@@ -361,7 +363,7 @@ void SquirrelStateWriter::WriteUserPointer( SQUserPointer pUserPointer )
 	m_pBuffer->PutPtr( pUserPointer );
 }
 
-static SQInteger SqWriteFunc( SQUserPointer up,SQUserPointer data, SQInteger size )
+static SQInteger SqWriteFunc( SQUserPointer up, SQUserPointer data, SQInteger size )
 {
 	CUtlBuffer *pBuffer = (CUtlBuffer *)up;
 	Assert( pBuffer && pBuffer->IsValid() );
@@ -377,7 +379,7 @@ void SquirrelStateWriter::WriteFuncProto( SQFunctionProto *pFuncProto )
 
 	if ( s_Pointers.Find( pFuncProto ) != s_Pointers.InvalidIndex() )
 		return;
-	
+
 	s_Pointers.Insert( pFuncProto, pFuncProto );
 
 	pFuncProto->Save( m_pVM, m_pBuffer, &SqWriteFunc );
@@ -425,7 +427,7 @@ void SquirrelStateWriter::WriteVM( HSQUIRRELVM pVM )
 	m_pBuffer->PutInt( pVM->_stackbase );
 
 	m_pBuffer->PutUnsignedInt( pVM->_stack.size() );
-	for( uint i=0; i < pVM->_stack.size(); ++i ) 
+	for( uint i=0; i < pVM->_stack.size(); ++i )
 		WriteObject( pVM->_stack[i] );
 }
 
@@ -439,7 +441,7 @@ void SquirrelStateWriter::WriteArray( SQArray *pArray )
 	pArray->_uiRef |= MARK_FLAG;
 
 	m_pBuffer->PutUnsignedInt( pArray->_values.size() );
-	for ( uint i=0; i < pArray->_values.size(); ++i )
+	for( uint i=0; i < pArray->_values.size(); ++i )
 		WriteObject( pArray->_values[i] );
 }
 
@@ -476,7 +478,7 @@ void SquirrelStateWriter::WriteClass( SQClass *pClass )
 	bool isNative = ( pClass->_typetag != NULL );
 	if ( !isNative )
 	{
-		for( uint i=0; i < pClass->_methods.size(); ++i ) 
+		for( uint i=0; i < pClass->_methods.size(); ++i )
 		{
 			if ( sq_isnativeclosure( pClass->_methods[i].val ) )
 			{
@@ -521,21 +523,21 @@ void SquirrelStateWriter::WriteClass( SQClass *pClass )
 		WriteObject( pClass->_attributes );
 
 		m_pBuffer->PutUnsignedInt( pClass->_defaultvalues.size() );
-		for( uint i=0; i < pClass->_defaultvalues.size(); ++i ) 
+		for( uint i=0; i < pClass->_defaultvalues.size(); ++i )
 		{
 			WriteObject( pClass->_defaultvalues[i].val );
 			WriteObject( pClass->_defaultvalues[i].attrs );
 		}
 
 		m_pBuffer->PutUnsignedInt( pClass->_methods.size() );
-		for( uint i=0; i < pClass->_methods.size(); ++i ) 
+		for( uint i=0; i < pClass->_methods.size(); ++i )
 		{
 			WriteObject( pClass->_methods[i].val );
 			WriteObject( pClass->_methods[i].attrs );
 		}
 
 		m_pBuffer->PutUnsignedInt( MT_LAST );
-		for( uint i=0; i < MT_LAST; ++i ) 
+		for( uint i=0; i < MT_LAST; ++i )
 			WriteObject( pClass->_metamethods[i] );
 	}
 }
@@ -548,7 +550,7 @@ void SquirrelStateWriter::WriteInstance( SQInstance *pInstance )
 	if ( pInstance->_uiRef & MARK_FLAG )
 		return;
 	pInstance->_uiRef |= MARK_FLAG;
-	
+
 	WriteObject( pInstance->_class );
 
 	m_pBuffer->PutUnsignedInt( pInstance->_class->_defaultvalues.size() );
@@ -605,7 +607,7 @@ void SquirrelStateReader::BeginRead( void )
 
 	int stackSize = m_pBuffer->GetUnsignedInt();
 	m_pVM->_stack.resize( stackSize );
-	for( int i=0; i < stackSize; i++ ) 
+	for( int i=0; i < stackSize; i++ )
 		ReadObject( &m_pVM->_stack[i] );
 }
 
@@ -631,7 +633,7 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 			_float( object ) = m_pBuffer->GetFloat();
 			break;
 		}
-		case OT_BOOL:			
+		case OT_BOOL:
 		{
 			_integer( object ) = m_pBuffer->GetInt();
 			break;
@@ -651,14 +653,14 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 			_table( object ) = ReadTable();
 			break;
 		}
-		case OT_ARRAY:			
+		case OT_ARRAY:
 		{
 			_array( object ) = ReadArray();
 			break;
 		}
 		case OT_USERDATA:
 		{
-			_userdata( object ) = ReadUserData();			
+			_userdata( object ) = ReadUserData();
 			break;
 		}
 		case OT_CLOSURE:
@@ -666,7 +668,7 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 			_closure( object ) = ReadClosure();
 			break;
 		}
-		case OT_NATIVECLOSURE:	
+		case OT_NATIVECLOSURE:
 		{
 			_nativeclosure( object ) = ReadNativeClosure();
 			break;
@@ -681,7 +683,7 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 			_userpointer( object ) = ReadUserPointer();
 			break;
 		}
-		case OT_THREAD:			
+		case OT_THREAD:
 		{
 			_thread( object ) = ReadVM();
 			break;
@@ -691,9 +693,9 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 			_funcproto( object ) = ReadFuncProto();
 			break;
 		}
-		case OT_CLASS:			
+		case OT_CLASS:
 		{
-			_class( object ) = ReadClass();			
+			_class( object ) = ReadClass();
 			break;
 		}
 		case OT_INSTANCE:
@@ -703,12 +705,12 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 			{
 				HSQOBJECT existingObject = LookupObject( pszName );
 				if ( sq_isinstance( existingObject ) )
-					_instance( object ) = _instance( existingObject );	
+					_instance( object ) = _instance( existingObject );
 			}
 
 			break;
 		}
-		case OT_WEAKREF:		
+		case OT_WEAKREF:
 		{
 			_weakref( object ) = ReadWeakRef();
 			break;
@@ -816,7 +818,7 @@ SQGenerator *SquirrelStateReader::ReadGenerator()
 
 	uint nLength = m_pBuffer->GetUnsignedInt();
 	pGenerator->_stack.resize( nLength );
-	for ( uint i=0; i < nLength; ++i ) 
+	for( uint i=0; i < nLength; ++i )
 		ReadObject( &pGenerator->_stack[i] );
 
 	return pGenerator;
@@ -841,11 +843,11 @@ SQClosure *SquirrelStateReader::ReadClosure()
 	pClosure->_env = _weakref( env );
 
 	uint nLength = m_pBuffer->GetUnsignedInt();
-	for ( uint i=0; i < nLength; ++i ) 
+	for( uint i=0; i < nLength; ++i )
 		ReadObject( &pClosure->_outervalues[i] );
 
 	nLength = m_pBuffer->GetUnsignedInt();
-	for ( uint i=0; i < nLength; ++i ) 
+	for( uint i=0; i < nLength; ++i )
 		ReadObject( &pClosure->_defaultparams[i] );
 
 	return pClosure;
@@ -889,7 +891,7 @@ SQUserPointer *SquirrelStateReader::ReadUserPointer()
 	return nullptr;
 }
 
-static SQInteger SqReadFunc(SQUserPointer up, SQUserPointer data, SQInteger size)
+static SQInteger SqReadFunc( SQUserPointer up, SQUserPointer data, SQInteger size )
 {
 	CUtlBuffer *pBuffer = (CUtlBuffer *)up;
 	pBuffer->Get( data, size );
@@ -905,11 +907,11 @@ SQFunctionProto *SquirrelStateReader::ReadFuncProto()
 	SQObjectPtr result;
 	SQFunctionProto::Load( m_pVM, m_pBuffer, &SqReadFunc, result );
 	pPrototype = _funcproto( result );
-	
+
 	pPrototype->_uiRef++;
 	result.Null();
 	pPrototype->_uiRef--;
-	
+
 	MapPtr( pOld, pPrototype );
 
 	return pPrototype;
@@ -923,7 +925,7 @@ SQWeakRef *SquirrelStateReader::ReadWeakRef()
 		return NULL;
 
 	SQRefCounted *pRefCounted = _refcounted( obj );
-	
+
 	pRefCounted->_uiRef++;
 
 	SQWeakRef *pResult = pRefCounted->GetWeakRef( obj._type );
@@ -984,7 +986,7 @@ SQClass *SquirrelStateReader::ReadClass()
 
 		uint nLength = m_pBuffer->GetUnsignedInt();
 		pClass->_defaultvalues.resize( nLength );
-		for ( uint i=0; i < nLength; ++i ) 
+		for( uint i=0; i < nLength; ++i )
 		{
 			ReadObject( &pClass->_defaultvalues[i].val );
 			ReadObject( &pClass->_defaultvalues[i].attrs );
@@ -992,14 +994,14 @@ SQClass *SquirrelStateReader::ReadClass()
 
 		nLength = m_pBuffer->GetUnsignedInt();
 		pClass->_methods.resize( nLength );
-		for ( uint i=0; i < nLength; ++i ) 
+		for( uint i=0; i < nLength; ++i )
 		{
 			ReadObject( &pClass->_methods[i].val );
 			ReadObject( &pClass->_methods[i].attrs );
 		}
 
 		nLength = m_pBuffer->GetUnsignedInt();
-		for ( uint i=0; i < nLength; ++i ) 
+		for( uint i=0; i < nLength; ++i )
 			ReadObject( &pClass->_metamethods[i] );
 
 		return pClass;
@@ -1024,7 +1026,7 @@ SQInstance *SquirrelStateReader::ReadInstance()
 		MapPtr( pOld, NULL );
 
 		int nLength = m_pBuffer->GetUnsignedInt();
-		for ( int i=0; i < nLength; ++i ) 
+		for ( int i=0; i < nLength; ++i )
 		{
 			SQObjectPtr unused;
 			ReadObject( &unused );
@@ -1060,7 +1062,7 @@ SQInstance *SquirrelStateReader::ReadInstance()
 		pInstance = SQInstance::Create( _ss( m_pVM ), _class( obj ) );
 
 		int nLength = m_pBuffer->GetUnsignedInt();
-		for ( int i=0; i < nLength; ++i )
+		for( int i=0; i < nLength; ++i )
 			ReadObject( &pInstance->_values[i] );
 
 		// unneccesary, just consume
@@ -1154,7 +1156,334 @@ HSQOBJECT SquirrelStateReader::LookupObject( char const *szName )
 }
 
 
-void DumpSquirrelState( HSQUIRRELVM pVM ) 
+class CSQStateIterator
 {
+public:
+	CSQStateIterator( HSQUIRRELVM pVM )
+		: m_pVM( pVM ), m_nTab( 0 ), m_bKey( false ) {
+		// Make sure no garbage collection happens during this
+		__ObjAddRef( pVM );
+	}
+	~CSQStateIterator() {
+		__ObjRelease( m_pVM );
+	}
 
+	virtual void PsuedoKey( char const *pszPsuedoKey )
+	{
+		for ( int i = 0; i < m_nTab; i++ )
+		{
+			Msg( "  " );
+		}
+
+		Msg( "%s: ", pszPsuedoKey );
+		m_bKey = true;
+	}
+
+	virtual void Key( SQObjectPtr &key )
+	{
+		for ( int i = 0; i < m_nTab; i++ )
+		{
+			Msg( "  " );
+		}
+
+		SQObjectPtr res;
+		m_pVM->ToString( key, res );
+		Msg( "%s: ", _stringval( res ) );
+		m_bKey = true;
+	}
+
+	virtual void Value( SQObjectPtr &value )
+	{
+		if ( !m_bKey )
+		{
+			for ( int i = 0; i < m_nTab; i++ )
+			{
+				Msg( "  " );
+			}
+		}
+
+		m_bKey = false;
+
+		SQObjectPtr res;
+		m_pVM->ToString( value, res );
+		if ( ISREFCOUNTED( sq_type( res ) ) )
+			Msg( "%s [%d]\n", _stringval( res ), _refcounted( value )->_uiRef );
+		else
+			Msg( "%s\n", _stringval( res ) );
+	}
+
+	virtual bool BeginContained( void )
+	{
+		if ( m_bKey )
+		{
+			Msg( "\n" );
+		}
+		m_bKey = false;
+
+		for ( int i = 0; i < m_nTab; i++ )
+		{
+			Msg( "  " );
+		}
+		Msg( "{\n" );
+
+		return true;
+	}
+
+	virtual void EndContained( void )
+	{
+		m_nTab--;
+		for ( int i = 0; i < m_nTab; i++ )
+		{
+			Msg( "  " );
+		}
+		Msg( "}\n" );
+	}
+
+private:
+	int m_nTab;
+	HSQUIRRELVM m_pVM;
+	bool m_bKey;
+};
+
+void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjectPtr &value );
+void IterateObject( CSQStateIterator *pIterator, SQObjectPtr &value, char const *pszName=NULL )
+{
+#ifndef NO_GARBAGE_COLLECTOR
+	if ( pszName )
+	{
+		pIterator->PsuedoKey( pszName );
+	}
+
+	auto IsContainer = [ ] ( SQObjectPtr const &value ) {
+		switch ( type( value ) )
+		{
+			case OT_TABLE:
+			case OT_ARRAY:
+			case OT_USERDATA:
+			case OT_CLOSURE:
+			case OT_NATIVECLOSURE:
+			case OT_GENERATOR:
+			case OT_THREAD:
+			case OT_CLASS:
+			case OT_INSTANCE:
+				return true;
+			default:
+				return false;
+		}
+	};
+
+	pIterator->Value( value );
+	if ( IsContainer( value ) )
+	{
+		if ( !( _refcounted( value )->_uiRef & MARK_FLAG ) )
+		{
+			if ( pIterator->BeginContained() )
+			{
+				_refcounted( value )->_uiRef |= MARK_FLAG;
+				IterateObject( pIterator, sq_type( value ), value );
+				pIterator->EndContained();
+			}
+		}
+	}
+#endif
+}
+void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjectPtr &value )
+{
+	switch ( type )
+	{
+		case OT_TABLE:
+		{
+			SQTable *table = _table( value );
+			if ( table->_delegate )
+			{
+				SQObjectPtr tmp( {OT_TABLE, table->_delegate} );
+				pIterator->PsuedoKey( "_delegate " );
+				pIterator->Value( tmp );
+			}
+
+			SQInteger len = table->_numofnodes;
+			for ( SQInteger i = 0; i < len; i++ )
+			{
+				pIterator->Key( table->_nodes[i].key );
+				IterateObject( pIterator, table->_nodes[i].val );
+			}
+			break;
+		}
+		case OT_ARRAY:
+		{
+			SQUnsignedInteger len = _array( value )->_values.size();
+			for ( SQUnsignedInteger i = 0; i < len; ++i )
+				IterateObject( pIterator, _array( value )->_values[i] );
+			break;
+		}
+		case OT_USERDATA:
+		{
+			if ( _userdata( value )->_delegate )
+			{
+				SQObjectPtr tmp( {OT_TABLE, _userdata( value )->_delegate} );
+				pIterator->PsuedoKey( "_delegate " );
+				pIterator->Value( tmp );
+			}
+			break;
+		}
+		case OT_CLOSURE:
+		{
+			SQUnsignedInteger len = _closure( value )->_function->_noutervalues;
+			for ( SQUnsignedInteger i = 0; i < len; ++i )
+				IterateObject( pIterator, _closure( value )->_outervalues[i] );
+
+			len = _closure( value )->_function->_ndefaultparams;
+			for ( SQUnsignedInteger i = 0; i < len; ++i )
+				IterateObject( pIterator, _closure( value )->_defaultparams[i] );
+			break;
+		}
+		case OT_NATIVECLOSURE:
+		{
+			SQUnsignedInteger len = _nativeclosure( value )->_noutervalues;
+			for ( SQUnsignedInteger i = 0; i < len; i++ )
+				IterateObject( pIterator, _nativeclosure( value )->_outervalues[i] );
+			break;
+		}
+		case OT_GENERATOR:
+		{
+			SQGenerator *generator = _generator( value );
+			SQUnsignedInteger len = generator->_stack.size();
+			for ( SQUnsignedInteger i=0; i < len; ++i )
+				IterateObject( pIterator, generator->_stack[i] );
+
+			IterateObject( pIterator, generator->_closure );
+			break;
+		}
+		case OT_THREAD:
+		{
+			HSQUIRRELVM pVM = _thread( value );
+			IterateObject( pIterator, pVM->_lasterror, "_lasterror" );
+			IterateObject( pIterator, pVM->_errorhandler, "_errorhandler" );
+			IterateObject( pIterator, pVM->_debughook, "_debughook" );
+			IterateObject( pIterator, pVM->_roottable, "_roottable" );
+			IterateObject( pIterator, pVM->temp_reg, "temp_reg" );
+
+			pIterator->PsuedoKey( "_stack" );
+			if ( pIterator->BeginContained() )
+			{
+				SQUnsignedInteger len = pVM->_stack.size();
+				for ( SQUnsignedInteger i=0; i < len; ++i )
+					IterateObject( pIterator, pVM->_stack[i] );
+
+				pIterator->EndContained();
+			}
+
+			pIterator->PsuedoKey( "_openouters" );
+			if ( pIterator->BeginContained() )
+			{
+				SQOuter *pOpenOuter = pVM->_openouters;
+				while ( pOpenOuter )
+				{
+					SQObjectPtr ptr( pOpenOuter );
+					IterateObject( pIterator, ptr );
+
+					pOpenOuter = pOpenOuter->_next;
+				}
+
+				pIterator->EndContained();
+			}
+			break;
+		}
+		case OT_CLASS:
+		{
+			SQClass *clas = _class( value );
+			SQObjectPtr tmp( {OT_TABLE, clas->_members} );
+			SQUnsignedInteger len = clas->_defaultvalues.size();
+
+			IterateObject( pIterator, tmp, "_members" );
+			IterateObject( pIterator, clas->_attributes, "_attributes" );
+
+			if ( clas->_base )
+			{
+				tmp ={OT_CLASS, (SQTable *)clas->_base};
+				pIterator->PsuedoKey( "_base " );
+				pIterator->Value( tmp );
+			}
+
+			pIterator->PsuedoKey( "_defaultvalues" );
+			pIterator->BeginContained();
+			for ( SQUnsignedInteger i=0; i < len; ++i )
+			{
+				IterateObject( pIterator, clas->_defaultvalues[i].val );
+				IterateObject( pIterator, clas->_defaultvalues[i].attrs );
+			}
+			pIterator->EndContained();
+
+			len = clas->_methods.size();
+
+			pIterator->PsuedoKey( "_methods" );
+			pIterator->BeginContained();
+			for ( SQUnsignedInteger i=0; i < len; ++i )
+			{
+				IterateObject( pIterator, clas->_methods[i].val );
+				IterateObject( pIterator, clas->_methods[i].attrs );
+			}
+			pIterator->EndContained();
+
+			pIterator->PsuedoKey( "_metamethods" );
+			pIterator->BeginContained();
+			for ( SQUnsignedInteger i=0; i < MT_LAST; ++i )
+			{
+				IterateObject( pIterator, clas->_metamethods[i] );
+			}
+			pIterator->EndContained();
+
+			break;
+		}
+		case OT_INSTANCE:
+		{
+			SQObjectPtr tmp( {OT_CLASS, (SQTable *)_instance( value )->_class} );
+			pIterator->PsuedoKey( "_class " );
+			pIterator->Value( tmp );
+
+			SQUnsignedInteger len = _instance( value )->_class->_defaultvalues.size();
+			for ( SQUnsignedInteger i=0; i < len; ++i )
+				IterateObject( pIterator, _instance( value )->_values[i] );
+
+			break;
+		}
+		case OT_OUTER:
+		{
+			//pIterator->PsuedoKey( "_outer " );
+			IterateObject( pIterator, _outer( value )->_value, "_outer" );
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+
+void DumpSquirrelState( HSQUIRRELVM pVM )
+{
+	CSQStateIterator iter( pVM );
+	sq_collectgarbage( pVM );
+
+	SQSharedState *pSS = _ss( pVM );
+	IterateObject( &iter, pSS->_root_vm, "_root_vm" );
+	IterateObject( &iter, pSS->_registry, "_registry" );
+	IterateObject( &iter, pSS->_consts, "_consts" );
+	IterateObject( &iter, pSS->_metamethodsmap, "_metamethodsmap" );
+	IterateObject( &iter, pSS->_table_default_delegate, "_table_default_delegate" );
+	IterateObject( &iter, pSS->_array_default_delegate, "_array_default_delegate" );
+	IterateObject( &iter, pSS->_string_default_delegate, "_string_default_delegate" );
+	IterateObject( &iter, pSS->_number_default_delegate, "_number_default_delegate" );
+	IterateObject( &iter, pSS->_generator_default_delegate, "_generator_default_delegate" );
+	IterateObject( &iter, pSS->_thread_default_delegate, "_thread_default_delegate" );
+	IterateObject( &iter, pSS->_closure_default_delegate, "_closure_default_delegate" );
+	IterateObject( &iter, pSS->_class_default_delegate, "_class_default_delegate" );
+	IterateObject( &iter, pSS->_instance_default_delegate, "_instance_default_delegate" );
+	IterateObject( &iter, pSS->_weakref_default_delegate, "_weakref_default_delegate" );
+
+	SQCollectable *t = _ss( pVM )->_gc_chain;
+	while ( t )
+	{
+		t->UnMark();
+		t = t->_next;
+	}
 }
