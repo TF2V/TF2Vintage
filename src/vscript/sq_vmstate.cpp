@@ -283,6 +283,11 @@ void SquirrelStateWriter::WriteObject( SQObjectPtr const &obj )
 			WriteWeakRef( _weakref( obj ) );
 			break;
 		}
+		case OT_OUTER:
+		{
+			WriteOuter( _outer( obj ) );
+			break;
+		}
 		default:
 			break;
 	}
@@ -389,6 +394,12 @@ void SquirrelStateWriter::WriteWeakRef( SQWeakRef *pWeakRef )
 {
 	m_pBuffer->PutInt( OT_WEAKREF );
 	WriteObject( pWeakRef->_obj );
+}
+
+void SquirrelStateWriter::WriteOuter( SQOuter *pOuter )
+{
+	m_pBuffer->PutInt( OT_OUTER );
+	WriteObject( *pOuter->_valptr );
 }
 
 bool SquirrelStateWriter::FindKeyForObject( const SQObjectPtr &table, void *p, SQObjectPtr &key )
@@ -714,6 +725,10 @@ bool SquirrelStateReader::ReadObject( SQObjectPtr *pObj, const char *pszName )
 		{
 			_weakref( object ) = ReadWeakRef();
 			break;
+		}
+		case OT_OUTER:
+		{
+			_outer( object ) = ReadOuter();
 		}
 		default:
 		{
@@ -1135,6 +1150,24 @@ SQInstance *SquirrelStateReader::ReadInstance()
 	}
 
 	return pInstance;
+}
+
+SQOuter *SquirrelStateReader::ReadOuter()
+{
+	SQOuter *pOld, *pOuter;
+	if ( !BeginRead( &pOld, &pOuter, m_pBuffer ) )
+		return pOuter;
+
+	SQObjectPtr obj;
+	ReadObject( &obj );
+
+	pOuter = SQOuter::Create( _ss( m_pVM ), NULL );
+	pOuter->_value = obj;
+	pOuter->_valptr = &( pOuter->_value );
+
+	MapPtr( pOld, pOuter );
+
+	return pOuter;
 }
 
 HSQOBJECT SquirrelStateReader::LookupObject( char const *szName )
