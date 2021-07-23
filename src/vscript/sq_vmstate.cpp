@@ -1281,6 +1281,8 @@ private:
 void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjectPtr &value );
 void IterateObject( CSQStateIterator *pIterator, SQObjectPtr &value, char const *pszName=NULL )
 {
+	if ( sq_isnull( value ) )
+		return;
 #ifndef NO_GARBAGE_COLLECTOR
 	if ( pszName )
 	{
