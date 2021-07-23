@@ -1239,7 +1239,7 @@ public:
 
 		SQObjectPtr res;
 		m_pVM->ToString( value, res );
-		if ( ISREFCOUNTED( sq_type( res ) ) )
+		if ( ISREFCOUNTED( sq_type( value ) ) )
 			Msg( "%s [%d]\n", _stringval( res ), _refcounted( value )->_uiRef );
 		else
 			Msg( "%s\n", _stringval( res ) );
