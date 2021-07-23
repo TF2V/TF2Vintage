@@ -1259,6 +1259,7 @@ public:
 		}
 		Msg( "{\n" );
 
+		m_nTab++;
 		return true;
 	}
 
