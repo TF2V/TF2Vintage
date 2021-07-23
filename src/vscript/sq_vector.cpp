@@ -27,8 +27,8 @@ Vector GetVectorByValue( HSQUIRRELVM pVM, int nIndex )
 		return Vector( flValue );
 	}
 
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, nIndex, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, nIndex, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	if ( pVector == nullptr )
 	{
@@ -58,19 +58,19 @@ SQInteger VectorConstruct( HSQUIRRELVM pVM )
 	sq_setinstanceup( pVM, 1, pVector );
 	sq_setreleasehook( pVM, 1, &VectorRelease );
 
-	return SQ_OK;
+	return 0;
 }
 
 SQInteger VectorRelease( SQUserPointer up, SQInteger size )
 {
 	delete (Vector *)up;
-	return SQ_OK;
+	return 0;
 }
 
 SQInteger VectorGet( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -78,11 +78,11 @@ SQInteger VectorGet( HSQUIRRELVM pVM )
 	sq_getstring( pVM, 2, &pString );
 	// Are we using the table accessor correctly?
 	if ( pString == NULL || *pString == '\0' )
-		return SQ_ERROR;
+		return sq_throwerror( pVM, "" );
 
 	// Error on using additional characters
 	if ( pString[1] != '\0' )
-		return SQ_ERROR;
+		return sq_throwerror( pVM, "" );;
 
 	// Accessing x, y or z
 	if ( pString[0] - 'x' < 3 )
@@ -91,13 +91,13 @@ SQInteger VectorGet( HSQUIRRELVM pVM )
 		return 1;
 	}
 
-	return SQ_ERROR;
+	return sq_throwerror( pVM, "" );;
 }
 
 SQInteger VectorSet( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -105,11 +105,11 @@ SQInteger VectorSet( HSQUIRRELVM pVM )
 	sq_getstring( pVM, 2, &pString );
 	// Are we using the table accessor correctly?
 	if ( pString == NULL || *pString == '\0' )
-		return SQ_ERROR;
+		return sq_throwerror( pVM, "" );;
 
 	// Error on using additional characters
 	if ( pString[1] != '\0' )
-		return SQ_ERROR;
+		return sq_throwerror( pVM, "" );;
 
 	// Accessing x, y or z
 	if ( pString[0] - 'x' < 3 )
@@ -122,13 +122,13 @@ SQInteger VectorSet( HSQUIRRELVM pVM )
 		return 1;
 	}
 
-	return SQ_ERROR;
+	return sq_throwerror( pVM, "" );;
 }
 
 SQInteger VectorToString( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -144,13 +144,13 @@ SQInteger VectorTypeInfo( HSQUIRRELVM pVM )
 
 SQInteger VectorEquals( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
+	SQUserPointer up = NULL;
 
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pLHS = (Vector *)up;
 	sq_checkvector( pVM, pLHS );
 
-	sq_getinstanceup( pVM, 2, &up, &tag );
+	sq_getinstanceup( pVM, 2, &up, VECTOR_TYPE_TAG );
 	Vector *pRHS = (Vector *)up;
 	sq_checkvector( pVM, pRHS );
 
@@ -172,11 +172,11 @@ SQInteger VectorIterate( HSQUIRRELVM pVM )
 	{
 		sq_getstring( pVM, 2, &szAccessor );
 		if ( !szAccessor || !*szAccessor )
-			return SQ_ERROR;
+			return sq_throwerror( pVM, "" );;
 	}
 
 	if ( szAccessor[1] != '\0' )
-		return SQ_ERROR;
+		return sq_throwerror( pVM, "" );;
 
 	static char const *const results[] ={
 		"x",
@@ -251,8 +251,8 @@ SQInteger VectorDivide( HSQUIRRELVM pVM )
 
 SQInteger VectorToKeyValue( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -262,8 +262,8 @@ SQInteger VectorToKeyValue( HSQUIRRELVM pVM )
 
 SQInteger VectorLength( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -273,8 +273,8 @@ SQInteger VectorLength( HSQUIRRELVM pVM )
 
 SQInteger VectorLengthSqr( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -284,8 +284,8 @@ SQInteger VectorLengthSqr( HSQUIRRELVM pVM )
 
 SQInteger VectorLength2D( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -295,8 +295,8 @@ SQInteger VectorLength2D( HSQUIRRELVM pVM )
 
 SQInteger VectorLength2DSqr( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -306,13 +306,13 @@ SQInteger VectorLength2DSqr( HSQUIRRELVM pVM )
 
 SQInteger VectorDotProduct( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
+	SQUserPointer up = NULL;
 
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pLHS = (Vector *)up;
 	sq_checkvector( pVM, pLHS );
 
-	sq_getinstanceup( pVM, 2, &up, &tag );
+	sq_getinstanceup( pVM, 2, &up, VECTOR_TYPE_TAG );
 	Vector *pRHS = (Vector *)up;
 	sq_checkvector( pVM, pRHS );
 
@@ -322,13 +322,13 @@ SQInteger VectorDotProduct( HSQUIRRELVM pVM )
 
 SQInteger VectorCrossProduct( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
+	SQUserPointer up = NULL;
 
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pLHS = (Vector *)up;
 	sq_checkvector( pVM, pLHS );
 
-	sq_getinstanceup( pVM, 2, &up, &tag );
+	sq_getinstanceup( pVM, 2, &up, VECTOR_TYPE_TAG );
 	Vector *pRHS = (Vector *)up;
 	sq_checkvector( pVM, pRHS );
 
@@ -343,8 +343,8 @@ SQInteger VectorCrossProduct( HSQUIRRELVM pVM )
 
 SQInteger VectorNormalize( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, &tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
@@ -389,7 +389,7 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 	if ( SQ_FAILED( sq_newclass( pVM, SQFalse ) ) )
 	{
 		sq_settop( pVM, nArgs );
-		return SQ_ERROR;
+		return sq_throwerror( pVM, "" );;
 	}
 
 	HSQOBJECT pTable{};
