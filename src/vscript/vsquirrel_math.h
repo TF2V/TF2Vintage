@@ -5,10 +5,9 @@
 #pragma once
 #endif
 
-#define VECTOR_TYPE_TAG		((SQUserPointer)0xDEDBEAF)
+#define VECTOR_TYPE_TAG		(SQUserPointer)"Vector"
 
 SQRESULT RegisterVector( HSQUIRRELVM pVM );
-extern SQRegFunction g_VectorFuncs[];
 
 SQInteger VectorConstruct( HSQUIRRELVM pVM );
 SQInteger VectorRelease( SQUserPointer up, SQInteger size );
