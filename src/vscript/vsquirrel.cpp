@@ -18,6 +18,7 @@
 #include "sqstdaux.h"
 #include "sqstdstring.h"
 #include "sqstdmath.h"
+#include "sqstdtime.h"
 #include "sqrdbg.h"
 #include "sqobject.h"
 #include "sqstate.h"
@@ -33,7 +34,7 @@
 #include "vscript/ivscript.h"
 #include "vscript_init_nut.h"
 
-#include "sq_vector.h"
+#include "vsquirrel_math.h"
 #include "sq_vmstate.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -135,12 +136,12 @@ public:
 
 	bool				ConnectDebugger();
 	void				DisconnectDebugger();
-	void				SetOutputCallback( ScriptOutputFunc_t pFunc ) {}
-	void				SetErrorCallback( ScriptErrorFunc_t pFunc ) {}
+	void				SetOutputCallback( ScriptOutputFunc_t pFunc ) { m_OutputFunc = pFunc; }
+	void				SetErrorCallback( ScriptErrorFunc_t pFunc ) { m_ErrorFunc = pFunc; }
 	bool				RaiseException( const char *pszExceptionText );
 
 private:
-	HSQUIRRELVM GetVM( void )   { return m_pVirtualMachine; }
+	HSQUIRRELVM GetVM( void )   { return m_hVM; }
 
 	void						ConvertToVariant( SQObject const &pValue, ScriptVariant_t *pVariant );
 	void						PushVariant( ScriptVariant_t const &pVariant, bool bDuplicate );
@@ -171,7 +172,7 @@ private:
 
 	//---------------------------------------------------------------------------------------------
 
-	HSQUIRRELVM m_pVirtualMachine;
+	HSQUIRRELVM m_hVM;
 	HSQREMOTEDBG m_pDbgServer;
 
 	CUtlHashFast<SQClass *, CUtlHashFastGenericHash> m_ScriptClasses;
@@ -188,6 +189,9 @@ private:
 
 	long long m_nUniqueKeySerial;
 	float m_flTimeStartedCall;
+
+	ScriptOutputFunc_t m_OutputFunc;
+	ScriptErrorFunc_t m_ErrorFunc;
 };
 
 inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
@@ -197,7 +201,7 @@ inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
 
 
 CSquirrelVM::CSquirrelVM( void )
-	: m_pVirtualMachine( NULL ), developer( "developer" ), m_nUniqueKeySerial( 0 ), m_pDbgServer( NULL )
+	: m_hVM( NULL ), developer( "developer" ), m_nUniqueKeySerial( 0 ), m_pDbgServer( NULL )
 {
 	m_VectorClass = _null_;
 	m_CreateScopeClosure = _null_;
@@ -207,10 +211,10 @@ CSquirrelVM::CSquirrelVM( void )
 
 bool CSquirrelVM::Init( void )
 {
-	m_pVirtualMachine = sq_open( 1024 );
+	m_hVM = sq_open( 1024 );
 	
 	sq_setsharedforeignptr( GetVM(), this );
-	m_pVirtualMachine->SetQuerySuspendFn( &CSquirrelVM::QueryContinue );
+	m_hVM->SetQuerySuspendFn( &CSquirrelVM::QueryContinue );
 	
 	sq_setprintfunc( GetVM(), &CSquirrelVM::PrintFunc, &CSquirrelVM::ErrorFunc );
 
@@ -219,6 +223,7 @@ bool CSquirrelVM::Init( void )
 
 	sqstd_register_stringlib( GetVM() );
 	sqstd_register_mathlib( GetVM() );
+	sqstd_register_timelib( GetVM() );
 	sqstd_seterrorhandlers( GetVM() );
 
 	sq_pop( GetVM(), 1 );
@@ -278,8 +283,8 @@ void CSquirrelVM::Shutdown( void )
 		sq_pushnull( GetVM() );
 		sq_setroottable( GetVM() );
 
-		sq_close( m_pVirtualMachine );
-		m_pVirtualMachine = NULL;
+		sq_close( m_hVM );
+		m_hVM = NULL;
 	}
 
 	DisconnectDebugger();
@@ -1381,6 +1386,40 @@ void CSquirrelVM::RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBindi
 	sq_pop( GetVM(), 1 );
 }
 
+HSQOBJECT CSquirrelVM::LookupObject( char const *szName, HSCRIPT hScope, bool bRefCount )
+{
+	HSQOBJECT pObject = _null_;
+	if ( hScope )
+	{
+		if ( hScope == INVALID_HSCRIPT )
+			return _null_;
+
+		HSQOBJECT &pTable = *(HSQOBJECT *)hScope;
+		if ( pTable == INVALID_HSQOBJECT || !sq_istable( pTable ) )
+			return _null_;
+
+		sq_pushobject( GetVM(), pTable );
+	}
+	else
+	{
+		sq_pushroottable( GetVM() );
+	}
+
+	sq_pushstring( GetVM(), szName, -1 );
+	if ( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
+	{
+		sq_getstackobj( GetVM(), -1, &pObject );
+		if ( bRefCount )
+			sq_addref( GetVM(), &pObject );
+
+		sq_pop( GetVM(), 1 );
+	}
+
+	sq_pop( GetVM(), 1 );
+
+	return pObject;
+}
+
 SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
 {
 	SQUserPointer up = NULL, tag = NULL;
@@ -1718,7 +1757,15 @@ void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 	V_vsnprintf( szMessage, sizeof( szMessage ), fmt, va );
 	va_end( va );
 
-	Msg( "%s", szMessage );
+	ScriptOutputFunc_t fnOutput = GetVScript( pVM )->m_OutputFunc;
+	if ( fnOutput )
+	{
+		fnOutput( szMessage );
+	}
+	else
+	{
+		Msg( "%s", szMessage );
+	}
 }
 
 void CSquirrelVM::ErrorFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
@@ -1730,7 +1777,15 @@ void CSquirrelVM::ErrorFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 	V_vsnprintf( szMessage, sizeof( szMessage ), fmt, va );
 	va_end( va );
 
-	Warning( "%s", szMessage );
+	ScriptErrorFunc_t fnError = GetVScript( pVM )->m_ErrorFunc;
+	if ( fnError )
+	{
+		fnError( SCRIPT_LEVEL_ERROR, szMessage );
+	}
+	else
+	{
+		Warning( "%s", szMessage );
+	}
 }
 
 int CSquirrelVM::QueryContinue( HSQUIRRELVM pVM )
@@ -1747,40 +1802,6 @@ int CSquirrelVM::QueryContinue( HSQUIRRELVM pVM )
 		}
 	}
 	return SQ_QUERY_CONTINUE;
-}
-
-HSQOBJECT CSquirrelVM::LookupObject( char const *szName, HSCRIPT hScope, bool bRefCount )
-{
-	HSQOBJECT pObject = _null_;
-	if ( hScope )
-	{
-		if ( hScope == INVALID_HSCRIPT )
-			return _null_;
-
-		HSQOBJECT &pTable = *(HSQOBJECT *)hScope;
-		if ( pTable == INVALID_HSQOBJECT || !sq_istable( pTable ) )
-			return _null_;
-
-		sq_pushobject( GetVM(), pTable );
-	}
-	else
-	{
-		sq_pushroottable( GetVM() );
-	}
-
-	sq_pushstring( GetVM(), szName, -1 );
-	if ( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
-	{
-		sq_getstackobj( GetVM(), -1, &pObject );
-		if ( bRefCount )
-			sq_addref( GetVM(), &pObject );
-
-		sq_pop( GetVM(), 1 );
-	}
-
-	sq_pop( GetVM(), 1 );
-
-	return pObject;
 }
 
 
