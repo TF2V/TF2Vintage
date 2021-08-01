@@ -18,7 +18,7 @@
 #include "sqclosure.h"
 
 
-#include "sq_vector.h"
+#include "vsquirrel_math.h"
 #include "sq_vmstate.h"
 
 class SquirrelStateWriter

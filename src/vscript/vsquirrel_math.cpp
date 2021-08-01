@@ -1,10 +1,11 @@
 #include "mathlib/vector.h"
+#include "mathlib/vmatrix.h"
 #include "tier1/fmtstr.h"
 #include "tier1/strtools.h"
 
 #include "squirrel.h"
 #include "sqobject.h"
-#include "sq_vector.h"
+#include "vsquirrel_math.h"
 
 
 #define sq_checkvector(vm, vector) \
@@ -249,6 +250,17 @@ SQInteger VectorDivide( HSQUIRRELVM pVM )
 	return 1;
 }
 
+SQInteger VectorNegate( HSQUIRRELVM pVM )
+{
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
+	Vector *pVector = (Vector *)up;
+	sq_checkvector( pVM, pVector );
+
+	pVector->Negate();
+	return 0;
+}
+
 SQInteger VectorToKeyValue( HSQUIRRELVM pVM )
 {
 	SQUserPointer up = NULL;
@@ -256,8 +268,28 @@ SQInteger VectorToKeyValue( HSQUIRRELVM pVM )
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	sq_pushstring( pVM, CFmtStr( "(vector : (%f, %f, %f))", VectorExpand( *pVector ) ), -1 );
+	sq_pushstring( pVM, CFmtStr( "%f %f %f", VectorExpand( *pVector ) ), -1 );
 	return 1;
+}
+
+SQInteger VectorFromKeyValue( HSQUIRRELVM pVM )
+{
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, VECTOR_TYPE_TAG );
+	Vector *pVector = (Vector *)up;
+	sq_checkvector( pVM, pVector );
+
+	SQChar const *pInput;
+	if ( SQ_FAILED( sq_getstring( pVM, 2, &pInput ) ) )
+		return sq_throwerror( pVM, "Expected a string input" );
+
+	float x, y, z;
+	if ( sscanf_s( pInput, "%f %f %f", &x, &y, &z ) < 3 )
+		return sq_throwerror( pVM, "Expected format: 'float float float'" );
+
+	pVector->Init( x, y, z );
+
+	return 0;
 }
 
 SQInteger VectorLength( HSQUIRRELVM pVM )
@@ -367,6 +399,7 @@ SQRegFunction g_VectorFuncs[] ={
 	{MM_SUB,					VectorSubtract,		2,		0},
 	{MM_MUL,					VectorMultiply,		2,		0},
 	{MM_DIV,					VectorDivide,		2,		0},
+	{MM_UNM,					VectorNegate,		1,		0},
 	{_SC( "Length" ),			VectorLength				},
 	{_SC( "LengthSqr" ),		VectorLengthSqr				},
 	{_SC( "Length2D" ),			VectorLength2D				},
@@ -383,13 +416,13 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 
 	// Register a new class of name Vector
 	sq_pushroottable( pVM );
-	sq_pushstring( pVM, "Vector", -1 );
+	sq_pushstring( pVM, _SC("Vector"), -1 );
 
 	// Something went wrong, bail and reset
 	if ( SQ_FAILED( sq_newclass( pVM, SQFalse ) ) )
 	{
 		sq_settop( pVM, nArgs );
-		return sq_throwerror( pVM, "" );;
+		return sq_throwerror( pVM, "Unable to create Vector class" );;
 	}
 
 	HSQOBJECT pTable{};
@@ -397,6 +430,7 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 	// Setup class table
 	sq_getstackobj( pVM, -1, &pTable );
 	sq_settypetag( pVM, -1, VECTOR_TYPE_TAG );
+	sq_setclassudsize( pVM, -1, sizeof(Vector) );
 
 	// Add to VM
 	sq_createslot( pVM, -3 );
@@ -423,9 +457,8 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 		sq_createslot( pVM, -3 );
 	}
 
-	// Reset vm
+	// Pop off roottable
 	sq_pop( pVM, 1 );
-	sq_settop( pVM, nArgs );
 
 	return SQ_OK;
 }
