@@ -42,8 +42,8 @@ $Project "VScript"
 			}
 		}
 		$File   "vscript.cpp"
-		$File   "squirrel_vm.cpp"
-		$File   "sq_vector.cpp"
+		$File   "vsquirrel.cpp"
+		$File   "vsquirrel_math.cpp"
 		$File   "sq_vmstate.cpp"
 		$File	"lua_vm.cpp"
 		$File	"lua_vector.cpp"
@@ -57,8 +57,8 @@ $Project "VScript"
 
 	$Folder	"Header Files"
 	{
-		$File   "squirrel_vm.h"
-		$File   "sq_vector.h"
+		$File   "vsquirrel.h"
+		$File   "vsquirrel_math.h"
 		$File   "sq_vmstate.h"
 		$File	"lua_vm.h"
 		$File	"lua_vector.h"
