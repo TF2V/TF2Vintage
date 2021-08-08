@@ -8,13 +8,12 @@
 #include "networkvar.h"
 #include "basecombatweapon_shared.h"
 #include "vscript/ivscript.h"
+#include <type_traits>
 
 
 #if defined( CLIENT_DLL )
 #define CBaseScriptedWeapon C_BaseScriptedWeapon
 #endif
-
-#define ScriptGetStructMember(pStruct, hScope, memberName, scriptName)		do { ScriptVariant_t value; g_pScriptVM->GetValue( hScope, scriptName, &value ); value.AssignTo( &pStruct->##memberName ); g_pScriptVM->ReleaseValue( value ); } while ( 0 )
 
 
 class CScriptedWeaponScopeBase
@@ -48,69 +47,55 @@ public:
 	CScriptedWeaponScope();
 	~CScriptedWeaponScope();
 
-	template<typename T, typename D>
-	void GetStructData( T *pStruct, ptrdiff_t nOffs, D data )
+	template<class Arg>
+	void PushArg( Arg const &arg )
 	{
-		*(D *)( (intptr_t)pStruct + nOffs ) = (D)data;
+		// This is not at all the right method to do this, but pushing a
+		// "void" type as a argument is an error anyway, c'est la vie
+		COMPILE_TIME_ASSERT( ScriptDeduceType( Arg ) );
+		m_vecPushedArgs.AddToTail( arg );
+	}
+	template<class Arg, typename ...Rest>
+	void PushArg( Arg const &arg, Rest const &...args )
+	{
+		COMPILE_TIME_ASSERT( ScriptDeduceType( Arg ) );
+		m_vecPushedArgs.AddToTail( arg );
+
+		PushArg( args... );
 	}
 
-	template<typename T, typename D>
-	void GetStructData( T *pStruct, ptrdiff_t nOffs, D data, size_t unSize )
+	template<typename T=int32>
+	ScriptStatus_t CallFunc( char const *pszFuncName, T *pReturn = NULL )
 	{
-		V_memcpy( (void *)( (intptr_t)pStruct + nOffs ), data, unSize );
-	}
-
-	template<typename T>
-	void GetStruct( T *pStruct, HSCRIPT hScope )
-	{
-		ScriptStructDesc_t *pDesc = pStruct->GetScriptDesc();
-
-		FOR_EACH_VEC(pDesc->m_MemberBindings, idx)
-		{
-			ScriptStructMemberBinding_t const &binding = pDesc->m_MemberBindings[idx];
-
-			ScriptVariant_t res;
-			if( GetVM()->GetValue( hScope, binding.m_pszScriptName, &res ) )
+		// See if we used this function previously...
+		int nIndex = m_FuncMap.Find( pszFuncName );
+		if ( nIndex == m_FuncMap.InvalidIndex() )
+		{	// ...and cache it if not
+			CScriptFuncHolder holder;
+			HSCRIPT hFunction = GetVM()->LookupFunction( pszFuncName, m_hScope );
+			if ( hFunction != INVALID_HSCRIPT )
 			{
-				switch ( binding.m_nMemberType )
-				{
-					case FIELD_VECTOR:
-					{
-						Vector newVec( res.m_pVector->x, res.m_pVector->y, res.m_pVector->z );
-						GetStructData( pStruct, binding.m_unMemberOffs, newVec );
-						break;
-					}
-					case FIELD_CSTRING:
-					{
-						string_t iNewString = AllocPooledString( res.m_pszString );
-						GetStructData( pStruct, binding.m_unMemberOffs, STRING( iNewString ), binding.m_unMemberSize );
-						break;
-					}
-					case FIELD_BOOLEAN:
-					{
-						GetStructData( pStruct, binding.m_unMemberOffs, res.m_bool );
-						break;
-					}
-					case FIELD_INTEGER:
-					{
-						GetStructData( pStruct, binding.m_unMemberOffs, res.m_int );
-						break;
-					}
-					case FIELD_FLOAT:
-					{
-						GetStructData( pStruct, binding.m_unMemberOffs, res.m_float );
-						break;
-					}
-					default:
-					{
-						DevWarning( "Unsupported data type (%s) hit building struct data\n", ScriptFieldTypeName( binding.m_nMemberType ) );
-						break;
-					}
-				}
-
-				GetVM()->ReleaseValue( res );
+				holder.hFunction = hFunction;
+				m_FuncHandles.AddToTail( &holder.hFunction );
+				nIndex = m_FuncMap.Insert( pszFuncName, holder );
 			}
 		}
+		
+		ScriptVariant_t returnVal;
+		ScriptStatus_t result = GetVM()->ExecuteFunction( m_FuncMap[nIndex].hFunction, 
+														  m_vecPushedArgs.Base(), 
+														  m_vecPushedArgs.Count(), 
+														  pReturn ? &returnVal : NULL, 
+														  m_hScope, true );
+		if ( pReturn && result != SCRIPT_ERROR )
+		{
+			returnVal.AssignTo( pReturn );
+		}
+
+		returnVal.Free();
+		m_vecPushedArgs.RemoveAll();
+
+		return result;
 	}
 
 private:

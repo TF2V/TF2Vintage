@@ -172,17 +172,17 @@ struct ScriptVariant_t;
 template <typename T> struct ScriptDeducer { /*enum { FIELD_TYPE = FIELD_TYPEUNKNOWN };*/ };
 #define DECLARE_DEDUCE_FIELDTYPE( fieldType, type ) template<> struct ScriptDeducer<type> { enum { FIELD_TYPE = fieldType }; };
 
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VOID,		void );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_FLOAT,		float );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,	const char * );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,	char * );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,		Vector );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,		const Vector &);
-DECLARE_DEDUCE_FIELDTYPE( FIELD_INTEGER,	int );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_BOOLEAN,	bool );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_CHARACTER,	char );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_HSCRIPT,	HSCRIPT );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VARIANT,	ScriptVariant_t );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VOID,      void );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_FLOAT,     float );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,   const char * );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,   char * );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,    Vector );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,    const Vector& );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_INTEGER,   int );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_BOOLEAN,   bool );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_CHARACTER, char );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_HSCRIPT,   HSCRIPT );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VARIANT,   ScriptVariant_t );
 
 #define ScriptDeduceType( T ) ScriptDeducer<T>::FIELD_TYPE
 
@@ -193,17 +193,17 @@ inline const char * ScriptFieldTypeName()
 }
 
 #define DECLARE_NAMED_FIELDTYPE( fieldType, strName ) template <> inline const char * ScriptFieldTypeName<fieldType>() { return strName; }
-DECLARE_NAMED_FIELDTYPE( void,	          "void" );
-DECLARE_NAMED_FIELDTYPE( float,	          "float" );
-DECLARE_NAMED_FIELDTYPE( const char *,	  "cstring" );
-DECLARE_NAMED_FIELDTYPE( char *,	      "cstring" );
-DECLARE_NAMED_FIELDTYPE( Vector,	      "vector" );
-DECLARE_NAMED_FIELDTYPE( const Vector&,	  "vector" );
-DECLARE_NAMED_FIELDTYPE( int,	          "integer" );
-DECLARE_NAMED_FIELDTYPE( bool,	          "boolean" );
-DECLARE_NAMED_FIELDTYPE( char,	          "character" );
-DECLARE_NAMED_FIELDTYPE( HSCRIPT,	      "hscript" );
-DECLARE_NAMED_FIELDTYPE( ScriptVariant_t, "variant" );
+DECLARE_NAMED_FIELDTYPE( void,               "void" );
+DECLARE_NAMED_FIELDTYPE( float,              "float" );
+DECLARE_NAMED_FIELDTYPE( const char *,       "cstring" );
+DECLARE_NAMED_FIELDTYPE( char *,             "cstring" );
+DECLARE_NAMED_FIELDTYPE( Vector,             "vector" );
+DECLARE_NAMED_FIELDTYPE( const Vector&,      "vector" );
+DECLARE_NAMED_FIELDTYPE( int,                "integer" );
+DECLARE_NAMED_FIELDTYPE( bool,               "boolean" );
+DECLARE_NAMED_FIELDTYPE( char,               "character" );
+DECLARE_NAMED_FIELDTYPE( HSCRIPT,            "hscript" );
+DECLARE_NAMED_FIELDTYPE( ScriptVariant_t,    "variant" );
 
 inline const char * ScriptFieldTypeName( int16 eType)
 {
@@ -215,10 +215,10 @@ inline const char * ScriptFieldTypeName( int16 eType)
 	case FIELD_VECTOR:	return "vector";
 	case FIELD_INTEGER:	return "integer";
 	case FIELD_BOOLEAN:	return "boolean";
-	case FIELD_CHARACTER:	return "character";
+	case FIELD_CHARACTER: return "character";
 	case FIELD_HSCRIPT:	return "hscript";
 	case FIELD_VARIANT:	return "variant";
-	default:	return "unknown_script_type";
+	default:	        return "unknown_script_type";
 	}
 }
 
@@ -652,6 +652,8 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 #define ScriptInitStructDesc(pStructDesc, structName, description)										ScriptInitStructDescNamed( pStructDesc, structName, #structName, description )
 #define ScriptInitStructDescNamed(pStructDesc, structName, scriptName, description)						do { (pStructDesc)->m_pszScriptName = scriptName; (pStructDesc)->m_pszStructName = #structName; (pStructDesc)->m_pszDescription = description; } while ( 0 )	
 
+#define ScriptGetStructMember(pStruct, hScope, memberName, scriptName)									do { ScriptVariant_t value; g_pScriptVM->GetValue( hScope, scriptName, &value ); value.AssignTo( &(pStruct)->##memberName ); g_pScriptVM->ReleaseValue( value ); } while ( 0 )
+
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
@@ -1084,6 +1086,55 @@ public:
 		HSCRIPT hFunction = GetVM()->LookupFunction( pszFunction, m_hScope );
 		GetVM()->ReleaseFunction( hFunction );
 		return ( hFunction != NULL ) ;
+	}
+
+	template<typename T>
+	void GetStruct( T *pStruct, HSCRIPT hScope = NULL )
+	{
+		ScriptStructDesc_t *pDesc = GetScriptDescForStruct( T );
+
+		FOR_EACH_VEC( pDesc->m_MemberBindings, idx )
+		{
+			ScriptStructMemberBinding_t const &binding = pDesc->m_MemberBindings[idx];
+
+			ScriptVariant_t res;
+			if( GetVM()->GetValue( hScope ? hScope : m_hScope, binding.m_pszScriptName, &res ) )
+			{
+				switch ( binding.m_nMemberType )
+				{
+					case FIELD_VECTOR:
+					{
+						Vector newVec( res.m_pVector->x, res.m_pVector->y, res.m_pVector->z );
+						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), &newVec, binding.m_unMemberSize );
+						break;
+					}
+					case FIELD_CSTRING:
+					{
+						string_t iNewString = AllocPooledString( res.m_pszString );
+						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), STRING( iNewString ), binding.m_unMemberSize );
+						break;
+					}
+					case FIELD_BOOLEAN:
+					{
+						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), &res.m_bool, binding.m_unMemberSize );
+						break;
+					}
+					case FIELD_INTEGER:
+					case FIELD_FLOAT:
+					{
+						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), &res.m_int, binding.m_unMemberSize );
+						break;
+					}
+					default:
+					{
+						DevWarning( "Unsupported data type (%s) hit building struct data\n", ScriptFieldTypeName( binding.m_nMemberType ) );
+						break;
+					}
+				}
+
+				GetVM()->ReleaseValue( res );
+			}
+		}
 	}
 
 	//-----------------------------------------------------
