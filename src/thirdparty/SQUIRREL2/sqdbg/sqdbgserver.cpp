@@ -178,27 +178,6 @@ bool SQDbgServer::Init()
 	return true;
 }
 
-bool SQDbgServer::IsConnected() const
-{
-	if (_endpoint == INVALID_SOCKET)
-		return false;
-
-	FD_SET fdSet{};
-	FD_SET(_endpoint,&fdSet);
-
-	timeval timeout{};
-	timerclear(&timeout);
-
-	SOCKET sock = select(0,&fdSet,NULL,NULL,&timeout);
-	if (sock == INVALID_SOCKET)
-	{
-		scprintf(_SC("Script debugger disconnected\n"));
-		return false;
-	}
-
-	return true;
-}
-
 bool SQDbgServer::ReadMsg()
 {
 	return false;

@@ -173,7 +173,7 @@ private:
 	//---------------------------------------------------------------------------------------------
 
 	HSQUIRRELVM m_hVM;
-	HSQREMOTEDBG m_pDbgServer;
+	HSQREMOTEDBG m_hDbgSrv;
 
 	CUtlHashFast<SQClass *, CUtlHashFastGenericHash> m_ScriptClasses;
 
@@ -201,7 +201,7 @@ inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
 
 
 CSquirrelVM::CSquirrelVM( void )
-	: m_hVM( NULL ), developer( "developer" ), m_nUniqueKeySerial( 0 ), m_pDbgServer( NULL )
+	: m_hVM( NULL ), developer( "developer" ), m_nUniqueKeySerial( 0 ), m_hDbgSrv( NULL )
 {
 	m_VectorClass = _null_;
 	m_CreateScopeClosure = _null_;
@@ -293,12 +293,12 @@ void CSquirrelVM::Shutdown( void )
 
 bool CSquirrelVM::Frame( float simTime )
 {
-	if ( m_pDbgServer )
+	if ( m_hDbgSrv )
 	{
 		// process outgoing messages
-		sq_rdbg_update( m_pDbgServer );
+		sq_rdbg_update( m_hDbgSrv );
 
-		if ( !m_pDbgServer->IsConnected() )
+		if ( !sq_rdbg_connected( m_hDbgSrv ) )
 			DisconnectDebugger();
 	}
 
@@ -474,7 +474,7 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 		return SCRIPT_ERROR;
 	}
 
-	if ( m_pDbgServer )
+	if ( m_hDbgSrv )
 	{
 		if ( g_bSqDebugBreak )
 		{
@@ -577,7 +577,7 @@ void CSquirrelVM::RegisterFunction( ScriptFunctionBinding_t *pScriptFunction )
 
 bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 {
-	UtlHashFastHandle_t hndl = m_ScriptClasses.Find( (uintp)pClassDesc );
+	UtlHashFastHandle_t hndl = m_ScriptClasses.Find( (intp)pClassDesc );
 	if ( hndl != m_ScriptClasses.InvalidHandle() )
 		return true;
 
@@ -635,7 +635,7 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 	// restore VM state
 	sq_settop( GetVM(), nArgs );
 
-	m_ScriptClasses.FastInsert( (uintp)pClassDesc, pClass );
+	m_ScriptClasses.FastInsert( (intp)pClassDesc, pClass );
 	return true;
 }
 
@@ -977,24 +977,26 @@ bool CSquirrelVM::ConnectDebugger()
 	if( developer.GetInt() == 0 )
 		return false;
 
-	if ( m_pDbgServer == NULL )
+	if ( m_hDbgSrv == NULL )
 	{
 		const int serverPort = 1234;
-		m_pDbgServer = sq_rdbg_init( GetVM(), serverPort, SQTrue );
+		m_hDbgSrv = sq_rdbg_init( GetVM(), serverPort, SQTrue );
 	}
 
-	if ( m_pDbgServer == NULL )
+	if ( m_hDbgSrv == NULL )
 		return false;
 
-	return SQ_SUCCEEDED( sq_rdbg_waitforconnections( m_pDbgServer ) );
+	// !WARN!
+	// This will hold up the main thread until connection is established
+	return SQ_SUCCEEDED( sq_rdbg_waitforconnections( m_hDbgSrv ) );
 }
 
 void CSquirrelVM::DisconnectDebugger()
 {
-	if ( m_pDbgServer )
+	if ( m_hDbgSrv )
 	{
-		sq_rdbg_shutdown( m_pDbgServer );
-		m_pDbgServer = NULL;
+		sq_rdbg_shutdown( m_hDbgSrv );
+		m_hDbgSrv = NULL;
 	}
 }
 
@@ -1184,7 +1186,7 @@ HSQOBJECT CSquirrelVM::CreateClass( ScriptClassDesc_t *pClassDesc )
 
 bool CSquirrelVM::CreateInstance( ScriptClassDesc_t *pClassDesc, ScriptInstance_t *pInstance, SQRELEASEHOOK fnRelease )
 {
-	UtlHashFastHandle_t index = m_ScriptClasses.Find( (uintp)pClassDesc );
+	UtlHashFastHandle_t index = m_ScriptClasses.Find( (intp)pClassDesc );
 	if ( index == m_ScriptClasses.InvalidHandle() )
 		return false;
 
@@ -1296,7 +1298,7 @@ void CSquirrelVM::RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBindi
 	}
 	V_strcat_safe( szName, pFunction->m_desc.m_pszScriptName );
 
-	char const *pszReturnType = "void";
+	char const *pszReturnType = "";
 	switch ( pFunction->m_desc.m_ReturnType )
 	{
 		case FIELD_VOID:
@@ -1338,7 +1340,7 @@ void CSquirrelVM::RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBindi
 		if ( i != 0 )
 			V_strcat_safe( szSignature, ", " );
 
-		char const *pszArgumentType = "int";
+		char const *pszArgumentType = "";
 		switch ( pFunction->m_desc.m_Parameters[i] )
 		{
 			case FIELD_FLOAT:
@@ -1379,7 +1381,7 @@ void CSquirrelVM::RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBindi
 	sq_pushstring( GetVM(), szName, -1 );
 	sq_pushstring( GetVM(), szSignature, -1 );
 	sq_pushstring( GetVM(), pFunction->m_desc.m_pszDescription, -1 );
-	// this pops off the number of parameters automatically
+	// call the function and pop the parameters
 	sq_call( GetVM(), 5, SQFalse, SQ_CALL_RAISE_ERROR );
 
 	// pop off the closure
@@ -1792,7 +1794,7 @@ int CSquirrelVM::QueryContinue( HSQUIRRELVM pVM )
 {
 	CSquirrelVM *pVScript = GetVScript( pVM );
 	const float flStartTime = pVScript->m_flTimeStartedCall;
-	if ( !pVScript->m_pDbgServer && flStartTime != 0.0f )
+	if ( !pVScript->m_hDbgSrv && flStartTime != 0.0f )
 	{
 		const float flTimeDelta = Plat_FloatTime() - flStartTime;
 		if ( flTimeDelta > 0.03f )

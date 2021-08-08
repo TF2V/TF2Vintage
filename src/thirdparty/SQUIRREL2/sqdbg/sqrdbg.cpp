@@ -71,6 +71,27 @@ SQRESULT sq_rdbg_waitforconnections(HSQREMOTEDBG rdbg)
 	return SQ_OK;
 }
 
+SQBool sq_rdbg_connected(HSQREMOTEDBG rdbg)
+{
+	if (rdbg->_endpoint == INVALID_SOCKET)
+		return FALSE;
+
+	FD_SET fdSet{};
+	FD_SET(rdbg->_endpoint,&fdSet);
+
+	timeval timeout{};
+	timerclear(&timeout);
+
+	SOCKET sock = select(0,&fdSet,NULL,NULL,&timeout);
+	if (sock == INVALID_SOCKET)
+	{
+		scprintf(_SC("Script debugger disconnected\n"));
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg)
 {
 #ifdef _WIN32

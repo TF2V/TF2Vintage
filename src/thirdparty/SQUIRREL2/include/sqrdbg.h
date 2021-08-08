@@ -43,6 +43,7 @@ HSQREMOTEDBG sq_rdbg_init(HSQUIRRELVM v,unsigned short port,SQBool autoupdate);
 SQRESULT sq_rdbg_waitforconnections(HSQREMOTEDBG rdbg);
 SQRESULT sq_rdbg_shutdown(HSQREMOTEDBG rdbg);
 SQRESULT sq_rdbg_update(HSQREMOTEDBG rdbg);
+SQBool sq_rdbg_connected( HSQREMOTEDBG rdbg);
 
 #ifdef __cplusplus
 } /*extern "C"*/

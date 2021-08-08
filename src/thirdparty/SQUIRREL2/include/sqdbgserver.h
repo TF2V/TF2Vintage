@@ -94,7 +94,6 @@ public:
 	SQDbgServer(HSQUIRRELVM v);
 	~SQDbgServer();
 	bool Init();
-	bool IsConnected() const;
 	//returns true if a message has been received
 	bool WaitForClient();
 	bool ReadMsg();
