@@ -296,13 +296,36 @@ struct ScriptClassDesc_t
 };
 
 //---------------------------------------------------------
+// Struct descriptors provide an easy way to fill or retrieve large
+// amounts of data from scripts by allowing you to pull in whole tables 
+// of data from the script side to the C++ side
+//	C++:
+//		struct scriptStruct
+//		{
+//			int structMemberA;
+//			bool structMemberB;
+//		};
+//		BEGIN_STRUCT_SCRIPTDESC( ScriptWeaponInfo_t, "" )
+//			DEFINE_STRUCT_MEMBER_NAMED( FIELD_INTEGER, structMemberA, "scriptKeyValueA" )
+//			DEFINE_STRUCT_MEMBER_NAMED( FIELD_BOOLEAN, structMemberB, "scriptKeyValueB" )
+//		END_STRUCT_SCRIPTDESC()
+//	Script:
+//		var myTable = {
+//			scriptKeyValueA = 6,
+//			scriptKeyvalueB = true
+//		}
+//	Populating:
+//		scriptStruct myStruct = {};
+//		ScriptStructDesct_t *pDesc = myStruct.GetScriptDesc();
+//
+//---------------------------------------------------------
 struct ScriptStructMemberBinding_t
 {
 	ScriptStructMemberBinding_t() : m_pszMemberName( 0 ), m_nMemberType( FIELD_TYPEUNKNOWN ), m_unMemberOffs( 0 ), m_unMemberSize( 0 ), m_pszScriptName( 0 ) {}
 	char const *		m_pszScriptName;
 	char const *		m_pszMemberName;
 	ScriptDataType_t	m_nMemberType;
-	uint32				m_unMemberOffs;
+	ptrdiff_t			m_unMemberOffs;
 	uint32				m_unMemberSize;
 };
 struct ScriptStructDesc_t
@@ -323,8 +346,6 @@ enum SVFlags_t
 	SV_FREE = 0x01,
 };
 
-#pragma warning(push)
-#pragma warning(disable:4800)
 struct ScriptVariant_t
 {
 	ScriptVariant_t() :						m_flags( 0 ), m_type( FIELD_VOID )		{ m_pVector = 0; }
@@ -440,8 +461,8 @@ struct ScriptVariant_t
 		switch( m_type )
 		{
 		case FIELD_VOID:		*pDest = 0; return false;
-		case FIELD_INTEGER:		*pDest = m_int; return true;
-		case FIELD_FLOAT:		*pDest = m_float; return true;
+		case FIELD_INTEGER:		*pDest = m_int != 0; return true;
+		case FIELD_FLOAT:		*pDest = m_float != 0.0f; return true;
 		case FIELD_BOOLEAN:		*pDest = m_bool; return true;
 		default:
 			DevWarning( "No conversion from %s to bool now\n", ScriptFieldTypeName( m_type ) );
@@ -496,8 +517,6 @@ private:
 };
 
 #define SCRIPT_VARIANT_NULL ScriptVariant_t()
-
-#pragma warning(pop)
 
 
 
