@@ -627,7 +627,7 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 // 
 //-----------------------------------------------------------------------------
 
-#define ScriptAddMemberToStructDesc(pStructDesc, struct, memberType, memberName)						ScriptAddMemberToStructDescNamed(pStructDesc, struct, memberType, memberName, #memberName, memberSize )
+#define ScriptAddMemberToStructDesc(pStructDesc, struct, memberType, memberName)						ScriptAddMemberToStructDescNamed(pStructDesc, struct, memberType, memberName, #memberName )
 #define ScriptAddMemberToStructDescNamed(pStructDesc, struct, memberType, memberName, scriptName)		do { ScriptStructMemberBinding_t *pBinding = &((pStructDesc)->m_MemberBindings[(pStructDesc)->m_MemberBindings.AddToTail()]); pBinding->m_nMemberType = memberType; pBinding->m_pszMemberName = #memberName; pBinding->m_pszScriptName = scriptName; pBinding->m_unMemberOffs = offsetof(struct, memberName); pBinding->m_unMemberSize = sizeof(((struct *)0)->memberName); } while( 0 )
 
 #define ScriptInitStructDesc(pStructDesc, structName, description)										ScriptInitStructDescNamed( pStructDesc, structName, #structName, description )
@@ -650,7 +650,6 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 #define IMPLEMENT_STRUCT_SCRIPT_ACCESSOR(structName)						DEFINE_STRUCT_SCRIPTDESC_FUNCTION(structName); ScriptStructDesc_t *structName::GetScriptDesc(void) { return GetScriptStructDesc(this); } 
 
 #define BEGIN_STRUCT_SCRIPTDESC(structName, description) \
-	IMPLEMENT_STRUCT_SCRIPT_ACCESSOR( structName ) \
 	static ScriptStructDesc_t g_##structName##_ScriptDesc; \
 	DEFINE_STRUCT_SCRIPTDESC_FUNCTION( structName ) \
 	{ \
