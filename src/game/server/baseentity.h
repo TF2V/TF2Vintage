@@ -1898,7 +1898,7 @@ public:
 	HSCRIPT GetScriptInstance( void );
 	bool ValidateScriptScope( void );
 	virtual void RunVScripts( void );
-	bool CallScriptFunction( const char *pFunctionName, ScriptVariant_t *pFunctionReturn );
+	virtual bool CallScriptFunction( const char *pFunctionName, ScriptVariant_t *pFunctionReturn );
 	void ConnectOutputToScript( const char *pszOutput, const char *pszScriptFunc );
 	void DisconnectOutputFromScript( const char *pszOutput, const char *pszScriptFunc );
 	void ScriptThink( void );
@@ -1921,7 +1921,6 @@ public:
 
 	void ScriptSetSize( const Vector &mins, const Vector &maxs );
 	void ScriptUtilRemove( void );
-	void ScriptSetOwner( HSCRIPT hEntity );
 
 	void ScriptSetOrigin( const Vector &v );
 	void ScriptSetForward( const Vector &v );
@@ -2868,11 +2867,6 @@ inline void CBaseEntity::ScriptSetSize( Vector const &mins, Vector const &maxs )
 inline void CBaseEntity::ScriptUtilRemove( void )
 {
 	UTIL_Remove( this );
-}
-
-inline void CBaseEntity::ScriptSetOwner( HSCRIPT hEntity )
-{
-	SetOwnerEntity( ToEnt( hEntity ) );
 }
 
 inline void CBaseEntity::ScriptSetOrigin( Vector const &v )
