@@ -1968,14 +1968,13 @@ int CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 //-----------------------------------------------------------------------------
 // VScript: Scale damage done and call OnTakeDamage
 //-----------------------------------------------------------------------------
-void CBaseEntity::ScriptTakeDamage( float flDamage, int ndamageType, HSCRIPT hAttacker )
+void CBaseEntity::ScriptTakeDamage( float flDamage, int nDamageType, HSCRIPT hAttacker )
 {
 	CBaseEntity *pAttacker = ToEnt(hAttacker);
-	if ( !pAttacker )
+	if ( pAttacker == NULL )
 		pAttacker = this;
 
-	CTakeDamageInfo info( pAttacker, pAttacker, flDamage, ndamageType );
-	TakeDamage( info );
+	TakeDamage( CTakeDamageInfo(pAttacker, pAttacker, flDamage, nDamageType) );
 }
 
 //-----------------------------------------------------------------------------

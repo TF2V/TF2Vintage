@@ -16,20 +16,69 @@ ConVar phys_pushscale( "phys_pushscale", "1", FCVAR_REPLICATED );
 
 BEGIN_SIMPLE_DATADESC( CTakeDamageInfo )
 	DEFINE_FIELD( m_vecDamageForce, FIELD_VECTOR ),
-	DEFINE_FIELD( m_vecDamagePosition, FIELD_POSITION_VECTOR),
-	DEFINE_FIELD( m_vecReportedPosition, FIELD_POSITION_VECTOR),
-	DEFINE_FIELD( m_hInflictor, FIELD_EHANDLE),
-	DEFINE_FIELD( m_hAttacker, FIELD_EHANDLE),
-	DEFINE_FIELD( m_hWeapon, FIELD_EHANDLE),
-	DEFINE_FIELD( m_flDamage, FIELD_FLOAT),
-	DEFINE_FIELD( m_flMaxDamage, FIELD_FLOAT),
+	DEFINE_FIELD( m_vecDamagePosition, FIELD_POSITION_VECTOR ),
+	DEFINE_FIELD( m_vecReportedPosition, FIELD_POSITION_VECTOR ),
+	DEFINE_FIELD( m_hInflictor, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_hAttacker, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_hWeapon, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_flDamage, FIELD_FLOAT ),
+	DEFINE_FIELD( m_flMaxDamage, FIELD_FLOAT ),
 	DEFINE_FIELD( m_flBaseDamage, FIELD_FLOAT ),
-	DEFINE_FIELD( m_bitsDamageType, FIELD_INTEGER),
-	DEFINE_FIELD( m_iDamageCustom, FIELD_INTEGER),
-	DEFINE_FIELD( m_iDamageStats, FIELD_INTEGER),
-	DEFINE_FIELD( m_iAmmoType, FIELD_INTEGER),
-	DEFINE_FIELD( m_iDamagedOtherPlayers, FIELD_INTEGER),
+	DEFINE_FIELD( m_bitsDamageType, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iDamageCustom, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iDamageStats, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iAmmoType, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iDamagedOtherPlayers, FIELD_INTEGER ),
 END_DATADESC()
+
+BEGIN_SCRIPTDESC_ROOT( CTakeDamageInfo, "Info provided from entities that deal damage" )
+	DEFINE_SCRIPT_CONSTRUCTOR()
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetInflictor, "GetInflictor", "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptSetInflictor, "SetInflictor", "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetAttacker, "GetAttacker", "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptSetAttacker, "SetAttacker", "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetWeapon, "GetWeapon", "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptSetWeapon, "SetWeapon", "" )
+	DEFINE_SCRIPTFUNC( GetDamage, "" )
+	DEFINE_SCRIPTFUNC( SetDamage, "" )
+	DEFINE_SCRIPTFUNC( GetMaxDamage, "" )
+	DEFINE_SCRIPTFUNC( SetMaxDamage, "" )
+	DEFINE_SCRIPTFUNC( ScaleDamage, "" )
+	DEFINE_SCRIPTFUNC( AddDamage, "" )
+	DEFINE_SCRIPTFUNC( SubtractDamage, "" )
+	DEFINE_SCRIPTFUNC( GetDamageBonus, "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetDamageBonusProvider, "GetDamageBonusProvider", "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptSetDamageBonus, "SetDamageBonus", "" )
+	DEFINE_SCRIPTFUNC( GetBaseDamage, "" )
+	DEFINE_SCRIPTFUNC( GetDamageForce, "" )
+	DEFINE_SCRIPTFUNC( SetDamageForce, "" )
+	DEFINE_SCRIPTFUNC( ScaleDamageForce, "" )
+	DEFINE_SCRIPTFUNC( GetDamageForForceCalc, "" )
+	DEFINE_SCRIPTFUNC( SetDamageForForceCalc, "" )
+	DEFINE_SCRIPTFUNC( GetDamagePosition, "" )
+	DEFINE_SCRIPTFUNC( SetDamagePosition, "" )
+	DEFINE_SCRIPTFUNC( GetReportedPosition, "" )
+	DEFINE_SCRIPTFUNC( SetReportedPosition, "" )
+	DEFINE_SCRIPTFUNC( GetDamageType, "" )
+	DEFINE_SCRIPTFUNC( SetDamageType, "" )
+	DEFINE_SCRIPTFUNC( AddDamageType, "" )
+	DEFINE_SCRIPTFUNC( GetDamageCustom, "" )
+	DEFINE_SCRIPTFUNC( SetDamageCustom, "" )
+	DEFINE_SCRIPTFUNC( GetDamageStats, "" )
+	DEFINE_SCRIPTFUNC( SetDamageStats, "" )
+	DEFINE_SCRIPTFUNC( SetForceFriendlyFire, "" )
+	DEFINE_SCRIPTFUNC( IsForceFriendlyFire, "" )
+	DEFINE_SCRIPTFUNC( GetAmmoType, "" )
+	DEFINE_SCRIPTFUNC( SetAmmoType, "" )
+	DEFINE_SCRIPTFUNC( GetAmmoName, "" )
+	DEFINE_SCRIPTFUNC( GetPlayerPenetrationCount, "" )
+	DEFINE_SCRIPTFUNC( SetPlayerPenetrationCount, "" )
+	DEFINE_SCRIPTFUNC( GetDamagedOtherPlayers, "" )
+	DEFINE_SCRIPTFUNC( SetDamagedOtherPlayers, "" )
+	DEFINE_SCRIPTFUNC( AdjustPlayerDamageInflictedForSkillLevel, "" )
+	DEFINE_SCRIPTFUNC( AdjustPlayerDamageTakenForSkillLevel, "" )
+	DEFINE_SCRIPTFUNC( CopyDamageToBaseDamage, "" )
+END_SCRIPTDESC();
 
 void CTakeDamageInfo::Init( CBaseEntity *pInflictor, CBaseEntity *pAttacker, CBaseEntity *pWeapon, const Vector &damageForce, const Vector &damagePosition, const Vector &reportedPosition, float flDamage, int bitsDamageType, int iCustomDamage )
 {
@@ -165,6 +214,47 @@ const char *CTakeDamageInfo::GetAmmoName() const
 	}
 
 	return pszAmmoType;
+}
+
+inline HSCRIPT CTakeDamageInfo::ScriptGetInflictor() const
+{
+	return ToHScript( m_hInflictor );
+}
+
+inline void CTakeDamageInfo::ScriptSetInflictor( HSCRIPT hInflictor )
+{
+	m_hInflictor = ToEnt( hInflictor );
+}
+
+inline HSCRIPT CTakeDamageInfo::ScriptGetAttacker() const
+{
+	return ToHScript( m_hAttacker );
+}
+
+inline void CTakeDamageInfo::ScriptSetAttacker( HSCRIPT hAttacker )
+{
+	m_hAttacker = ToEnt( hAttacker );
+}
+
+inline HSCRIPT CTakeDamageInfo::ScriptGetWeapon() const
+{
+	return ToHScript( m_hWeapon );
+}
+
+inline void CTakeDamageInfo::ScriptSetWeapon( HSCRIPT hWeapon )
+{
+	m_hWeapon = ToEnt( hWeapon );
+}
+
+inline HSCRIPT CTakeDamageInfo::ScriptGetDamageBonusProvider() const
+{
+	return ToHScript( m_hDamageBonusProvider );
+}
+
+inline void CTakeDamageInfo::ScriptSetDamageBonus( float flBonus, HSCRIPT hProvider )
+{
+	m_flDamageBonus = flBonus;
+	m_hDamageBonusProvider = ToEnt( hProvider );
 }
 
 // -------------------------------------------------------------------------------------------------- //
