@@ -2039,66 +2039,42 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 #endif
 }
 
+
+BEGIN_STRUCT_SCRIPTDESC( FireBulletsInfo_t, "Data for firing bullet tracers" )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iShots )
+	DEFINE_STRUCT_MEMBER( FIELD_VECTOR, m_vecSrc )
+	DEFINE_STRUCT_MEMBER( FIELD_VECTOR, m_vecDirShooting )
+	DEFINE_STRUCT_MEMBER( FIELD_VECTOR, m_vecSpread )
+	DEFINE_STRUCT_MEMBER( FIELD_FLOAT, m_flDistance )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iAmmoType )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iTracerFreq )
+	DEFINE_STRUCT_MEMBER( FIELD_FLOAT, m_flDamage )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iPlayerDamage )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_nFlags )
+	DEFINE_STRUCT_MEMBER( FIELD_FLOAT, m_flDamageForceScale )
+	DEFINE_STRUCT_MEMBER( FIELD_BOOLEAN, m_bPrimaryAttack )
+	DEFINE_STRUCT_MEMBER( FIELD_BOOLEAN, m_bUseServerRandomSeed )
+END_STRUCT_SCRIPTDESC()
+
 void CBaseEntity::ScriptFireBullets( HSCRIPT hInfo )
 {
 	CScriptScope scope;
-	ScriptVariant_t variant;
 	if ( scope.Init( hInfo ) )
 	{
 		FireBulletsInfo_t info;
+		scope.GetStruct( &info );
 
-		if ( scope.GetValue( "shots", &variant ) )
-		{
-			info.m_iShots = variant;
-		}
-		if ( scope.GetValue( "damage", &variant ) )
-		{
-			info.m_flDamage = variant;
-		}
-		if ( scope.GetValue( "distance", &variant ) )
-		{
-			info.m_flDistance = variant;
-		}
-		if ( scope.GetValue( "ammoType", &variant ) )
-		{
-			info.m_iAmmoType = variant;
-		}
-		if ( scope.GetValue( "tracerFreq", &variant ) )
-		{
-			info.m_iTracerFreq = variant;
-		}
-		if ( scope.GetValue( "damageForceScale", &variant ) )
-		{
-			info.m_flDamageForceScale = variant;
-		}
-		if ( scope.GetValue( "flags", &variant ) )
-		{
-			info.m_nFlags = variant;
-		}
-		if ( scope.GetValue( "source", &variant ) )
-		{
-			info.m_vecSrc = variant;
-			variant.Free();
-		}
-		if ( scope.GetValue( "dir", &variant ) )
-		{
-			info.m_vecDirShooting = variant;
-			variant.Free();
-		}
-		if ( scope.GetValue( "spread", &variant ) )
-		{
-			info.m_vecSpread = variant;
-			variant.Free();
-		}
-		if ( scope.GetValue( "attacker", &variant ) )
+		// HSCRIPT variants that weren't retrieved
+		ScriptVariant_t variant;
+		if ( scope.GetValue( "m_pAttacker", &variant ) )
 		{
 			info.m_pAttacker = ToEnt( variant );
-			variant.Free();
+			scope.ReleaseValue( variant );
 		}
-		if ( scope.GetValue( "ignoreEnt", &variant ) )
+		if ( scope.GetValue( "m_pAdditionalIgnoreEnt", &variant ) )
 		{
 			info.m_pAdditionalIgnoreEnt = ToEnt( variant );
-			variant.Free();
+			scope.ReleaseValue( variant );
 		}
 
 		FireBullets( info );
