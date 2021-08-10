@@ -83,7 +83,7 @@ SQInteger VectorGet( HSQUIRRELVM pVM )
 
 	// Error on using additional characters
 	if ( pString[1] != '\0' )
-		return sq_throwerror( pVM, "" );;
+		return sq_throwerror( pVM, "" );
 
 	// Accessing x, y or z
 	if ( pString[0] - 'x' < 3 )
@@ -407,7 +407,8 @@ SQRegFunction g_VectorFuncs[] ={
 	{_SC( "Dot" ),				VectorDotProduct,	2,		0},
 	{_SC( "Cross" ),			VectorCrossProduct,	2,		0},
 	{_SC( "Norm" ),				VectorNormalize				},
-	{_SC( "ToKVString" ),		VectorToKeyValue			}
+	{_SC( "ToKVString" ),		VectorToKeyValue			},
+	{_SC( "FromKVString" ),		VectorFromKeyValue			}
 };
 
 SQRESULT RegisterVector( HSQUIRRELVM pVM )
@@ -425,10 +426,10 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 		return sq_throwerror( pVM, "Unable to create Vector class" );;
 	}
 
-	HSQOBJECT pTable{};
+	SQObjectPtr hTable;
 
 	// Setup class table
-	sq_getstackobj( pVM, -1, &pTable );
+	sq_getstackobj( pVM, -1, &hTable );
 	sq_settypetag( pVM, -1, VECTOR_TYPE_TAG );
 	sq_setclassudsize( pVM, -1, sizeof(Vector) );
 
@@ -436,9 +437,9 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 	sq_createslot( pVM, -3 );
 
 	// Prepare table for insert
-	sq_pushobject( pVM, pTable );
+	sq_pushobject( pVM, hTable );
 
-	for ( int i = 1; i < ARRAYSIZE( g_VectorFuncs ); ++i )
+	for ( int i = 0; i < ARRAYSIZE( g_VectorFuncs ); ++i )
 	{
 		SQRegFunction *reg = &g_VectorFuncs[i];
 

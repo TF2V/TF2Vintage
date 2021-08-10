@@ -1,5 +1,5 @@
-#ifndef SQUIRREL_VECTOR_H
-#define SQUIRREL_VECTOR_H
+#ifndef SQUIRREL_MATH_H
+#define SQUIRREL_MATH_H
 
 #ifdef _WIN32
 #pragma once
