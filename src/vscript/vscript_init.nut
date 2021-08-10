@@ -18,6 +18,11 @@ function Msg( text )
 	return print( text );
 }
 
+function Warning( text )
+{
+	return error( text );
+}
+
 function Assert( b, msg = null )
 {
 	if ( b )
@@ -31,6 +36,80 @@ function Assert( b, msg = null )
 	{
 		throw "Assertion failed";
 	}
+}
+
+function clamp(val,min,max)
+{
+	if ( max < min )
+		return max;
+	else if( val < min )
+		return min;
+	else if( val > max )
+		return max;
+	else
+		return val;
+}
+
+function max(a,b) return a > b ? a : b
+
+function min(a,b) return a < b ? a : b
+
+function RemapVal(val, A, B, C, D)
+{
+	if ( A == B )
+		return val >= B ? D : C;
+	return C + (D - C) * (val - A) / (B - A);
+}
+
+function RemapValClamped(val, A, B, C, D)
+{
+	if ( A == B )
+		return val >= B ? D : C;
+	local cVal = (val - A) / (B - A);
+	cVal = (cVal < 0.0) ? 0.0 : (1.0 < cVal) ? 1.0 : cVal;
+	return C + (D - C) * cVal;
+}
+
+function Approach( target, value, speed )
+{
+	local delta = target - value
+
+	if( delta > speed )
+		value += speed
+	else if( delta < (-speed) )
+		value -= speed
+	else
+		value = target
+
+	return value
+}
+
+function AngleDistance( next, cur )
+{
+	local delta = next - cur
+
+	if ( delta < (-180.0) )
+		delta += 360.0
+	else if ( delta > 180.0 )
+		delta -= 360.0
+
+	return delta
+}
+
+function FLerp( f1, f2, i1, i2, x )
+{
+	return f1+(f2-f1)*(x-i1)/(i2-i1);
+}
+
+function Lerp( f, A, B )
+{
+	return A + ( B - A ) * f
+}
+
+function SimpleSpline( f )
+{
+	local ff = f * f;
+	return 3.0 * ff - 2.0 * ff * f;
 }
 
 //-----------------------------------------------------------------------------
@@ -164,7 +243,7 @@ function VSquirrel_OnCreateScope( name, outer )
 	if ( !(name in outer) )
 	{
 		result = outer[name] <- { __vname=name, __vrefs = 1 };
-		delegate outer : result;
+		result.setdelegate( outer );
 	}
 	else
 	{
@@ -185,7 +264,7 @@ function VSquirrel_OnReleaseScope( scope )
 	{
 		delete scope.parent[scope.__vname];
 		scope.__vname = null;
-		delegate null : scope;
+		scope.setdelegate( null );
 	}
 }
 
@@ -245,10 +324,10 @@ class CCallChainer
 			{
 				local i;
 				local args = [];
-				if ( vargc > 0 )
+				if ( vargv.len() > 0 )
 				{
 					args.push( scope );
-					for ( i = 0; i < vargc; i++ )
+					for ( i = 0; i < vegv.len(); i++ )
 					{
 						args.push( vargv[i] );
 					}
@@ -343,10 +422,10 @@ class CSimpleCallChainer
 		{
 			local i;
 			local args = [];
-			if ( vargc > 0 )
+			if ( vargv.len() > 0 )
 			{
 				args.push( scope );
-				for ( i = 0; i < vargc; i++ )
+				for ( i = 0; i < vargv.len(); i++ )
 				{
 					args.push( vargv[i] );
 				}
@@ -355,7 +434,7 @@ class CSimpleCallChainer
 			{
 				local func = chain[i];
 				local result;
-				if ( !args.len() )
+				if ( args.len() == 0 )
 				{
 					result = func.pcall( scope );
 				}
@@ -493,7 +572,7 @@ class LateBinder
 
 	function EstablishDelegation( parentTable, childTable )
 	{
-		delegate parentTable : childTable;
+		childTable.setdelegate( parentTable );
 		
 		foreach( key, value in childTable )
 		{
@@ -507,7 +586,7 @@ class LateBinder
 	
 	function RemoveDelegation( childTable )
 	{
-		delegate null : childTable;
+		childTable.setdelegate( null );
 		
 		foreach( key, value in childTable )
 		{
