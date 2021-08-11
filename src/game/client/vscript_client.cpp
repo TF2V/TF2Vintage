@@ -89,6 +89,8 @@ bool VScriptClientInit()
 				ScriptRegisterFunction( g_pScriptVM, GetMapName, "Get the name of the map.");
 				ScriptRegisterFunction( g_pScriptVM, Time, "Get the current server time" );
 				ScriptRegisterFunction( g_pScriptVM, DoIncludeScript, "Execute a script (internal)" );
+
+				g_pScriptVM->RegisterClass( GetScriptDescForClass( CScriptKeyValues ) );
 				
 				if ( GameRules() )
 				{
