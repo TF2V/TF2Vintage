@@ -26,9 +26,9 @@ $Configuration
 
 $Project "VScript"
 {
-	$Folder	"Source Files"
+	$Folder "Script Files"
 	{
-		$File   "vscript_init.nut"
+		$File   "languages/squirrel/vscript_init.nut"
 		{
 			$Configuration
 			{
@@ -41,12 +41,16 @@ $Project "VScript"
 				}
 			}
 		}
+	}
+
+	$Folder	"Source Files"
+	{
 		$File   "vscript.cpp"
-		$File   "vsquirrel.cpp"
-		$File   "vsquirrel_math.cpp"
-		$File   "sq_vmstate.cpp"
-		$File	"lua_vm.cpp"
-		$File	"lua_vector.cpp"
+		$File   "languages/squirrel/vsquirrel.cpp"
+		$File   "languages/squirrel/vsquirrel_math.cpp"
+		$File   "languages/squirrel/sq_vmstate.cpp"
+		$File	"languages/lua/lua_vm.cpp"
+		$File	"languages/lua/lua_vector.cpp"
 	}
 
 	$Folder	"Public Header Files"
@@ -57,11 +61,11 @@ $Project "VScript"
 
 	$Folder	"Header Files"
 	{
-		$File   "vsquirrel.h"
-		$File   "vsquirrel_math.h"
-		$File   "sq_vmstate.h"
-		$File	"lua_vm.h"
-		$File	"lua_vector.h"
+		$File   "languages/squirrel/vsquirrel.h"
+		$File   "languages/squirrel/vsquirrel_math.h"
+		$File   "languages/squirrel/sq_vmstate.h"
+		$File	"languages/lua/lua_vm.h"
+		$File	"languages/lua/lua_vector.h"
 	}
 
 	$Folder "Squirrel Lang"

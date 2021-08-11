@@ -109,6 +109,9 @@ public:
 
 	void				RegisterFunction( ScriptFunctionBinding_t *pScriptFunction );
 	bool				RegisterClass( ScriptClassDesc_t *pClassDesc );
+	void				RegisterConstant( ScriptConstantBinding_t *pScriptConstant );
+	void				RegisterEnum( ScriptEnumDesc_t *pEnumDesc );
+
 	HSCRIPT				RegisterInstance( ScriptClassDesc_t *pDesc, void *pInstance );
 	void				*GetInstanceValue( HSCRIPT hInstance, ScriptClassDesc_t *pExpectedType = NULL );
 	void				RemoveInstance( HSCRIPT hScript );
@@ -179,6 +182,8 @@ private:
 
 	// A reference to our Vector type to compare to
 	HSQOBJECT m_VectorClass;
+	HSQOBJECT m_QuaternionClass;
+	HSQOBJECT m_MatrixClass;
 
 	HSQOBJECT m_CreateScopeClosure;
 	HSQOBJECT m_ReleaseScopeClosure;
@@ -204,6 +209,8 @@ CSquirrelVM::CSquirrelVM( void )
 	: m_hVM( NULL ), developer( "developer" ), m_nUniqueKeySerial( 0 ), m_hDbgSrv( NULL )
 {
 	m_VectorClass = _null_;
+	m_QuaternionClass = _null_;
+	m_MatrixClass = _null_;
 	m_CreateScopeClosure = _null_;
 	m_ReleaseScopeClosure = _null_;
 	m_ErrorString = _null_;
@@ -233,33 +240,45 @@ bool CSquirrelVM::Init( void )
 
 	// register root functions
 	sq_pushroottable( GetVM() );
-
 	sq_pushstring( GetVM(), "developer", -1 );
 	sq_newclosure( GetVM(), &CSquirrelVM::GetDeveloper, 0 );
 	sq_setnativeclosurename( GetVM(), -1, "developer" );
 	sq_createslot( GetVM(), -3 );
-
 	sq_pushstring( GetVM(), "GetFunctionSignature", -1 );
 	sq_newclosure( GetVM(), &CSquirrelVM::GetFunctionSignature, 0 );
 	sq_setnativeclosurename( GetVM(), -1, "GetFunctionSignature" );
 	sq_createslot( GetVM(), -3 );
-
 	sq_pop( GetVM(), 1 );
 
-	RegisterVector( GetVM() );
+	RegisterMathBindings( GetVM() );
 
 	// store a reference to the Vector class for instancing
 	sq_pushroottable( GetVM() );
-
 	sq_pushstring( GetVM(), "Vector", -1 );
 	if( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
 	{
 		sq_getstackobj( GetVM(), -1, &m_VectorClass );
 		sq_addref( GetVM(), &m_VectorClass );
+		// Pop the result
+		sq_pop( GetVM(), 1 );
+	}
+	sq_pushstring( GetVM(), "Quaternion", -1 );
+	if( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
+	{
+		sq_getstackobj( GetVM(), -1, &m_QuaternionClass );
+		sq_addref( GetVM(), &m_QuaternionClass );
 
 		sq_pop( GetVM(), 1 );
 	}
+	sq_pushstring( GetVM(), "matrix3x4_t", -1 );
+	if( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
+	{
+		sq_getstackobj( GetVM(), -1, &m_MatrixClass );
+		sq_addref( GetVM(), &m_MatrixClass );
 
+		sq_pop( GetVM(), 1 );
+	}
+	// Pop off root table
 	sq_pop( GetVM(), 1 );
 
 	m_ScriptClasses.Init( 256 );
@@ -360,27 +379,30 @@ void CSquirrelVM::ReleaseScript( HSCRIPT hScript )
 	if ( hScript )
 	{
 		sq_release( GetVM(), (HSQOBJECT *)hScript );
-		delete hScript;
+		delete (HSQOBJECT *)hScript;
 	}
 }
 
 HSCRIPT CSquirrelVM::CreateScope( const char *pszScope, HSCRIPT hParent )
 {
-	if ( hParent == NULL )
-		hParent = (HSCRIPT)&GetVM()->_roottable;
-
-	HSQOBJECT &pParent = *(HSQOBJECT *)hParent;
-	HSQOBJECT pScope ={OT_NULL, NULL};
-
 	// call the utility create function
 	sq_pushobject( GetVM(), m_CreateScopeClosure );
-
 	// push parameters
 	sq_pushroottable( GetVM() );
 	sq_pushstring( GetVM(), pszScope, -1 );
-	sq_pushobject( GetVM(), pParent );
+	if ( hParent )
+	{
+		HSQOBJECT &pTable = *(HSQOBJECT *)hParent;
+		Assert( hParent != INVALID_HSCRIPT && sq_istable( pTable ) );
+		sq_pushobject( GetVM(), pTable );
+	}
+	else
+	{
+		sq_pushroottable( GetVM() );
+	}
 
 	// this pops off the parameters automatically
+	HSQOBJECT pScope ={OT_NULL, NULL};
 	if ( SQ_SUCCEEDED( sq_call( GetVM(), 3, SQTrue, SQ_CALL_RAISE_ERROR ) ) )
 	{
 		sq_getstackobj( GetVM(), -1, &pScope );
@@ -407,25 +429,25 @@ HSCRIPT CSquirrelVM::CreateScope( const char *pszScope, HSCRIPT hParent )
 
 void CSquirrelVM::ReleaseScope( HSCRIPT hScript )
 {
-	HSQOBJECT &pObject = *(HSQOBJECT *)hScript;
-
-	// call the utility release function
-	sq_pushobject( GetVM(), m_ReleaseScopeClosure );
-
-	// push parameters
-	sq_pushroottable( GetVM() );
-	sq_pushobject( GetVM(), pObject );
-
-	// this pops off the paramaeters automatically
-	sq_call( GetVM(), 2, SQFalse, SQ_CALL_RAISE_ERROR );
-
-	// pop off the closure
-	sq_pop( GetVM(), 1 );
-
 	if ( hScript )
 	{
-		sq_release( GetVM(), (HSQOBJECT *)hScript );
-		delete hScript;
+		HSQOBJECT *pObject = (HSQOBJECT *)hScript;
+
+		// call the utility release function
+		sq_pushobject( GetVM(), m_ReleaseScopeClosure );
+
+		// push parameters
+		sq_pushroottable( GetVM() );
+		sq_pushobject( GetVM(), *pObject );
+
+		// this pops off the paramaeters automatically
+		sq_call( GetVM(), 2, SQFalse, SQ_CALL_RAISE_ERROR );
+
+		// pop off the closure
+		sq_pop( GetVM(), 1 );
+
+		sq_release( GetVM(), pObject );
+		delete (HSQOBJECT *)hScript;
 	}
 }
 
@@ -586,14 +608,29 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 
 	if ( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
 	{
-		sq_pop( GetVM(), 2 );
-		return false;
+		SQObjectPtr hObject;
+		sq_getstackobj( GetVM(), -1, &hObject );
+		if ( !sq_isnull(hObject) )
+		{
+			sq_pop( GetVM(), 2 );
+			return false;
+		}
+
+		sq_pop( GetVM(), 1 );
 	}
 
-	sq_pop( GetVM(), 1 );
-
 	if ( pClassDesc->m_pBaseDesc )
+	{
 		RegisterClass( pClassDesc->m_pBaseDesc );
+
+		sq_pushstring( GetVM(), pClassDesc->m_pBaseDesc->m_pszScriptName, -1 );
+		if ( SQ_FAILED( sq_get( GetVM(), -2 ) ) )
+		{
+			sq_pop( GetVM(), 1 );
+			
+			return false;
+		}
+	}
 
 	int nArgs = sq_gettop( GetVM() );
 
@@ -637,6 +674,54 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 
 	m_ScriptClasses.FastInsert( (intp)pClassDesc, pClass );
 	return true;
+}
+
+void CSquirrelVM::RegisterConstant( ScriptConstantBinding_t *pScriptConstant )
+{
+	// register to the const table so users can't change it
+	sq_pushconsttable( GetVM() );
+	sq_pushstring( GetVM(), pScriptConstant->m_pszScriptName, -1 );
+	PushVariant( GetVM(), pScriptConstant->m_data );
+	// add to consts
+	sq_newslot( GetVM(), -3, SQFalse );
+	// pop off const table
+	sq_pop( GetVM(), 1 );
+}
+
+void CSquirrelVM::RegisterEnum( ScriptEnumDesc_t *pEnumDesc )
+{
+	// register to the const table so users can't change it
+	sq_pushconsttable( GetVM() );
+	sq_pushstring( GetVM(), pEnumDesc->m_pszScriptName, -1 );
+
+	// Check if class name is already taken
+	if ( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
+	{
+		HSQOBJECT pObject ={OT_NULL, NULL};
+		sq_getstackobj( GetVM(), -1, &pObject );
+		if ( !sq_isnull( pObject ) )
+		{
+			sq_pop( GetVM(), 2 );
+			return;
+		}
+	}
+
+	// create a new table to hold the values
+	sq_newtable( GetVM() );
+	FOR_EACH_VEC( pEnumDesc->m_ConstantBindings, i )
+	{
+		ScriptConstantBinding_t &constant = pEnumDesc->m_ConstantBindings[i];
+
+		sq_pushstring( GetVM(), constant.m_pszScriptName, -1 );
+		PushVariant( constant.m_data, false );
+		// add to table
+		sq_newslot( GetVM(), -3, SQFalse );
+	}
+
+	// add to consts
+	sq_newslot( GetVM(), -3, SQTrue );
+	// pop off const table
+	sq_pop( GetVM(), 1 );
 }
 
 HSCRIPT CSquirrelVM::RegisterInstance( ScriptClassDesc_t *pDesc, void *pInstance )
@@ -693,7 +778,7 @@ void CSquirrelVM::RemoveInstance( HSCRIPT hScript )
 		_instance( pObject )->_userpointer = NULL;
 
 	sq_release( GetVM(), &pObject );
-	delete hScript;
+	delete (HSQOBJECT *)hScript;
 }
 
 void *CSquirrelVM::GetInstanceValue( HSCRIPT hInstance, ScriptClassDesc_t *pExpectedType )
@@ -799,7 +884,7 @@ bool CSquirrelVM::SetValue( HSCRIPT hScope, const char *pszKey, const ScriptVari
 			if ( sq_isnull( pInstance->m_instanceUniqueId ) )
 			{
 				// if we haven't been given a unique ID, we'll be assigned the key name
-				pInstance->m_instanceUniqueId = stack_get( GetVM(), -1 );
+				sq_getstackobj( GetVM(), -1, &pInstance->m_instanceUniqueId );
 			}
 		}
 	}
@@ -1142,6 +1227,48 @@ void CSquirrelVM::PushVariant( ScriptVariant_t const &Variant, bool bDuplicate )
 
 			break;
 		}
+		case FIELD_QUATERNION:
+		{
+			sq_pushobject( GetVM(), m_QuaternionClass );
+			sq_createinstance( GetVM(), -1 );
+
+			if ( bDuplicate )
+			{
+				Quaternion *pQuat = new Quaternion( Variant );
+				sq_setinstanceup( GetVM(), -1, (SQUserPointer)pQuat );
+				sq_setreleasehook( GetVM(), -1, &QuaternionRelease );
+			}
+			else
+			{
+				sq_setinstanceup( GetVM(), -1, (SQUserPointer)Variant.m_pQuat );
+			}
+
+			// Remove the class object from stack so we are aligned
+			sq_remove( GetVM(), -2 );
+
+			break;
+		}
+		case FIELD_MATRIX3X4:
+		{
+			sq_pushobject( GetVM(), m_MatrixClass );
+			sq_createinstance( GetVM(), -1 );
+
+			if ( bDuplicate )
+			{
+				matrix3x4_t *pMatrix = new matrix3x4_t( Variant );
+				sq_setinstanceup( GetVM(), -1, (SQUserPointer)pMatrix );
+				sq_setreleasehook( GetVM(), -1, &QuaternionRelease );
+			}
+			else
+			{
+				sq_setinstanceup( GetVM(), -1, (SQUserPointer)Variant.m_pMatrix );
+			}
+
+			// Remove the class object from stack so we are aligned
+			sq_remove( GetVM(), -2 );
+
+			break;
+		}
 	}
 }
 
@@ -1240,6 +1367,8 @@ void CSquirrelVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFunction, Scri
 				break;
 			}
 			case FIELD_VECTOR:
+			case FIELD_QUATERNION:
+			case FIELD_MATRIX3X4:
 			{
 				*pCurrent = 'x';
 				break;
@@ -1313,6 +1442,12 @@ void CSquirrelVM::RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBindi
 		case FIELD_VECTOR:
 			pszReturnType = "Vector";
 			break;
+		case FIELD_QUATERNION:
+			pszReturnType = "Quaternion";
+			break;
+		case FIELD_MATRIX3X4:
+			pszReturnType = "matrix3x4_t";
+			break;
 		case FIELD_INTEGER:
 			pszReturnType = "int";
 			break;
@@ -1351,6 +1486,12 @@ void CSquirrelVM::RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBindi
 				break;
 			case FIELD_VECTOR:
 				pszArgumentType = "Vector";
+				break;
+			case FIELD_QUATERNION:
+				pszArgumentType = "Quaternion";
+				break;
+			case FIELD_MATRIX3X4:
+				pszArgumentType = "matrix3x4_t";
 				break;
 			case FIELD_INTEGER:
 				pszArgumentType = "int";
@@ -1426,7 +1567,7 @@ SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
 {
 	SQUserPointer up = NULL, tag = NULL;
 	sq_getuserdata( pVM, sq_gettop( pVM ), &up, &tag );
-	ScriptClassDesc_t *pClassDesc = ( *(ScriptClassDesc_t **)up );
+	ScriptClassDesc_t *pClassDesc = *(ScriptClassDesc_t **)up;
 
 	ScriptInstance_t *pInstance = new ScriptInstance_t;
 	pInstance->m_pClassDesc = pClassDesc;
@@ -1441,7 +1582,7 @@ SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
 SQInteger CSquirrelVM::ReleaseHook( SQUserPointer data, SQInteger size )
 {
 	ScriptInstance_t *pObject = (ScriptInstance_t *)data;
-	if( pObject )
+	if( pObject->m_pClassDesc->m_pfnDestruct )
 	{
 		pObject->m_pClassDesc->m_pfnDestruct( pObject->m_pInstance );
 		delete pObject;
@@ -1580,6 +1721,26 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 				parameters[i] = (Vector *)pInstance;
 				break;
 			}
+			case FIELD_QUATERNION:
+			{
+				SQUserPointer pInstance = NULL;
+				sq_getinstanceup( pVM, i+2, &pInstance, QUATERNION_TYPE_TAG );
+				if ( pInstance == NULL )
+					return sq_throwerror( pVM, "Vector argument expected" );
+
+				parameters[i] = (Quaternion *)pInstance;
+				break;
+			}
+			case FIELD_MATRIX3X4:
+			{
+				SQUserPointer pInstance = NULL;
+				sq_getinstanceup( pVM, i+2, &pInstance, MATRIX_TYPE_TAG );
+				if ( pInstance == NULL )
+					return sq_throwerror( pVM, "Vector argument expected" );
+
+				parameters[i] = (matrix3x4_t *)pInstance;
+				break;
+			}
 			case FIELD_HSCRIPT:
 			{
 				HSQOBJECT pObject = _null_;
@@ -1608,8 +1769,8 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 	SQUserPointer pContext = NULL;
 	if ( pFuncBinding->m_flags & SF_MEMBER_FUNC )
 	{
-		SQUserPointer up = NULL, tag = NULL;
-		sq_getinstanceup( pVM, 1, &up, tag );
+		SQUserPointer up = NULL;
+		sq_getinstanceup( pVM, 1, &up, NULL );
 		ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
 		if ( pInstance == NULL || pInstance->m_pInstance == NULL )
 			return sq_throwerror( pVM, "Accessed null instance" );
@@ -1666,13 +1827,34 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 			}
 			case FIELD_VECTOR:
 			{
+				Assert( GetVScript( pVM )->m_VectorClass != _null_ );
 				sq_pushobject( pVM, GetVScript( pVM )->m_VectorClass );
-
 				sq_createinstance( pVM, -1 );
 				sq_setinstanceup( pVM, -1, (SQUserPointer)returnValue.m_pVector );
 				sq_setreleasehook( pVM, -1, &VectorRelease );
-
 				// Remove the class object from stack so we are aligned
+				sq_remove( pVM, -2 );
+
+				break;
+			}
+			case FIELD_QUATERNION:
+			{
+				Assert( GetVScript( pVM )->m_QuaternionClass != _null_ );
+				sq_pushobject( pVM, GetVScript( pVM )->m_QuaternionClass );
+				sq_createinstance( pVM, -1 );
+				sq_setinstanceup( pVM, -1, (SQUserPointer)returnValue.m_pQuat );
+				sq_setreleasehook( pVM, -1, &QuaternionRelease );
+				sq_remove( pVM, -2 );
+
+				break;
+			}
+			case FIELD_MATRIX3X4:
+			{
+				Assert( GetVScript( pVM )->m_MatrixClass != _null_ );
+				sq_pushobject( pVM, GetVScript( pVM )->m_MatrixClass );
+				sq_createinstance( pVM, -1 );
+				sq_setinstanceup( pVM, -1, (SQUserPointer)returnValue.m_pMatrix );
+				sq_setreleasehook( pVM, -1, &MatrixRelease );
 				sq_remove( pVM, -2 );
 
 				break;
@@ -1716,8 +1898,8 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 
 SQInteger CSquirrelVM::InstanceToString( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, tag );
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, NULL );
 	ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
 	if ( pInstance && pInstance->m_pInstance )
 	{
@@ -1820,5 +2002,241 @@ IScriptVM *CreateSquirrelVM( void )
 //-----------------------------------------------------------------------------
 void DestroySquirrelVM( IScriptVM *pVM )
 {
-	if( pVM ) delete pVM;
+	if( pVM ) delete assert_cast<CSquirrelVM *>( pVM );
 }
+
+#ifdef VSQUIRREL_TEST
+
+#include "fasttimer.h"
+
+CSquirrelVM g_SquirrelVM;
+IScriptVM *g_pScriptVM = &g_SquirrelVM;
+
+
+//-----------------------------------------------------------------------------
+// 
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// 
+//-----------------------------------------------------------------------------
+
+#include <time.h>
+#include "fasttimer.h"
+
+static void FromScript_AddBehavior( const char *pBehaviorName, HSCRIPT hTable )
+{
+	ScriptVariant_t		KeyVariant, ValueVariant;
+
+	Msg( "Behavior: %s\n", pBehaviorName );
+
+	int nInterator = 0;
+	int index =	g_pScriptVM->GetNumTableEntries( hTable );
+	for( int i = 0; i < index; i++ )
+	{
+		nInterator = g_pScriptVM->GetKeyValue( hTable, nInterator, &KeyVariant, &ValueVariant );
+
+		Msg( "   %d: %s / %s\n", i, KeyVariant.m_pszString, ValueVariant.m_pszString );
+
+		g_pScriptVM->ReleaseValue( KeyVariant );
+		g_pScriptVM->ReleaseValue( ValueVariant );
+	}
+}
+
+static ScriptVariant_t TestReturn( )
+{
+	return ScriptVariant_t("test");
+}
+
+static Vector MyVectorAdd( Vector A, Vector B )
+{
+	return A + B;
+}
+
+void TestOutput( const char *pszText )
+{
+	Msg( "%s\n", pszText );
+}
+
+bool TestError( const char *pszText )
+{
+	Msg( "%s\n", pszText );
+
+	return true;
+}
+
+
+class CMyClass
+{
+public:
+	bool Foo( int );
+	void Bar( HSCRIPT TableA, HSCRIPT TableB );
+	float FooBar( int, const char * );
+	float OverlyTechnicalName( bool );
+};
+
+bool CMyClass::Foo( int test  )
+{
+	return true;
+}
+
+void CMyClass::Bar( HSCRIPT TableA, HSCRIPT TableB )
+{
+	ScriptVariant_t MyValue;
+
+	//	g_pScriptVM->CreateTable( MyTable );
+
+	MyValue = 10;
+	g_pScriptVM->SetValue( TableA, "1", MyValue );
+	MyValue = 20;
+	g_pScriptVM->SetValue( TableA, "2", MyValue );
+	MyValue = 30;
+	g_pScriptVM->SetValue( TableA, "3", MyValue );
+
+	MyValue = 100;
+	g_pScriptVM->SetValue( TableB, "1", MyValue );
+	MyValue = 200;
+	g_pScriptVM->SetValue( TableB, "2", MyValue );
+	MyValue = 300;
+	g_pScriptVM->SetValue( TableB, "3", MyValue );
+
+	//	return MyTable;
+}
+
+float CMyClass::FooBar( int test1, const char *test2 )
+{
+	return 2.34f;
+}
+
+float CMyClass::OverlyTechnicalName( bool test )
+{
+	return 4.56f;
+}
+
+BEGIN_SCRIPTDESC_ROOT_NAMED( CMyClass , "CMyClass", SCRIPT_SINGLETON "" )
+DEFINE_SCRIPTFUNC( Foo, "" )
+DEFINE_SCRIPTFUNC( Bar, "" )
+DEFINE_SCRIPTFUNC( FooBar, "" )
+DEFINE_SCRIPTFUNC_NAMED( OverlyTechnicalName, "SimpleMemberName", "" )
+END_SCRIPTDESC();
+
+class CMyDerivedClass : public CMyClass
+{
+public:
+	float DerivedFunc() const;
+};
+
+BEGIN_SCRIPTDESC( CMyDerivedClass, CMyClass, SCRIPT_SINGLETON "" )
+DEFINE_SCRIPTFUNC( DerivedFunc, "" )
+END_SCRIPTDESC();
+
+float CMyDerivedClass::DerivedFunc() const
+{
+	return 8.91f;
+}
+
+CMyDerivedClass derivedInstance;
+
+void AnotherFunction()
+{
+	// Manual class exposure
+	g_pScriptVM->RegisterClass( GetScriptDescForClass( CMyClass ) );
+
+	// Auto registration by instance
+	g_pScriptVM->RegisterInstance( &derivedInstance, "theInstance" );
+}
+
+int main( int argc, const char **argv)
+{
+	if ( argc < 2 )
+	{
+		printf( "No script specified" );
+		return 1;
+	}
+	g_pScriptVM->Init();
+
+	g_pScriptVM->SetOutputCallback( TestOutput );
+
+	AnotherFunction();
+
+	CCycleCount count;
+	count.Sample();
+	RandomSeed( time( NULL ) ^ count.GetMicroseconds() );
+	ScriptRegisterFunction( g_pScriptVM, RandomFloat, "" );
+	ScriptRegisterFunction( g_pScriptVM, RandomInt, "" );
+
+	ScriptRegisterFunction( g_pScriptVM, FromScript_AddBehavior, "" );
+	ScriptRegisterFunction( g_pScriptVM, MyVectorAdd, "" );
+	ScriptRegisterFunction( g_pScriptVM, TestReturn, "" );
+
+	if ( argc == 3 && *argv[2] == 'd' )
+	{
+		g_pScriptVM->ConnectDebugger();
+	}
+
+	int key;
+	CScriptScope scope;
+	scope.Init( "TestScope" );
+	do 
+	{
+		const char *pszScript = argv[1];
+		FILE *hFile = fopen( pszScript, "rb" );
+		if ( !hFile )
+		{
+			printf( "\"%s\" not found.\n", pszScript );
+			return 1;
+		}
+
+		int nFileLen = _filelength( _fileno( hFile ) );
+		char *pBuf = new char[nFileLen + 1];
+		fread( pBuf, 1, nFileLen, hFile );
+		pBuf[nFileLen] = 0;
+		fclose( hFile );
+
+		if (1)
+		{
+			printf( "Executing script \"%s\"\n----------------------------------------\n", pszScript );
+			HSCRIPT hScript = g_pScriptVM->CompileScript( pBuf, ( strrchr( pszScript, '\\' ) ? strrchr( pszScript, '\\' ) + 1 : pszScript ) );
+			if ( hScript )
+			{
+				ScriptVariant_t	Table;
+
+				if ( scope.Run( hScript ) != SCRIPT_ERROR )
+				{
+					printf( "----------------------------------------\n" );
+					printf("Script complete.  Press q to exit, r to reset the scope, m to dump memory usage, enter to run again.\n");
+				}
+				else
+				{
+					printf( "----------------------------------------\n" );
+					printf("Script execution error.  Press q to exit, r to reset the scope, m to dump memory usage, enter to run again.\n");
+				}
+				g_pScriptVM->ReleaseScript( hScript );
+			}
+			else
+			{
+				printf( "----------------------------------------\n" );
+				printf("Script failed to compile.  Press q to exit, r to reset the scope, m to dump memory usage, enter to run again.\n");
+			}
+		}
+		key = _getch(); // Keypress before exit
+		if ( key == 'm' )
+		{
+			Msg( "%d\n", g_pMemAlloc->GetSize( NULL ) );
+		}
+		if ( key == 'r' )
+		{
+			scope.Term();
+			scope.Init( "TestScope" );
+		}
+		delete pBuf;
+	} while ( key != 'q' );
+
+	scope.Term();
+	g_pScriptVM->DisconnectDebugger();
+
+	g_pScriptVM->Shutdown();
+	return 0;
+}
+
+#endif
