@@ -63,9 +63,9 @@ typedef struct
 } ScriptInstance_t;
 
 
-static HSQOBJECT const INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
-inline bool operator==( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type == rhs._type && _table( lhs ) == _table( rhs ); }
-inline bool operator!=( HSQOBJECT const &lhs, HSQOBJECT const &rhs ) { return lhs._type != rhs._type || _table( lhs ) != _table( rhs ); }
+static SQObject const INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
+inline bool operator==( SQObject const &lhs, SQObject const &rhs ) { return lhs._type == rhs._type && _table( lhs ) == _table( rhs ); }
+inline bool operator!=( SQObject const &lhs, SQObject const &rhs ) { return lhs._type != rhs._type || _table( lhs ) != _table( rhs ); }
 
 //-----------------------------------------------------------------------------
 // Purpose: Squirrel scripting engine implementation
@@ -420,7 +420,7 @@ HSCRIPT CSquirrelVM::CreateScope( const char *pszScope, HSCRIPT hParent )
 	
 	sq_addref( GetVM(), &pScope );
 
-	HSQOBJECT *pObject = new SQObject;
+	HSQOBJECT *pObject = new HSQOBJECT;
 	pObject->_type = pScope._type;
 	pObject->_unVal = pScope._unVal;
 
@@ -615,24 +615,22 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 			sq_pop( GetVM(), 2 );
 			return false;
 		}
-
-		sq_pop( GetVM(), 1 );
 	}
+	sq_pop( GetVM(), 1 );
 
 	if ( pClassDesc->m_pBaseDesc )
 	{
 		RegisterClass( pClassDesc->m_pBaseDesc );
 
+		sq_pushroottable( GetVM() );
 		sq_pushstring( GetVM(), pClassDesc->m_pBaseDesc->m_pszScriptName, -1 );
 		if ( SQ_FAILED( sq_get( GetVM(), -2 ) ) )
 		{
 			sq_pop( GetVM(), 1 );
-			
 			return false;
 		}
+		sq_pop( GetVM(), 2 );
 	}
-
-	int nArgs = sq_gettop( GetVM() );
 
 	HSQOBJECT pObject = CreateClass( pClassDesc );
 	SQClass *pClass = _class( pObject );
@@ -667,10 +665,9 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 		{
 			RegisterFunctionGuts( &pClassDesc->m_FunctionBindings[i], pClassDesc );
 		}
-	}
 
-	// restore VM state
-	sq_settop( GetVM(), nArgs );
+		sq_pop( GetVM(), 1 );
+	}
 
 	m_ScriptClasses.FastInsert( (intp)pClassDesc, pClass );
 	return true;
