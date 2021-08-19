@@ -38,7 +38,7 @@ function PPlayer::new(name,pos)
 {
     local p = clone ::PPlayer;
     local newplayer = ::PEntity.new(name,pos);
-    newplayer.setdelegate(p)
+    newplayer.setdelegate(p);
     return newplayer;
 }
 

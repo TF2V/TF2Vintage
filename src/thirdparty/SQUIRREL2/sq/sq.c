@@ -30,7 +30,7 @@ void PrintVersionInfos();
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 int MemAllocHook( int allocType, void *userData, size_t size, int blockType,
-    long requestNumber, const unsigned char *filename, int lineNumber)
+   long requestNumber, const unsigned char *filename, int lineNumber)
 {
     //if(requestNumber==769)_asm int 3;
     return 1;
@@ -52,7 +52,6 @@ void printfunc(HSQUIRRELVM SQ_UNUSED_ARG(v),const SQChar *s,...)
     va_start(vl, s);
     scvprintf(stdout, s, vl);
     va_end(vl);
-    (void)v; /* UNUSED */
 }
 
 void errorfunc(HSQUIRRELVM SQ_UNUSED_ARG(v),const SQChar *s,...)
@@ -205,7 +204,7 @@ int getargs(HSQUIRRELVM v,int argc, char* argv[],SQInteger *retval)
 
                 }
             }
-            //if this point is reached an error occured
+            //if this point is reached an error occurred
             {
                 const SQChar *err;
                 sq_getlasterror(v);

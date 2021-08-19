@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2016 Alberto Demichelis
+Copyright (c) 2003-2017 Alberto Demichelis
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,14 @@ THE SOFTWARE.
 #include "platform.h"
 #include "dbg.h"
 #define printf	DevMsg
+#endif
+
+#ifndef Assert
+#define Assert	assert
+#endif
+
+#ifdef _SQ_CONFIG_INCLUDE
+#include _SQ_CONFIG_INCLUDE
 #endif
 
 #ifdef __cplusplus
@@ -68,7 +76,7 @@ struct SQOuter;
 #include "sqconfig.h"
 
 #define SQUIRREL_VERSION    _SC("Squirrel 3.2 VScript")
-#define SQUIRREL_COPYRIGHT  _SC("Copyright (C) 2003-2016 Alberto Demichelis")
+#define SQUIRREL_COPYRIGHT  _SC("Copyright (C) 2003-2017 Alberto Demichelis")
 #define SQUIRREL_AUTHOR     _SC("Alberto Demichelis")
 #define SQUIRREL_VERSION_NUMBER 310
 
@@ -268,6 +276,7 @@ SQUIRREL_API SQRESULT sq_getbase(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQBool sq_instanceof(HSQUIRRELVM v);
 SQUIRREL_API SQRESULT sq_tostring(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API void sq_tobool(HSQUIRRELVM v, SQInteger idx, SQBool *b);
+SQUIRREL_API SQRESULT sq_getstringandsize(HSQUIRRELVM v,SQInteger idx,const SQChar **c,SQInteger *size);
 SQUIRREL_API SQRESULT sq_getstring(HSQUIRRELVM v,SQInteger idx,const SQChar **c);
 SQUIRREL_API SQRESULT sq_getinteger(HSQUIRRELVM v,SQInteger idx,SQInteger *i);
 SQUIRREL_API SQRESULT sq_getfloat(HSQUIRRELVM v,SQInteger idx,SQFloat *f);
@@ -281,7 +290,7 @@ SQUIRREL_API void sq_setreleasehook(HSQUIRRELVM v,SQInteger idx,SQRELEASEHOOK ho
 SQUIRREL_API SQRELEASEHOOK sq_getreleasehook(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQChar *sq_getscratchpad(HSQUIRRELVM v,SQInteger minsize);
 SQUIRREL_API SQRESULT sq_getfunctioninfo(HSQUIRRELVM v,SQInteger level,SQFunctionInfo *fi);
-SQUIRREL_API SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQUnsignedInteger *nparams,SQUnsignedInteger *nfreevars);
+SQUIRREL_API SQRESULT sq_getclosureinfo(HSQUIRRELVM v,SQInteger idx,SQInteger *nparams,SQInteger *nfreevars);
 SQUIRREL_API SQRESULT sq_getclosurename(HSQUIRRELVM v,SQInteger idx);
 SQUIRREL_API SQRESULT sq_setnativeclosurename(HSQUIRRELVM v,SQInteger idx,const SQChar *name);
 SQUIRREL_API SQRESULT sq_setinstanceup(HSQUIRRELVM v, SQInteger idx, SQUserPointer p);
@@ -337,6 +346,7 @@ SQUIRREL_API SQRESULT sq_throwerror(HSQUIRRELVM v,const SQChar *err);
 SQUIRREL_API SQRESULT sq_throwobject(HSQUIRRELVM v);
 SQUIRREL_API void sq_reseterror(HSQUIRRELVM v);
 SQUIRREL_API void sq_getlasterror(HSQUIRRELVM v);
+SQUIRREL_API SQRESULT sq_tailcall(HSQUIRRELVM v, SQInteger nparams);
 
 /*raw object handling*/
 SQUIRREL_API SQRESULT sq_getstackobj(HSQUIRRELVM v,SQInteger idx,HSQOBJECT *po);
@@ -370,6 +380,7 @@ SQUIRREL_API void sq_free(void *p,SQUnsignedInteger size);
 /*debug*/
 SQUIRREL_API SQRESULT sq_stackinfos(HSQUIRRELVM v,SQInteger level,SQStackInfos *si);
 SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
+SQUIRREL_API void sq_setnativedebughook(HSQUIRRELVM v,SQDEBUGHOOK hook);
 
 /*UTILITY MACRO*/
 #define sq_isnumeric(o) ((o)._type&SQOBJECT_NUMERIC)
@@ -402,7 +413,7 @@ SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 #define SQ_SUCCEEDED(res) (res>=0)
 
 #ifdef __GNUC__
-# define SQ_UNUSED_ARG(x) __attribute__((unused)) x
+# define SQ_UNUSED_ARG(x) x __attribute__((__unused__))
 #else
 # define SQ_UNUSED_ARG(x) x
 #endif

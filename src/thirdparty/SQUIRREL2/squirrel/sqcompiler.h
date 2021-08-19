@@ -72,6 +72,7 @@ struct SQVM;
 #define TK_CONST    324
 #define TK_BASE     325
 #define TK_3WAYSCMP 326
+#define TK_RAWCALL  327
 
 
 typedef void(*CompilerErrorFunc)(void *ud, const SQChar *s);
