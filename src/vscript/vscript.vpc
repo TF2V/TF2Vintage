@@ -46,6 +46,8 @@ $Project "VScript"
 	$Folder	"Source Files"
 	{
 		$File   "vscript.cpp"
+		$File   "vscript_math.cpp"
+		$File   "vscript_misc.cpp"
 		$File   "languages/squirrel/vsquirrel.cpp"
 		$File   "languages/squirrel/vsquirrel_math.cpp"
 		$File   "languages/squirrel/sq_vmstate.cpp"
@@ -61,6 +63,8 @@ $Project "VScript"
 
 	$Folder	"Header Files"
 	{
+		$File   "vscript_math.h"
+		$File   "vscript_misc.h"
 		$File   "languages/squirrel/vsquirrel.h"
 		$File   "languages/squirrel/vsquirrel_math.h"
 		$File   "languages/squirrel/sq_vmstate.h"

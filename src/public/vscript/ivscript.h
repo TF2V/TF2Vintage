@@ -154,6 +154,11 @@ public:
 DECLARE_POINTER_HANDLE( HSCRIPT );
 #define INVALID_HSCRIPT ((HSCRIPT)-1)
 
+template <typename T> T *HScriptToClass( HSCRIPT hObj )
+{
+	return (hObj) ? (T*)g_pScriptVM->GetInstanceValue( hObj, GetScriptDesc( (T*)NULL ) ) : NULL;
+}
+
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
@@ -172,17 +177,19 @@ struct ScriptVariant_t;
 template <typename T> struct ScriptDeducer { /*enum { FIELD_TYPE = FIELD_TYPEUNKNOWN };*/ };
 #define DECLARE_DEDUCE_FIELDTYPE( fieldType, type ) template<> struct ScriptDeducer<type> { enum { FIELD_TYPE = fieldType }; };
 
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VOID,      void );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_FLOAT,     float );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,   const char * );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,   char * );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,    Vector );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,    const Vector& );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_INTEGER,   int );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_BOOLEAN,   bool );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_CHARACTER, char );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_HSCRIPT,   HSCRIPT );
-DECLARE_DEDUCE_FIELDTYPE( FIELD_VARIANT,   ScriptVariant_t );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VOID,       void );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_FLOAT,      float );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,    const char * );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_CSTRING,    char * );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     Vector );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     const Vector& );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     QAngle );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     const QAngle& );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_INTEGER,    int );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_BOOLEAN,    bool );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_CHARACTER,  char );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_HSCRIPT,    HSCRIPT );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_VARIANT,    ScriptVariant_t );
 
 #define ScriptDeduceType( T ) ScriptDeducer<T>::FIELD_TYPE
 
@@ -199,6 +206,8 @@ DECLARE_NAMED_FIELDTYPE( const char *,       "cstring" );
 DECLARE_NAMED_FIELDTYPE( char *,             "cstring" );
 DECLARE_NAMED_FIELDTYPE( Vector,             "vector" );
 DECLARE_NAMED_FIELDTYPE( const Vector&,      "vector" );
+DECLARE_NAMED_FIELDTYPE( QAngle,             "vector" );
+DECLARE_NAMED_FIELDTYPE( const QAngle&,      "vector" );
 DECLARE_NAMED_FIELDTYPE( int,                "integer" );
 DECLARE_NAMED_FIELDTYPE( bool,               "boolean" );
 DECLARE_NAMED_FIELDTYPE( char,               "character" );
@@ -356,9 +365,10 @@ struct ScriptVariant_t
 	ScriptVariant_t( bool val ) :			m_flags( 0 ), m_type( FIELD_BOOLEAN )	{ m_bool = val; }
 	ScriptVariant_t( HSCRIPT val ) :		m_flags( 0 ), m_type( FIELD_HSCRIPT )	{ m_hScript = val; }
 
-	ScriptVariant_t( const Vector &val, bool bCopy = false ) :	m_flags( 0 ), m_type( FIELD_VECTOR )	{ if ( !bCopy ) { m_pVector = &val; } else { m_pVector = new Vector( val ); m_flags |= SV_FREE; } }
-	ScriptVariant_t( const Vector *val, bool bCopy = false ) :	m_flags( 0 ), m_type( FIELD_VECTOR )	{ if ( !bCopy ) { m_pVector = val; } else { m_pVector = new Vector( *val ); m_flags |= SV_FREE; } }
-	ScriptVariant_t( const char *val , bool bCopy = false ) :	m_flags( 0 ), m_type( FIELD_CSTRING )	{ if ( !bCopy ) { m_pszString = val; } else { m_pszString = strdup( val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const Vector &val, bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_VECTOR )		{ if ( !bCopy ) { m_pVector = &val; } else { m_pVector = new Vector( val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const Vector *val, bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_VECTOR )		{ if ( !bCopy ) { m_pVector = val; } else { m_pVector = new Vector( *val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const QAngle &val, bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_VECTOR )		{ if ( !bCopy ) { m_pAngle = &val; } else { m_pAngle = new QAngle( val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const QAngle *val, bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_VECTOR )		{ if ( !bCopy ) { m_pAngle = val; } else { m_pAngle = new QAngle( *val ); m_flags |= SV_FREE; } }
 
 	bool IsNull() const						{ return (m_type == FIELD_VOID ); }
 
@@ -366,6 +376,7 @@ struct ScriptVariant_t
 	operator float() const					{ Assert( m_type == FIELD_FLOAT );		return m_float; }
 	operator const char *() const			{ Assert( m_type == FIELD_CSTRING );	return ( m_pszString ) ? m_pszString : ""; }
 	operator const Vector &() const			{ Assert( m_type == FIELD_VECTOR );		static Vector vecNull(0, 0, 0); return (m_pVector) ? *m_pVector : vecNull; }
+	operator const QAngle &() const			{ Assert( m_type == FIELD_VECTOR );		static QAngle vecNull(0, 0, 0); return (m_pAngle) ? *m_pAngle : vecNull; }
 	operator char() const					{ Assert( m_type == FIELD_CHARACTER );	return m_char; }
 	operator bool() const					{ Assert( m_type == FIELD_BOOLEAN );	return m_bool; }
 	operator HSCRIPT() const				{ Assert( m_type == FIELD_HSCRIPT );	return m_hScript; }
@@ -375,6 +386,8 @@ struct ScriptVariant_t
 	void operator=( double f ) 				{ m_type = FIELD_FLOAT; m_float = (float)f; }
 	void operator=( const Vector &vec )		{ m_type = FIELD_VECTOR; m_pVector = &vec; }
 	void operator=( const Vector *vec )		{ m_type = FIELD_VECTOR; m_pVector = vec; }
+	void operator=( const QAngle &vec )		{ m_type = FIELD_VECTOR; m_pAngle = &vec; }
+	void operator=( const QAngle *vec )		{ m_type = FIELD_VECTOR; m_pAngle = vec; }
 	void operator=( const char *psz )		{ m_type = FIELD_CSTRING; m_pszString = psz; }
 	void operator=( char c )				{ m_type = FIELD_CHARACTER; m_char = c; }
 	void operator=( bool b ) 				{ m_type = FIELD_BOOLEAN; m_bool = b; }
@@ -505,6 +518,7 @@ struct ScriptVariant_t
 		float			m_float;
 		const char *	m_pszString;
 		const Vector *	m_pVector;
+		const QAngle *	m_pAngle;
 		char			m_char;
 		bool			m_bool;
 		HSCRIPT			m_hScript;
@@ -518,7 +532,38 @@ private:
 
 #define SCRIPT_VARIANT_NULL ScriptVariant_t()
 
+//---------------------------------------------------------
 
+struct ScriptConstantBinding_t
+{
+	const char			*m_pszScriptName;
+	const char			*m_pszDescription;
+	ScriptVariant_t		m_data;
+	unsigned			m_flags;
+};
+
+//---------------------------------------------------------
+
+struct ScriptEnumDesc_t
+{
+	ScriptEnumDesc_t() : m_pszScriptName( 0 ), m_pszDescription( 0 ), m_flags( 0 )
+	{
+		AllEnumsDesc().AddToTail(this);
+	}
+
+	virtual void		RegisterDesc() = 0;
+
+	const char			*m_pszScriptName;
+	const char			*m_pszDescription;
+	CUtlVector<ScriptConstantBinding_t> m_ConstantBindings;
+	unsigned			m_flags;
+
+	static CUtlVector<ScriptEnumDesc_t*>& AllEnumsDesc()
+	{
+		static CUtlVector<ScriptEnumDesc_t*> enums;
+		return enums;
+	}
+};
 
 //-----------------------------------------------------------------------------
 // 
@@ -549,6 +594,50 @@ private:
 
 #define ScriptRegisterFunction( pVM, func, description )									ScriptRegisterFunctionNamed( pVM, func, #func, description )
 #define ScriptRegisterFunctionNamed( pVM, func, scriptName, description )					do { static ScriptFunctionBinding_t binding; binding.m_desc.m_pszDescription = description; binding.m_desc.m_Parameters.RemoveAll(); ScriptInitFunctionBindingNamed( &binding, func, scriptName ); pVM->RegisterFunction( &binding ); } while (0)
+
+//-----------------------------------------------------------------------------
+// 
+//-----------------------------------------------------------------------------
+
+#define ScriptRegisterConstant( pVM, constant, description )									ScriptRegisterConstantNamed( pVM, constant, #constant, description )
+#define ScriptRegisterConstantNamed( pVM, constant, scriptName, description )					do { static ScriptConstantBinding_t binding; binding.m_pszScriptName = scriptName; binding.m_pszDescription = description; binding.m_data = constant; pVM->RegisterConstant( &binding ); } while (0)
+
+// Could probably use a better name.
+// This is used for registering variants (particularly vectors) not tied to existing variables.
+// The principal difference is that m_data is initted with bCopy set to true.
+#define ScriptRegisterConstantFromTemp( pVM, constant, description )									ScriptRegisterConstantFromTempNamed( pVM, constant, #constant, description )
+#define ScriptRegisterConstantFromTempNamed( pVM, constant, scriptName, description )					do { static ScriptConstantBinding_t binding; binding.m_pszScriptName = scriptName; binding.m_pszDescription = description; binding.m_data = ScriptVariant_t( constant, true ); pVM->RegisterConstant( &binding ); } while (0)
+
+//-----------------------------------------------------------------------------
+// 
+//-----------------------------------------------------------------------------
+
+#define BEGIN_SCRIPTENUM( enumName, description ) \
+		struct ScriptEnum##enumName##Desc_t : public ScriptEnumDesc_t \
+		{ \
+			void RegisterDesc(); \
+		}; \
+		ScriptEnum##enumName##Desc_t g_##enumName##_EnumDesc; \
+		\
+		void ScriptEnum##enumName##Desc_t::RegisterDesc() \
+		{ \
+			static bool bInitialized; \
+			if ( bInitialized ) \
+				return; \
+			\
+			bInitialized = true; \
+			\
+			m_pszScriptName = #enumName; \
+			m_pszDescription = description; \
+
+#define DEFINE_ENUMCONST( constant, description )							DEFINE_ENUMCONST_NAMED( constant, #constant, description )
+#define DEFINE_ENUMCONST_NAMED( constant, scriptName, description )			do { ScriptConstantBinding_t *pBinding = &(m_ConstantBindings[m_ConstantBindings.AddToTail()]); pBinding->m_pszScriptName = scriptName; pBinding->m_pszDescription = description; pBinding->m_data = constant; pBinding->m_flags = SF_MEMBER_FUNC; } while (0);
+
+#define END_SCRIPTENUM() \
+		} \
+
+
+#define GetScriptDescForEnum( enumName ) GetScriptDesc( ( className *)NULL )
 
 //-----------------------------------------------------------------------------
 // 
@@ -780,6 +869,16 @@ public:
 	// External classes
 	//--------------------------------------------------------
 	virtual bool RegisterClass( ScriptClassDesc_t *pClassDesc ) = 0;
+
+	//--------------------------------------------------------
+	// External constants
+	//--------------------------------------------------------
+	virtual void RegisterConstant( ScriptConstantBinding_t *pScriptConstant ) = 0;
+
+	//--------------------------------------------------------
+	// External enums
+	//--------------------------------------------------------
+	virtual void RegisterEnum( ScriptEnumDesc_t *pEnumDesc ) = 0;
 
 	//--------------------------------------------------------
 	// External instances. Note class will be auto-registered.

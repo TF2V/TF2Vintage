@@ -2,6 +2,7 @@
 #include "ivscript.h"
 #include "lua_vm.h"
 #include "vsquirrel.h"
+#include "vscript_misc.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -42,9 +43,7 @@ IScriptVM *CScriptManager::CreateVM( ScriptLanguage_t language )
 			return NULL;
 		}
 
-		ScriptRegisterFunction( pVM, RandomFloat, "Generate a random floating point number within a range, inclusive" );
-		ScriptRegisterFunction( pVM, RandomInt, "Generate a random integer within a range, inclusive" );
-		ScriptRegisterFunction( pVM, RandomFloatExp, "Generate an exponential random floating point number within a range, exclusive" );
+		RegisterBaseBindings( pVM );
 	}
 
 	return pVM;
