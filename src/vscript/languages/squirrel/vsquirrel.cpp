@@ -54,6 +54,7 @@ extern "C"
 	}
 }
 
+static const SQObjectPtr _null_;
 
 typedef struct
 {
@@ -227,12 +228,10 @@ bool CSquirrelVM::Init( void )
 
 	// register libraries
 	sq_pushroottable( GetVM() );
-
 	sqstd_register_stringlib( GetVM() );
 	sqstd_register_mathlib( GetVM() );
 	sqstd_register_timelib( GetVM() );
 	sqstd_seterrorhandlers( GetVM() );
-
 	sq_pop( GetVM(), 1 );
 
 	if ( IsDebug() || developer.GetInt() )
@@ -678,7 +677,7 @@ void CSquirrelVM::RegisterConstant( ScriptConstantBinding_t *pScriptConstant )
 	// register to the const table so users can't change it
 	sq_pushconsttable( GetVM() );
 	sq_pushstring( GetVM(), pScriptConstant->m_pszScriptName, -1 );
-	PushVariant( GetVM(), pScriptConstant->m_data );
+	PushVariant( pScriptConstant->m_data, true );
 	// add to consts
 	sq_newslot( GetVM(), -3, SQFalse );
 	// pop off const table
@@ -729,7 +728,6 @@ HSCRIPT CSquirrelVM::RegisterInstance( ScriptClassDesc_t *pDesc, void *pInstance
 	ScriptInstance_t *pScriptInstance = new ScriptInstance_t;
 	pScriptInstance->m_pClassDesc = pDesc;
 	pScriptInstance->m_pInstance = pInstance;
-	pScriptInstance->m_instanceUniqueId = _null_;
 
 	if ( !CreateInstance( pDesc, pScriptInstance, &CSquirrelVM::ExternalReleaseHook ) )
 	{
