@@ -680,12 +680,12 @@ SQInteger QuaternionFromKeyValue( HSQUIRRELVM pVM )
 }
 
 SQRegFunction g_QuaternionFuncs[] ={
-	{_SC( "constructor" ),		QuaternionConstruct,			},
+	{_SC( "constructor" ),		QuaternionConstruct				},
 	{MM_GET,					QuaternionGet,			2,		_SC( ".s" )},
-	{MM_SET,					QuaternionSet,			2,		_SC( ".s" )},
-	{MM_TOSTRING,				QuaternionToString,		2,		_SC( ".." )},
+	{MM_SET,					QuaternionSet,			3,		_SC( ".sn" )},
+	{MM_TOSTRING,				QuaternionToString				},
 	{MM_TYPEOF,					QuaternionTypeInfo				},
-	{MM_CMP,					QuaternionEquals,		2,		0},
+	{MM_CMP,					QuaternionEquals,		2,		_SC( ".." )},
 	{MM_NEXTI,					QuaternionIterate				},
 	{_SC( "ToKVString" ),		QuaternionToKeyValue			},
 	{_SC( "FromKVString" ),		QuaternionFromKeyValue			}
