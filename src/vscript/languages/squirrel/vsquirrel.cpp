@@ -1663,7 +1663,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 
 	parameters.SetCount( fnParams.Count() );
 
-	const int nArguments = Max( fnParams.Count(), sq_gettop( pVM ) );
+	const int nArguments = Min( fnParams.Count(), sq_gettop( pVM ) );
 	for ( int i=0; i < nArguments; ++i )
 	{
 		switch ( fnParams.Element( i ) )
