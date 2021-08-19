@@ -399,7 +399,7 @@ SQRegFunction g_VectorFuncs[] ={
 	{_SC( "constructor" ),		VectorConstruct				},
 	{MM_GET,					VectorGet,			2,		_SC( ".s" )},
 	{MM_SET,					VectorSet,			3,		_SC( ".sn" )},
-	{MM_TOSTRING,				VectorToString,		2,		_SC( ".." )},
+	{MM_TOSTRING,				VectorToString				},
 	{MM_TYPEOF,					VectorTypeInfo				},
 	{MM_CMP,					VectorEquals,		2,		_SC( ".." )},
 	{MM_NEXTI,					VectorIterate				},
@@ -461,7 +461,7 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 
 	// Pop off roottable
 	sq_pop( pVM, 1 );
-
+	Assert(nArgs == sq_gettop(pVM));
 	return SQ_OK;
 }
 
@@ -733,6 +733,7 @@ SQRESULT RegisterQuaternion( HSQUIRRELVM pVM )
 
 	// Pop off roottable
 	sq_pop( pVM, 1 );
+	Assert(nArgs == sq_gettop(pVM));
 	return SQ_OK;
 }
 
@@ -785,6 +786,7 @@ SQRESULT RegisterMatrix( HSQUIRRELVM pVM )
 
 	sq_pushstring( pVM, "constructor", -1);
 	sq_newclosure( pVM, MatrixConstruct, 0 );
+	sq_setnativeclosurename( pVM, -1, "constructor" );
 	sq_newslot( pVM, -3, SQFalse );
 
 	// Add to VM
@@ -792,6 +794,7 @@ SQRESULT RegisterMatrix( HSQUIRRELVM pVM )
 
 	// Pop off roottable
 	sq_pop( pVM, 1 );
+	Assert( nArgs == sq_gettop( pVM ) );
 	return SQ_OK;
 }
 
