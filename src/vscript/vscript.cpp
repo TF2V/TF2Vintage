@@ -1,7 +1,7 @@
 #include "tier1.h"
 #include "ivscript.h"
-#include "lua_vm.h"
-#include "vsquirrel.h"
+#include "languages/lua/lua_vm.h"
+#include "languages/squirrel/vsquirrel.h"
 #include "vscript_misc.h"
 
 // memdbgon must be the last include file in a .cpp file!!!

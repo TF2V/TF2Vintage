@@ -1172,7 +1172,7 @@ SQOuter *SquirrelStateReader::ReadOuter()
 
 HSQOBJECT SquirrelStateReader::LookupObject( char const *szName )
 {
-	HSQOBJECT pObject = _null_;
+	SQObjectPtr pObject;
 
 	sq_pushroottable( m_pVM );
 
@@ -1291,7 +1291,7 @@ void IterateObject( CSQStateIterator *pIterator, SQObjectPtr &value, char const 
 	}
 
 	auto IsContainer = [ ] ( SQObjectPtr const &value ) {
-		switch ( type( value ) )
+		switch ( sq_type( value ) )
 		{
 			case OT_TABLE:
 			case OT_ARRAY:
@@ -1332,7 +1332,7 @@ void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjec
 			SQTable *table = _table( value );
 			if ( table->_delegate )
 			{
-				SQObjectPtr tmp( {OT_TABLE, table->_delegate} );
+				SQObjectPtr tmp( table->_delegate );
 				pIterator->PsuedoKey( "_delegate " );
 				pIterator->Value( tmp );
 			}
@@ -1356,7 +1356,7 @@ void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjec
 		{
 			if ( _userdata( value )->_delegate )
 			{
-				SQObjectPtr tmp( {OT_TABLE, _userdata( value )->_delegate} );
+				SQObjectPtr tmp( _userdata( value )->_delegate );
 				pIterator->PsuedoKey( "_delegate " );
 				pIterator->Value( tmp );
 			}
@@ -1395,7 +1395,7 @@ void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjec
 			HSQUIRRELVM pVM = _thread( value );
 			IterateObject( pIterator, pVM->_lasterror, "_lasterror" );
 			IterateObject( pIterator, pVM->_errorhandler, "_errorhandler" );
-			IterateObject( pIterator, pVM->_debughook, "_debughook" );
+			IterateObject( pIterator, pVM->_debughook_closure, "_debughook" );
 			IterateObject( pIterator, pVM->_roottable, "_roottable" );
 			IterateObject( pIterator, pVM->temp_reg, "temp_reg" );
 
@@ -1428,7 +1428,7 @@ void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjec
 		case OT_CLASS:
 		{
 			SQClass *clas = _class( value );
-			SQObjectPtr tmp( {OT_TABLE, clas->_members} );
+			SQObjectPtr tmp( clas->_members );
 			SQUnsignedInteger len = clas->_defaultvalues.size();
 
 			IterateObject( pIterator, tmp, "_members" );
@@ -1436,7 +1436,7 @@ void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjec
 
 			if ( clas->_base )
 			{
-				tmp ={OT_CLASS, (SQTable *)clas->_base};
+				tmp = clas->_base;
 				pIterator->PsuedoKey( "_base " );
 				pIterator->Value( tmp );
 			}
@@ -1473,7 +1473,7 @@ void IterateObject( CSQStateIterator *pIterator, SQUnsignedInteger type, SQObjec
 		}
 		case OT_INSTANCE:
 		{
-			SQObjectPtr tmp( {OT_CLASS, (SQTable *)_instance( value )->_class} );
+			SQObjectPtr tmp( _instance( value )->_class );
 			pIterator->PsuedoKey( "_class " );
 			pIterator->Value( tmp );
 

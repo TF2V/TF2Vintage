@@ -118,9 +118,8 @@ public:
     _INLINE bool LOCAL_INC(SQInteger op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
     _INLINE bool PLOCAL_INC(SQInteger op,SQObjectPtr &target, SQObjectPtr &a, SQObjectPtr &incr);
     _INLINE bool DerefInc(SQInteger op,SQObjectPtr &target, SQObjectPtr &self, SQObjectPtr &key, SQObjectPtr &incr, bool postfix,SQInteger arg0);
-#ifdef _DEBUG_DUMP
+
     void dumpstack(SQInteger stackbase=-1, bool dumpall = false);
-#endif
 
 #ifndef NO_GARBAGE_COLLECTOR
     void Mark(SQCollectable **chain);

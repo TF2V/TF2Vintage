@@ -22,14 +22,16 @@ THE SOFTWARE.
 #ifndef _SQUIRREL_H_
 #define _SQUIRREL_H_
 
-#if defined(VSCRIPT_DLL_EXPORT)
+#if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
 #include "platform.h"
 #include "dbg.h"
-#define printf	DevMsg
+#if defined(VSQUIRREL_TEST)
+#define printf( fmt, ...)  Msg( fmt, ##__VA_ARGS__ );
+#else
+#define printf( fmt, ...)  DevMsg( fmt, ##__VA_ARGS__ );
 #endif
-
-#ifndef Assert
-#define Assert	assert
+#else
+#define Assert assert
 #endif
 
 #ifdef _SQ_CONFIG_INCLUDE
@@ -44,7 +46,7 @@ extern "C" {
 #define SQUIRREL_API extern
 #endif
 
-#if (defined(_WIN64) || defined(_LP64))
+#if (defined(_WIN64) || defined(_LP64) || defined(PLATFORM_64BITS))
 #ifndef _SQ64
 #define _SQ64
 #endif

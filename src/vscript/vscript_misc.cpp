@@ -1,6 +1,7 @@
 #include "vscript/ivscript.h"
 #include "tier1/tier1.h"
 #include "tier0/platform.h"
+#include "Color.h"
 #include "icommandline.h"
 #include "worldsize.h"
 #include "bspflags.h"

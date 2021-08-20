@@ -70,6 +70,9 @@ public:
 
 	void				RegisterFunction( ScriptFunctionBinding_t *pScriptFunction );
 	bool				RegisterClass( ScriptClassDesc_t *pClassDesc );
+	void				RegisterConstant( ScriptConstantBinding_t *pScriptConstant ) {}
+	void				RegisterEnum( ScriptEnumDesc_t *pEnumDesc ) {}
+
 	HSCRIPT				RegisterInstance( ScriptClassDesc_t *pDesc, void *pInstance );
 	void				*GetInstanceValue( HSCRIPT hInstance, ScriptClassDesc_t *pExpectedType = NULL );
 	void				RemoveInstance( HSCRIPT hScript );
