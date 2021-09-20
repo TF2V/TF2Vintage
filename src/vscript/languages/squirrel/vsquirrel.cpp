@@ -207,7 +207,7 @@ inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
 
 
 CSquirrelVM::CSquirrelVM( void )
-	: m_hVM( NULL ), developer( "developer" ), m_nUniqueKeySerial( 0 ), m_hDbgSrv( NULL )
+	: m_hVM(NULL), developer("developer"), m_nUniqueKeySerial(0), m_hDbgSrv(NULL), m_ErrorFunc(NULL), m_OutputFunc(NULL)
 {
 	m_VectorClass = _null_;
 	m_QuaternionClass = _null_;
@@ -1295,7 +1295,7 @@ HSQOBJECT CSquirrelVM::CreateClass( ScriptClassDesc_t *pClassDesc )
 		return INVALID_HSQOBJECT;
 	}
 
-	HSQOBJECT pObject ={OT_NULL, NULL};
+	HSQOBJECT pObject = _null_;
 	sq_getstackobj( GetVM(), -1, &pObject );
 	sq_addref( GetVM(), &pObject );
 	sq_settypetag( GetVM(), -1, pClassDesc );
@@ -1308,18 +1308,19 @@ HSQOBJECT CSquirrelVM::CreateClass( ScriptClassDesc_t *pClassDesc )
 
 bool CSquirrelVM::CreateInstance( ScriptClassDesc_t *pClassDesc, ScriptInstance_t *pInstance, SQRELEASEHOOK fnRelease )
 {
-	UtlHashFastHandle_t index = m_ScriptClasses.Find( (intp)pClassDesc );
-	if ( index == m_ScriptClasses.InvalidHandle() )
+	UtlHashFastHandle_t nIndex = m_ScriptClasses.Find( (intp)pClassDesc );
+	if ( nIndex == m_ScriptClasses.InvalidHandle() )
 		return false;
 
-	SQObjectPtr pClass( m_ScriptClasses[ index ] );
-	sq_pushobject( GetVM(), pClass );
+	SQObjectPtr hClass( m_ScriptClasses[ nIndex ] );
+	sq_pushobject( GetVM(), hClass );
 	if ( SQ_FAILED( sq_createinstance( GetVM(), -1 ) ) )
 	{
 		sq_pop( GetVM(), 1 );
 		return false;
 	}
 
+	// remove class object to align stack
 	sq_remove( GetVM(), -2 );
 
 	if ( SQ_FAILED( sq_setinstanceup( GetVM(), -1, pInstance ) ) )
@@ -1342,64 +1343,61 @@ void CSquirrelVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFunction, Scri
 	szParamCheck[0] = '.';
 
 	char *pCurrent = &szParamCheck[1];
-	for ( int i=0; i < pFunction->m_desc.m_Parameters.Count(); ++i, pCurrent++ )
+	for ( int i=0; i < pFunction->m_desc.m_Parameters.Count(); ++i )
 	{
 		switch ( pFunction->m_desc.m_Parameters[i] )
 		{
 			case FIELD_INTEGER:
 			{
-				*pCurrent = 'n';
+				*pCurrent++ = 'n';
 				break;
 			}
 			case FIELD_FLOAT:
 			{
-				*pCurrent = 'n';
+				*pCurrent++ = 'n';
 				break;
 			}
 			case FIELD_BOOLEAN:
 			{
-				*pCurrent = 'b';
+				*pCurrent++ = 'b';
 				break;
 			}
 			case FIELD_VECTOR:
 			case FIELD_QUATERNION:
 			case FIELD_MATRIX3X4:
 			{
-				*pCurrent = 'x';
+				*pCurrent++ = 'x';
 				break;
 			}
 			case FIELD_CSTRING:
 			{
-				*pCurrent = 's';
+				*pCurrent++ = 's';
 				break;
 			}
 			case FIELD_HSCRIPT:
 			{
-				*pCurrent = '.';
+				*pCurrent++ = '.';
 				break;
 			}
 			default:
 			{
-				*pCurrent = '\0';
 				AssertMsg( 0 , "Unsupported type" );
-				break;
+				return;
 			}
 		}
 	}
 
 	// null terminate
-	*pCurrent = '\0';
+	*pCurrent++ = '\0';
 	
 	sq_pushstring( GetVM(), pFunction->m_desc.m_pszScriptName, -1 );
-	
-	ScriptFunctionBinding_t **pFunctionBinding = (ScriptFunctionBinding_t **)sq_newuserdata( GetVM(), sizeof( ScriptFunctionBinding_t * ) );
-	*pFunctionBinding = pFunction;
-
-	HSQOBJECT pClosure;
+	sq_pushuserpointer( GetVM(), pFunction );
 	sq_newclosure( GetVM(), &CSquirrelVM::TranslateCall, 1 );
-	sq_getstackobj( GetVM(), -1, &pClosure );
 	sq_setnativeclosurename( GetVM(), -1, pFunction->m_desc.m_pszScriptName );
 	sq_setparamscheck( GetVM(), pFunction->m_desc.m_Parameters.Count() + 1, szParamCheck );
+
+	HSQOBJECT pClosure;
+	sq_getstackobj( GetVM(), -1, &pClosure );
 
 	sq_createslot( GetVM(), -3 );
 
@@ -1656,9 +1654,8 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 {
 	CUtlVectorFixed<ScriptVariant_t, MAX_FUNCTION_PARAMS> parameters;
 
-	SQUserPointer pData = NULL;
-	sq_getuserdata( pVM, sq_gettop( pVM ), &pData, NULL );
-	ScriptFunctionBinding_t *pFuncBinding = ( *(ScriptFunctionBinding_t **)pData );
+	ScriptFunctionBinding_t *pFuncBinding = NULL;
+	sq_getuserpointer( pVM, sq_gettop( pVM ), (SQUserPointer *)&pFuncBinding );
 	CUtlVector<ScriptDataType_t> const &fnParams = pFuncBinding->m_desc.m_Parameters;
 
 	parameters.SetCount( fnParams.Count() );
@@ -1832,12 +1829,14 @@ SQInteger CSquirrelVM::InstanceToString( HSQUIRRELVM pVM )
 				return 1;
 			}
 		}
+
+		sqstd_pushstringf( pVM, "(%s : 0x%p)", pInstance->m_pClassDesc->m_pszScriptName, pInstance->m_pInstance );
+		return 1;
 	}
 
-	HSQOBJECT pObject = _null_;
-	sq_getstackobj( pVM, 1, &pObject );
-	sq_pushstring( pVM, CFmtStr( "(instance : 0x%p)", pObject._unVal.pInstance ), -1 );
-
+	SQObjectPtr hObject;
+	sq_getstackobj( pVM, 1, &hObject );
+	sqstd_pushstringf( pVM, "(instance : 0x%p)", _instance( hObject ) );
 	return 1;
 }
 
@@ -1867,7 +1866,7 @@ void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 	}
 	else
 	{
-		Msg( "%s", szMessage );
+		Msg( "%s\n", szMessage );
 	}
 }
 
@@ -1887,7 +1886,7 @@ void CSquirrelVM::ErrorFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 	}
 	else
 	{
-		Warning( "%s", szMessage );
+		Warning( "%s\n", szMessage );
 	}
 }
 
