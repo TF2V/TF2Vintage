@@ -26,9 +26,9 @@ THE SOFTWARE.
 #include "platform.h"
 #include "dbg.h"
 #if defined(VSQUIRREL_TEST)
-#define printf( fmt, ...)  Msg( fmt, ##__VA_ARGS__ );
+#define printf( fmt, ...)  Msg( fmt, ##__VA_ARGS__ )
 #else
-#define printf( fmt, ...)  DevMsg( fmt, ##__VA_ARGS__ );
+#define printf( fmt, ...)  DevMsg( fmt, ##__VA_ARGS__ )
 #endif
 #else
 #define Assert assert
