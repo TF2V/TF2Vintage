@@ -624,7 +624,7 @@ public:
                     if (!NeedGet())
                         Error(_SC("parent cannot be set"));
                     SQInteger src = _fs->PopTarget();
-                    _fs->AddInstruction(_OP_GETPARENT, _fs->PushTarget(), src);
+                    _fs->AddInstruction(_OP_GETBASE, _fs->PushTarget(), src);
                 }
                 else {
                     _fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_IDENTIFIER)));
@@ -728,6 +728,7 @@ public:
             _fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(_fs->CreateString(_lex._svalue,_lex._longstr.size()-1)));
             Lex();
             break;
+        case TK_PARENT:
         case TK_BASE:
             Lex();
             _fs->AddInstruction(_OP_GETBASE, _fs->PushTarget());
@@ -813,7 +814,6 @@ public:
                 return _es.epos;
             }
             break;
-        case TK_PARENT: Lex();_fs->AddInstruction(_OP_GETPARENT, _fs->PushTarget(), 0); break;
         case TK_DOUBLE_COLON:  // "::"
             _fs->AddInstruction(_OP_LOADROOT, _fs->PushTarget());
             _es.etype = OBJECT;
