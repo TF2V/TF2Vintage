@@ -5,6 +5,7 @@
 
 #include "squirrel.h"
 #include "sqobject.h"
+#include "sqstdstring.h"
 
 #include "vscript/ivscript.h"
 #include "vsquirrel_math.h"
@@ -141,7 +142,8 @@ SQInteger VectorToString( HSQUIRRELVM pVM )
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	sq_pushstring( pVM, CFmtStr("(vector : (%f, %f, %f))", pVector->x, pVector->y, pVector->z ), -1 );
+	sqstd_pushstringf( pVM, "(vector 0x%p : (%f, %f, %f))", (void *)pVector,
+					   pVector->x, pVector->y, pVector->z );
 	return 1;
 }
 
@@ -579,7 +581,8 @@ SQInteger QuaternionToString( HSQUIRRELVM pVM )
 	Quaternion *pQuat = (Quaternion *)up;
 	sq_checkquaternion( pVM, pQuat );
 
-	sq_pushstring( pVM, CFmtStr("(quaternion : (%f, %f, %f, %f))", pQuat->x, pQuat->y, pQuat->z, pQuat->w), -1 );
+	sqstd_pushstringf( pVM, "(quaternion 0x%p : (%f, %f, %f, %f))", (void *)pQuat, 
+								 pQuat->x, pQuat->y, pQuat->z, pQuat->w );
 	return 1;
 }
 
