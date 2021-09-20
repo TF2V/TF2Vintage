@@ -574,13 +574,9 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 
 	if ( !sq_isnull( m_ErrorString ) )
 	{
-		if ( sq_isstring( m_ErrorString ) )
-			sq_throwerror( GetVM(), _stringval( m_ErrorString ) );
-		else
-			sq_throwerror( GetVM(), "Internal error" );
-
-		m_ErrorString = _null_;
-
+		sq_pushobject( GetVM(), m_ErrorString );
+		sq_resetobject( &m_ErrorString );
+		sq_throwobject( GetVM() );
 		return SCRIPT_ERROR;
 	}
 
@@ -1667,29 +1663,36 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 		{
 			case FIELD_INTEGER:
 			{
-				SQInteger i = 0;
-				sq_getinteger( pVM, i+2, &i );
-				parameters[i] = i;
+				SQInteger n = 0;
+				if ( SQ_FAILED( sq_getinteger( pVM, i+2, &n ) ) )
+					return sqstd_throwerrorf( pVM, "Integer argument expected at argument %d", i );
+
+				parameters[i] = n;
 				break;
 			}
 			case FIELD_FLOAT:
 			{
 				SQFloat f = 0.0;
-				sq_getfloat( pVM, i+2, &f );
+				if ( SQ_FAILED( sq_getfloat( pVM, i+2, &f ) ) )
+					return sqstd_throwerrorf( pVM, "Float argument expected at argument %d", i );
+
 				parameters[i] = f;
 				break;
 			}
 			case FIELD_BOOLEAN:
 			{
 				SQBool b = SQFalse;
-				sq_getbool( pVM, i+2, &b );
+				if ( SQ_FAILED( sq_getbool( pVM, i+2, &b ) ) )
+					return sqstd_throwerrorf( pVM, "Bool argument expected at argument %d", i );
+
 				parameters[i] = b == SQTrue;
 				break;
 			}
 			case FIELD_CHARACTER:
 			{
 				char const *pChar = NULL;
-				sq_getstring( pVM, i+2, &pChar );
+				if ( SQ_FAILED( sq_getstring( pVM, i+2, &pChar ) ) )
+					return sqstd_throwerrorf( pVM, "String argument expected at argument %d", i );
 				if ( pChar == NULL )
 					pChar = "\0";
 
@@ -1699,7 +1702,9 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 			case FIELD_CSTRING:
 			{
 				char const *pszString = NULL;
-				sq_getstring( pVM, i+2, &pszString );
+				if ( SQ_FAILED( sq_getstring( pVM, i+2, &pszString ) ) )
+					return sqstd_throwerrorf( pVM, "String argument expected at argument %d", i );
+
 				parameters[i] = pszString;
 				break;
 			}
@@ -1708,7 +1713,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 				SQUserPointer pInstance = NULL;
 				sq_getinstanceup( pVM, i+2, &pInstance, VECTOR_TYPE_TAG );
 				if ( pInstance == NULL )
-					return sq_throwerror( pVM, "Vector argument expected" );
+					return sqstd_throwerrorf( pVM, "Vector argument expected at argument %d", i );
 
 				parameters[i] = (Vector *)pInstance;
 				break;
@@ -1718,7 +1723,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 				SQUserPointer pInstance = NULL;
 				sq_getinstanceup( pVM, i+2, &pInstance, QUATERNION_TYPE_TAG );
 				if ( pInstance == NULL )
-					return sq_throwerror( pVM, "Vector argument expected" );
+					return sqstd_throwerrorf( pVM, "Quaternion argument expected at argument %d", i );
 
 				parameters[i] = (Quaternion *)pInstance;
 				break;
@@ -1728,7 +1733,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 				SQUserPointer pInstance = NULL;
 				sq_getinstanceup( pVM, i+2, &pInstance, MATRIX_TYPE_TAG );
 				if ( pInstance == NULL )
-					return sq_throwerror( pVM, "Vector argument expected" );
+					return sqstd_throwerrorf( pVM, "Matrix argument expected at argument %d", i );
 
 				parameters[i] = (matrix3x4_t *)pInstance;
 				break;
@@ -1736,7 +1741,9 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 			case FIELD_HSCRIPT:
 			{
 				HSQOBJECT pObject = _null_;
-				sq_getstackobj( pVM, i+2, &pObject );
+				if ( SQ_FAILED( sq_getstackobj( pVM, i+2, &pObject ) ) )
+					return sqstd_throwerrorf( pVM, "Handle argument expected at argument %d", i );
+
 				if ( sq_isnull( pObject ) )
 				{
 					parameters[i] = (HSCRIPT)NULL;
@@ -1798,13 +1805,9 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 	HSQOBJECT pErrorString = GetVScript( pVM )->m_ErrorString;
 	if ( !sq_isnull( pErrorString ) )
 	{
-		if ( sq_isstring( pErrorString ) )
-			sq_throwerror( pVM, _stringval( pErrorString ) );
-		else
-			sq_throwerror( pVM, "Internal error" );
-
-		GetVScript( pVM )->m_ErrorString = _null_;
-		return SQ_ERROR;
+		sq_pushobject( pVM, pErrorString );
+		sq_resetobject( &GetVScript( pVM )->m_ErrorString );
+		return sq_throwobject( pVM );
 	}
 
 	PushVariant( pVM, returnValue );
