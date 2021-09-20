@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <assert.h>
 #include <stdarg.h>
 
 #define MAX_FORMAT_LEN  20
@@ -84,7 +83,7 @@ SQRESULT sqstd_format(HSQUIRRELVM v,SQInteger nformatstringidx,SQInteger *outlen
     while(n < format_size)
     {
         if(format[n] != '%') {
-            assert(i < allocated);
+            Assert(i < allocated);
             dest[i++] = format[n];
             n++;
         }
