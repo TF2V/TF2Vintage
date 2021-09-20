@@ -1858,8 +1858,8 @@ void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 	static char szMessage[2048]{};
 
 	va_list va;
-	va_start( va, szMessage );
-	V_vsnprintf( szMessage, sizeof( szMessage ), fmt, va );
+	va_start( va, fmt );
+	V_vsprintf_safe( szMessage, fmt, va );
 	va_end( va );
 
 	ScriptOutputFunc_t fnOutput = GetVScript( pVM )->m_OutputFunc;
@@ -1878,8 +1878,8 @@ void CSquirrelVM::ErrorFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
 	static char szMessage[2048]{};
 
 	va_list va;
-	va_start( va, szMessage );
-	V_vsnprintf( szMessage, sizeof( szMessage ), fmt, va );
+	va_start( va, fmt );
+	V_vsprintf_safe( szMessage, fmt, va );
 	va_end( va );
 
 	ScriptErrorFunc_t fnError = GetVScript( pVM )->m_ErrorFunc;
