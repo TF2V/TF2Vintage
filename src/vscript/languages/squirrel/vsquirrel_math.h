@@ -11,11 +11,6 @@
 
 SQRESULT RegisterMathBindings( HSQUIRRELVM pVM );
 
-SQInteger VectorConstruct( HSQUIRRELVM pVM );
 SQInteger VectorRelease( SQUserPointer up, SQInteger size );
-SQInteger QuaternionConstruct( HSQUIRRELVM pVM );
-SQInteger QuaternionRelease( SQUserPointer up, SQInteger size );
-SQInteger MatrixConstruct( HSQUIRRELVM pVM );
-SQInteger MatrixRelease( SQUserPointer up, SQInteger size );
 
 #endif

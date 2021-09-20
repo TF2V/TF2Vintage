@@ -435,7 +435,6 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 
 	// Setup class table
 	sq_settypetag( pVM, -1, VECTOR_TYPE_TAG );
-	sq_setclassudsize( pVM, -1, sizeof(Vector) );
 
 	for ( int i = 0; i < ARRAYSIZE( g_VectorFuncs ); ++i )
 	{
@@ -461,7 +460,6 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 
 	// Pop off roottable
 	sq_pop( pVM, 1 );
-	Assert(nArgs == sq_gettop(pVM));
 	return SQ_OK;
 }
 
@@ -477,24 +475,19 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 SQInteger QuaternionConstruct( HSQUIRRELVM pVM )
 {
 	int top = sq_gettop( pVM );
-	if ( top > 2 && top != 5 )
-		return sq_throwerror( pVM, CFmtStr( "Bad arguments passed to Quaternion constructor, expected 4, got %d", (top - 2) ) );
+	if ( top > 1 && top != 5 )
+		return sq_throwerror( pVM, CFmtStr( "Bad arguments passed to Quaternion constructor, expected 4, got %d", (top - 1) ) );
 
-	Quaternion *pQuat = new Quaternion;
+	Quaternion quat;
 	for ( int i=0; i < 4; ++i )
 	{
-		sq_getfloat( pVM, i + 2, &( *pQuat )[i] );
+		sq_getfloat( pVM, i + 2, &quat[i] );
 	}
 
-	sq_setinstanceup( pVM, 1, pQuat );
-	sq_setreleasehook( pVM, 1, &QuaternionRelease );
+	SQUserPointer p;
+	sq_getinstanceup( pVM, 1, &p, NULL );
+	V_memcpy( p, &quat, sizeof( quat ) );
 
-	return 0;
-}
-
-SQInteger QuaternionRelease( SQUserPointer up, SQInteger size )
-{
-	delete (Quaternion *)up;
 	return 0;
 }
 
@@ -733,7 +726,6 @@ SQRESULT RegisterQuaternion( HSQUIRRELVM pVM )
 
 	// Pop off roottable
 	sq_pop( pVM, 1 );
-	Assert(nArgs == sq_gettop(pVM));
 	return SQ_OK;
 }
 
@@ -746,25 +738,34 @@ SQRESULT RegisterQuaternion( HSQUIRRELVM pVM )
 SQInteger MatrixConstruct( HSQUIRRELVM pVM )
 {
 	int top = sq_gettop( pVM );
-	if ( top > 2 && top != 13 )
-		return sq_throwerror( pVM, CFmtStr( "Bad arguments passed to matrix3x4_t constructor, expected 12, got %d", (top - 2) ) );
+	if ( top > 1 && top != 13 )
+		return sq_throwerror( pVM, CFmtStr( "Bad arguments passed to matrix3x4_t constructor, expected 12, got %d", (top - 1) ) );
 
-	matrix3x4_t *pMatrix = new matrix3x4_t;
+	matrix3x4_t matrix;
 	for ( int i=0; i < 12; ++i )
 	{
-		sq_getfloat( pVM, i + 2, &( *pMatrix )[i / 4][i % 4] );
+		sq_getfloat( pVM, i + 1, &matrix[i / 4][i % 4] );
 	}
 
-	sq_setinstanceup( pVM, 1, pMatrix );
-	sq_setreleasehook( pVM, 1, &MatrixRelease );
+	SQUserPointer p;
+	sq_getinstanceup( pVM, 1, &p, NULL );
+	V_memcpy( p, &matrix, sizeof( matrix ) );
 
 	return SQ_OK;
 }
 
-SQInteger MatrixRelease( SQUserPointer up, SQInteger size )
+SQInteger MatrixToString( HSQUIRRELVM pVM )
 {
-	delete (matrix3x4_t *)up;
-	return 0;
+	SQUserPointer up = NULL;
+	sq_getinstanceup( pVM, 1, &up, MATRIX_TYPE_TAG );
+	matrix3x4_t &matrix = *(matrix3x4_t *)up;
+
+	sqstd_pushstringf( pVM, "(matrix 0x%p : [(%f, %f, %f, %f), (%f, %f, %f, %f), (%f, %f, %f, %f)])",
+								 (void *)&matrix,
+								 matrix[0][0], matrix[0][1], matrix[0][2], matrix[0][3],
+								 matrix[1][0], matrix[1][1], matrix[1][2], matrix[1][3],
+								 matrix[2][0], matrix[2][1], matrix[2][2], matrix[2][3] );
+	return 1;
 }
 
 SQRESULT RegisterMatrix( HSQUIRRELVM pVM )
@@ -784,9 +785,14 @@ SQRESULT RegisterMatrix( HSQUIRRELVM pVM )
 	sq_settypetag( pVM, -1, MATRIX_TYPE_TAG );
 	sq_setclassudsize( pVM, -1, sizeof(matrix3x4_t) );
 
-	sq_pushstring( pVM, "constructor", -1);
+	sq_pushstring( pVM, _SC( "constructor" ), -1);
 	sq_newclosure( pVM, MatrixConstruct, 0 );
-	sq_setnativeclosurename( pVM, -1, "constructor" );
+	sq_setnativeclosurename( pVM, -1, _SC( "constructor" ) );
+	sq_newslot( pVM, -3, SQFalse );
+
+	sq_pushstring( pVM, MM_TOSTRING, -1 );
+	sq_newclosure( pVM, MatrixToString, 0 );
+	sq_setnativeclosurename( pVM, -1, MM_TOSTRING );
 	sq_newslot( pVM, -3, SQFalse );
 
 	// Add to VM
@@ -794,7 +800,6 @@ SQRESULT RegisterMatrix( HSQUIRRELVM pVM )
 
 	// Pop off roottable
 	sq_pop( pVM, 1 );
-	Assert( nArgs == sq_gettop( pVM ) );
 	return SQ_OK;
 }
 

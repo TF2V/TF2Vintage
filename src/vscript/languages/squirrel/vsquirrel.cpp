@@ -147,8 +147,8 @@ public:
 private:
 	HSQUIRRELVM GetVM( void )   { return m_hVM; }
 
-	void						ConvertToVariant( SQObject const &pValue, ScriptVariant_t *pVariant );
-	void						PushVariant( ScriptVariant_t const &pVariant, bool bDuplicate );
+	static void					ConvertToVariant( HSQUIRRELVM pVM, SQObject const &pValue, ScriptVariant_t *pVariant );
+	static void					PushVariant( HSQUIRRELVM pVM, ScriptVariant_t const &pVariant );
 
 	HSQOBJECT					CreateClass( ScriptClassDesc_t *pClassDesc );
 	bool						CreateInstance( ScriptClassDesc_t *pClassDesc, ScriptInstance_t *pInstance, SQRELEASEHOOK fnRelease );
@@ -534,7 +534,7 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 	if ( pArgs )
 	{
 		for ( int i=0; i < nArgs; ++i )
-			PushVariant( pArgs[i], true );
+			PushVariant( GetVM(), pArgs[i] );
 	}
 
 	m_flTimeStartedCall = Plat_FloatTime();
@@ -557,7 +557,7 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 	{
 		HSQOBJECT _return;
 		sq_getstackobj( GetVM(), -1, &_return );
-		ConvertToVariant( _return, pReturn );
+		ConvertToVariant( GetVM(), _return, pReturn );
 
 		// sq_call pushes a result on success, pop it off
 		sq_pop( GetVM(), 1 );
@@ -677,7 +677,7 @@ void CSquirrelVM::RegisterConstant( ScriptConstantBinding_t *pScriptConstant )
 	// register to the const table so users can't change it
 	sq_pushconsttable( GetVM() );
 	sq_pushstring( GetVM(), pScriptConstant->m_pszScriptName, -1 );
-	PushVariant( pScriptConstant->m_data, true );
+	PushVariant( GetVM(), pScriptConstant->m_data );
 	// add to consts
 	sq_newslot( GetVM(), -3, SQFalse );
 	// pop off const table
@@ -690,7 +690,7 @@ void CSquirrelVM::RegisterEnum( ScriptEnumDesc_t *pEnumDesc )
 	sq_pushconsttable( GetVM() );
 	sq_pushstring( GetVM(), pEnumDesc->m_pszScriptName, -1 );
 
-	// Check if class name is already taken
+	// Check if name is already taken
 	if ( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
 	{
 		HSQOBJECT pObject ={OT_NULL, NULL};
@@ -709,7 +709,7 @@ void CSquirrelVM::RegisterEnum( ScriptEnumDesc_t *pEnumDesc )
 		ScriptConstantBinding_t &constant = pEnumDesc->m_ConstantBindings[i];
 
 		sq_pushstring( GetVM(), constant.m_pszScriptName, -1 );
-		PushVariant( constant.m_data, false );
+		PushVariant( GetVM(), constant.m_data );
 		// add to table
 		sq_newslot( GetVM(), -3, SQFalse );
 	}
@@ -884,7 +884,7 @@ bool CSquirrelVM::SetValue( HSCRIPT hScope, const char *pszKey, const ScriptVari
 		}
 	}
 
-	PushVariant( value, true );
+	PushVariant( GetVM(), value );
 	sq_createslot( GetVM(), -3 );
 
 	sq_pop( GetVM(), 1 );
@@ -900,7 +900,7 @@ void CSquirrelVM::CreateTable( ScriptVariant_t &Table )
 	sq_getstackobj( GetVM(), -1, &pObject );
 	sq_addref( GetVM(), &pObject );
 
-	ConvertToVariant( pObject, &Table );
+	ConvertToVariant( GetVM(), pObject, &Table );
 
 	sq_pop( GetVM(), 1 );
 }
@@ -939,8 +939,8 @@ int CSquirrelVM::GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pK
 	// sq_next pushes 2 objects onto the stack, so pop them off too
 	sq_pop( GetVM(), 2 );
 
-	ConvertToVariant( pKeyObj, pKey );
-	ConvertToVariant( pValueObj, pValue );
+	ConvertToVariant( GetVM(), pKeyObj, pKey );
+	ConvertToVariant( GetVM(), pValueObj, pValue );
 
 	int nNexti = 0;
 	sq_getinteger( GetVM(), -1, &nNexti );
@@ -953,7 +953,7 @@ int CSquirrelVM::GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pK
 bool CSquirrelVM::GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant_t *pValue )
 {
 	HSQOBJECT pObject = LookupObject( pszKey, hScope );
-	ConvertToVariant( pObject, pValue );
+	ConvertToVariant( GetVM(), pObject, pValue );
 
 	return !sq_isnull( pObject );
 }
@@ -1087,7 +1087,7 @@ bool CSquirrelVM::RaiseException( const char *pszExceptionText )
 	return true;
 }
 
-void CSquirrelVM::ConvertToVariant( HSQOBJECT const &pValue, ScriptVariant_t *pVariant )
+void CSquirrelVM::ConvertToVariant( HSQUIRRELVM pVM, HSQOBJECT const &pValue, ScriptVariant_t *pVariant )
 {
 	switch ( sq_type( pValue ) )
 	{
@@ -1124,19 +1124,40 @@ void CSquirrelVM::ConvertToVariant( HSQOBJECT const &pValue, ScriptVariant_t *pV
 		}
 		case OT_INSTANCE:
 		{
-			sq_pushobject( GetVM(), pValue );
+			sq_pushobject( pVM, pValue );
 
 			SQUserPointer pInstance = NULL;
-			SQRESULT nResult = sq_getinstanceup( GetVM(), -1, &pInstance, VECTOR_TYPE_TAG );
 
-			sq_pop( GetVM(), 1 );
-
+			SQRESULT nResult = sq_getinstanceup( pVM, -1, &pInstance, VECTOR_TYPE_TAG );
 			if ( nResult == SQ_OK )
 			{
 				*pVariant = new Vector();
 				V_memcpy( (void *)pVariant->m_pVector, pInstance, sizeof( Vector ) );
 				pVariant->m_flags |= SV_FREE;
 
+				sq_pop( pVM, 1 );
+				break;
+			}
+
+			nResult = sq_getinstanceup( pVM, -1, &pInstance, QUATERNION_TYPE_TAG );
+			if ( nResult == SQ_OK )
+			{
+				*pVariant = new Quaternion();
+				V_memcpy( (void *)pVariant->m_pQuat, pInstance, sizeof( Quaternion ) );
+				pVariant->m_flags |= SV_FREE;
+
+				sq_pop( pVM, 1 );
+				break;
+			}
+
+			nResult = sq_getinstanceup( pVM, -1, &pInstance, QUATERNION_TYPE_TAG );
+			if ( nResult == SQ_OK )
+			{
+				*pVariant = new matrix3x4_t();
+				V_memcpy( (void *)pVariant->m_pMatrix, pInstance, sizeof( matrix3x4_t ) );
+				pVariant->m_flags |= SV_FREE;
+
+				sq_pop( pVM, 1 );
 				break;
 			}
 
@@ -1156,112 +1177,91 @@ void CSquirrelVM::ConvertToVariant( HSQOBJECT const &pValue, ScriptVariant_t *pV
 	}
 }
 
-void CSquirrelVM::PushVariant( ScriptVariant_t const &Variant, bool bDuplicate )
+void CSquirrelVM::PushVariant( HSQUIRRELVM pVM, ScriptVariant_t const &Variant )
 {
 	switch ( Variant.m_type )
 	{
-		case FIELD_VOID:
-		{
-			sq_pushnull( GetVM() );
-			break;
-		}
 		case FIELD_INTEGER:
 		{
-			sq_pushinteger( GetVM(), Variant.m_int );
+			sq_pushinteger( pVM, Variant.m_int );
 			break;
 		}
 		case FIELD_FLOAT:
 		{
-			sq_pushfloat( GetVM(), Variant.m_float );
+			sq_pushfloat( pVM, Variant.m_float );
 			break;
 		}
 		case FIELD_BOOLEAN:
 		{
-			sq_pushbool( GetVM(), Variant.m_bool );
+			sq_pushbool( pVM, Variant.m_bool );
 			break;
 		}
 		case FIELD_CHARACTER:
 		{
-			sq_pushstring( GetVM(), &Variant.m_char, 1 );
+			sq_pushstring( pVM, &Variant.m_char, 1 );
 			break;
 		}
 		case FIELD_CSTRING:
 		{
 			char const *szString = Variant.m_pszString ? Variant : "";
-			sq_pushstring( GetVM(), szString, V_strlen( szString ) );
+			sq_pushstring( pVM, szString, V_strlen( szString ) );
 
 			break;
 		}
 		case FIELD_HSCRIPT:
 		{
 			if ( Variant.m_hScript )
-				sq_pushobject( GetVM(), *(HSQOBJECT *)Variant.m_hScript );
+				sq_pushobject( pVM, *(HSQOBJECT *)Variant.m_hScript );
 			else
-				sq_pushnull( GetVM() );
+				sq_pushnull( pVM );
 
 			break;
 		}
 		case FIELD_VECTOR:
 		{
-			sq_pushobject( GetVM(), m_VectorClass );
-			sq_createinstance( GetVM(), -1 );
+			sq_pushobject( pVM, GetVScript( pVM )->m_VectorClass );
+			sq_createinstance( pVM, -1 );
 
-			if ( bDuplicate )
-			{
-				Vector *pVector = new Vector( Variant );
-				sq_setinstanceup( GetVM(), -1, (SQUserPointer)pVector );
-				sq_setreleasehook( GetVM(), -1, &VectorRelease );
-			}
-			else
-			{
-				sq_setinstanceup( GetVM(), -1, (SQUserPointer)Variant.m_pVector );
-			}
+			Vector *pVector = new Vector( Variant );
+			sq_setinstanceup( pVM, -1, (SQUserPointer)pVector );
+			sq_setreleasehook( pVM, -1, &VectorRelease );
 
 			// Remove the class object from stack so we are aligned
-			sq_remove( GetVM(), -2 );
+			sq_remove( pVM, -2 );
 
 			break;
 		}
 		case FIELD_QUATERNION:
 		{
-			sq_pushobject( GetVM(), m_QuaternionClass );
-			sq_createinstance( GetVM(), -1 );
+			sq_pushobject( pVM, GetVScript( pVM )->m_QuaternionClass );
+			sq_createinstance( pVM, -1 );
 
-			if ( bDuplicate )
-			{
-				Quaternion *pQuat = new Quaternion( Variant );
-				sq_setinstanceup( GetVM(), -1, (SQUserPointer)pQuat );
-				sq_setreleasehook( GetVM(), -1, &QuaternionRelease );
-			}
-			else
-			{
-				sq_setinstanceup( GetVM(), -1, (SQUserPointer)Variant.m_pQuat );
-			}
+			Quaternion *pQuat = NULL;
+			sq_getinstanceup( pVM, -1, (SQUserPointer *)&pQuat, NULL );
+			V_memcpy( pQuat, Variant.m_pQuat, sizeof( Quaternion ) );
 
 			// Remove the class object from stack so we are aligned
-			sq_remove( GetVM(), -2 );
+			sq_remove( pVM, -2 );
 
 			break;
 		}
 		case FIELD_MATRIX3X4:
 		{
-			sq_pushobject( GetVM(), m_MatrixClass );
-			sq_createinstance( GetVM(), -1 );
+			sq_pushobject( pVM, GetVScript( pVM )->m_MatrixClass );
+			sq_createinstance( pVM, -1 );
 
-			if ( bDuplicate )
-			{
-				matrix3x4_t *pMatrix = new matrix3x4_t( Variant );
-				sq_setinstanceup( GetVM(), -1, (SQUserPointer)pMatrix );
-				sq_setreleasehook( GetVM(), -1, &QuaternionRelease );
-			}
-			else
-			{
-				sq_setinstanceup( GetVM(), -1, (SQUserPointer)Variant.m_pMatrix );
-			}
+			matrix3x4_t *pMatrix = NULL;
+			sq_getinstanceup( pVM, -1, (SQUserPointer *)&pMatrix, NULL );
+			V_memcpy( pMatrix, Variant.m_pMatrix, sizeof( matrix3x4_t ) );
 
 			// Remove the class object from stack so we are aligned
-			sq_remove( GetVM(), -2 );
+			sq_remove( pVM, -2 );
 
+			break;
+		}
+		default:
+		{
+			sq_pushnull( pVM );
 			break;
 		}
 	}
@@ -1569,7 +1569,7 @@ SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
 	pInstance->m_pInstance = pClassDesc->m_pfnConstruct();
 
 	sq_setinstanceup( pVM, 1, pInstance );
-	sq_setreleasehook( pVM, 1, CSquirrelVM::ReleaseHook );
+	sq_setreleasehook( pVM, 1, &CSquirrelVM::ReleaseHook );
 
 	return SQ_OK;
 }
@@ -1757,7 +1757,8 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 				break;
 			}
 			default:
-				break;
+				AssertMsg( 0, "Unsupported type" );
+				return false;
 		}
 	}
 
@@ -1792,85 +1793,6 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 								parameters.Count(), 
 								bHasReturn ? &returnValue : NULL );
 
-	if ( bHasReturn )
-	{
-		switch ( pFuncBinding->m_desc.m_ReturnType )
-		{
-			case FIELD_INTEGER:
-			{
-				sq_pushinteger( pVM, returnValue.m_int );
-				break;
-			}
-			case FIELD_FLOAT:
-			{
-				sq_pushfloat( pVM, returnValue.m_int );
-				break;
-			}
-			case FIELD_BOOLEAN:
-			{
-				sq_pushbool( pVM, returnValue.m_bool );
-				break;
-			}
-			case FIELD_CSTRING:
-			{
-				char const *pString = "";
-				if ( returnValue.m_pszString )
-					pString = returnValue;
-
-				sq_pushstring( pVM, pString, -1 );
-				break;
-			}
-			case FIELD_VECTOR:
-			{
-				Assert( GetVScript( pVM )->m_VectorClass != _null_ );
-				sq_pushobject( pVM, GetVScript( pVM )->m_VectorClass );
-				sq_createinstance( pVM, -1 );
-				sq_setinstanceup( pVM, -1, (SQUserPointer)returnValue.m_pVector );
-				sq_setreleasehook( pVM, -1, &VectorRelease );
-				// Remove the class object from stack so we are aligned
-				sq_remove( pVM, -2 );
-
-				break;
-			}
-			case FIELD_QUATERNION:
-			{
-				Assert( GetVScript( pVM )->m_QuaternionClass != _null_ );
-				sq_pushobject( pVM, GetVScript( pVM )->m_QuaternionClass );
-				sq_createinstance( pVM, -1 );
-				sq_setinstanceup( pVM, -1, (SQUserPointer)returnValue.m_pQuat );
-				sq_setreleasehook( pVM, -1, &QuaternionRelease );
-				sq_remove( pVM, -2 );
-
-				break;
-			}
-			case FIELD_MATRIX3X4:
-			{
-				Assert( GetVScript( pVM )->m_MatrixClass != _null_ );
-				sq_pushobject( pVM, GetVScript( pVM )->m_MatrixClass );
-				sq_createinstance( pVM, -1 );
-				sq_setinstanceup( pVM, -1, (SQUserPointer)returnValue.m_pMatrix );
-				sq_setreleasehook( pVM, -1, &MatrixRelease );
-				sq_remove( pVM, -2 );
-
-				break;
-			}
-			case FIELD_HSCRIPT:
-			{
-				if ( returnValue.m_hScript )
-					sq_pushobject( pVM, *(HSQOBJECT *)returnValue.m_hScript );
-				else
-					sq_pushnull( pVM );
-
-				break;
-			}
-			default:
-			{
-				sq_pushnull( pVM );
-				break;
-			}
-		}
-	}
-
 	for ( int i=0; i < parameters.Count(); ++i )
 	{
 		parameters[i].Free();
@@ -1887,6 +1809,8 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 		GetVScript( pVM )->m_ErrorString = _null_;
 		return SQ_ERROR;
 	}
+
+	PushVariant( pVM, returnValue );
 
 	return pFuncBinding->m_desc.m_ReturnType != FIELD_VOID;
 }

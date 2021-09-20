@@ -3,6 +3,126 @@
 
 //=============================================================================
 //
+// matrix3x4_t
+// 
+//=============================================================================
+
+matrix3x4_t const& ScriptConcatTransforms( matrix3x4_t const &mat1, matrix3x4_t const &mat2 )
+{
+	static matrix3x4_t result;
+	ConcatTransforms( mat1, mat2, result );
+	return result;
+}
+
+matrix3x4_t const& ScriptMatrixCopy( matrix3x4_t const &mat )
+{
+	static matrix3x4_t result;
+	MatrixCopy( mat, result );
+	return result;
+}
+
+matrix3x4_t const& ScriptMatrixInvert( matrix3x4_t mat )
+{
+	static matrix3x4_t result;
+	MatrixInvert( mat, result );
+	return result;
+}
+
+bool ScriptMatricesAreEqual( matrix3x4_t const &mat1, matrix3x4_t const &mat2 )
+{
+	return MatricesAreEqual( mat1, mat2 );
+}
+
+const Vector& ScriptMatrixGetColumn( matrix3x4_t const &mat, int column )
+{
+	static Vector outvec;
+	outvec.Zero();
+	MatrixGetColumn( mat, column, outvec );
+	return outvec;
+}
+
+matrix3x4_t const& ScriptMatrixSetColumn( const Vector& vecset, int column, matrix3x4_t const& mat )
+{
+	static matrix3x4_t result;
+	MatrixCopy( mat, result );
+	MatrixSetColumn( vecset, column, result );
+	return result;
+}
+
+QAngle const& ScriptMatrixAngles( matrix3x4_t const& mat )
+{
+	static QAngle result;
+	MatrixAngles( mat, result );
+	return result;
+}
+
+matrix3x4_t const& ScriptAngleMatrix( const QAngle& angset )
+{
+	static matrix3x4_t result;
+	AngleMatrix( angset, result );
+	return result;
+}
+
+matrix3x4_t const& ScriptAngleIMatrix( const QAngle& angset )
+{
+	static matrix3x4_t result;
+	AngleIMatrix( angset, result );
+	return result;
+}
+
+matrix3x4_t const& ScriptGetIdentityMatrix( void )
+{
+	static matrix3x4_t result{
+		1.f, 0.f, 0.f, 0.f,
+		0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 1.f, 0.f
+	};
+	return result;
+}
+
+matrix3x4_t const& ScriptSetScaleMatrix( float x, float y, float z )
+{
+	static matrix3x4_t result;
+	SetScaleMatrix( x, y, z, result );
+	return result;
+}
+
+//=============================================================================
+//
+// Quaternion
+// 
+//=============================================================================
+
+Quaternion const& ScriptQuaternionAdd( Quaternion const &p, Quaternion const &q )
+{
+	static Quaternion result;
+	QuaternionAdd( p, q,  result );
+	return result;
+}
+
+Quaternion const& ScriptMatrixQuaternion( matrix3x4_t const &mat )
+{
+	static Quaternion result;
+	MatrixQuaternion( mat, result );
+	return result;
+}
+
+matrix3x4_t const& ScriptQuaternionMatrix( Quaternion const &q )
+{
+	static matrix3x4_t result;
+	QuaternionMatrix( q, result );
+	return result;
+}
+
+QAngle const& ScriptQuaternionAngles( Quaternion const &q )
+{
+	static QAngle result;
+	QuaternionAngles( q, result );
+	return result;
+}
+
+//=============================================================================
+//
 // Misc. Vector/QAngle functions
 // 
 //=============================================================================
@@ -124,4 +244,27 @@ void RegisterMathBaseBindings( IScriptVM *pVM )
 	ScriptRegisterFunction( pVM, SmoothCurve, "SmoothCurve maps a 0-1 value into another 0-1 value based on a cosine wave" );
 	ScriptRegisterFunction( pVM, SmoothCurve_Tweak, "SmoothCurve peaks at flPeakPos, flPeakSharpness controls the sharpness of the peak" );
 	ScriptRegisterFunctionNamed( pVM, ScriptExponentialDecay, "ExponentialDecay", "decayTo is factor the value should decay to in decayTime" );
+
+	// 
+	// matrix3x4_t
+	// 
+	ScriptRegisterFunctionNamed( pVM, ScriptConcatTransforms, "ConcatTransforms", "Concatenates two transformation matrices into another matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptMatrixCopy, "MatrixCopy", "Copies a matrix to another matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptMatrixInvert, "MatrixInvert", "Inverts a matrix and copies the result to another matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptMatricesAreEqual, "MatricesAreEqual", "Checks if two matrices are equal." );
+	ScriptRegisterFunctionNamed( pVM, ScriptMatrixGetColumn, "MatrixGetColumn", "Gets the column of a matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptMatrixSetColumn, "MatrixSetColumn", "Sets the column of a matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptMatrixAngles, "MatrixAngles", "Gets the angles and position of a matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptAngleMatrix, "AngleMatrix", "Sets the angles and position of a matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptAngleIMatrix, "AngleIMatrix", "Sets the inverted angles and position of a matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptGetIdentityMatrix, "GetIdentityMatrix", "Returns an identity matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptSetScaleMatrix, "SetScaleMatrix", "Scales a matrix." );
+
+	// 
+	// Quaternion
+	// 
+	ScriptRegisterFunctionNamed( pVM, ScriptQuaternionAdd, "QuaternionAdd", "Adds two quaternions together into another quaternion." );
+	ScriptRegisterFunctionNamed( pVM, ScriptMatrixQuaternion, "MatrixQuaternion", "Converts a matrix to a quaternion." );
+	ScriptRegisterFunctionNamed( pVM, ScriptQuaternionMatrix, "QuaternionMatrix", "Converts a quaternion to a matrix." );
+	ScriptRegisterFunctionNamed( pVM, ScriptQuaternionAngles, "QuaternionAngles", "Converts a quaternion to angles." );
 }

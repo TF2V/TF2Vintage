@@ -169,6 +169,7 @@ enum ExtendedFieldType
 	FIELD_CSTRING,
 	FIELD_HSCRIPT,
 	FIELD_VARIANT,
+	FIELD_MATRIX3X4,
 };
 
 typedef int ScriptDataType_t;
@@ -185,6 +186,10 @@ DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     Vector );
 DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     const Vector& );
 DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     QAngle );
 DECLARE_DEDUCE_FIELDTYPE( FIELD_VECTOR,     const QAngle& );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_QUATERNION, Quaternion );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_QUATERNION, const Quaternion& );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_MATRIX3X4,  matrix3x4_t );
+DECLARE_DEDUCE_FIELDTYPE( FIELD_MATRIX3X4,  const matrix3x4_t& );
 DECLARE_DEDUCE_FIELDTYPE( FIELD_INTEGER,    int );
 DECLARE_DEDUCE_FIELDTYPE( FIELD_BOOLEAN,    bool );
 DECLARE_DEDUCE_FIELDTYPE( FIELD_CHARACTER,  char );
@@ -208,6 +213,10 @@ DECLARE_NAMED_FIELDTYPE( Vector,             "vector" );
 DECLARE_NAMED_FIELDTYPE( const Vector&,      "vector" );
 DECLARE_NAMED_FIELDTYPE( QAngle,             "vector" );
 DECLARE_NAMED_FIELDTYPE( const QAngle&,      "vector" );
+DECLARE_NAMED_FIELDTYPE( Quaternion,         "quaternion" );
+DECLARE_NAMED_FIELDTYPE( const Quaternion&,  "quaternion" );
+DECLARE_NAMED_FIELDTYPE( matrix3x4_t,        "matrix" );
+DECLARE_NAMED_FIELDTYPE( const matrix3x4_t&, "matrix" );
 DECLARE_NAMED_FIELDTYPE( int,                "integer" );
 DECLARE_NAMED_FIELDTYPE( bool,               "boolean" );
 DECLARE_NAMED_FIELDTYPE( char,               "character" );
@@ -222,6 +231,8 @@ inline const char * ScriptFieldTypeName( int16 eType)
 	case FIELD_FLOAT:	return "float";
 	case FIELD_CSTRING:	return "cstring";
 	case FIELD_VECTOR:	return "vector";
+	case FIELD_QUATERNION: return "quaternion";
+	case FIELD_MATRIX3X4: return "matrix";
 	case FIELD_INTEGER:	return "integer";
 	case FIELD_BOOLEAN:	return "boolean";
 	case FIELD_CHARACTER: return "character";
@@ -323,9 +334,6 @@ struct ScriptClassDesc_t
 //			scriptKeyValueA = 6,
 //			scriptKeyvalueB = true
 //		}
-//	Populating:
-//		scriptStruct myStruct = {};
-//		ScriptStructDesct_t *pDesc = myStruct.GetScriptDesc();
 //
 //---------------------------------------------------------
 struct ScriptStructMemberBinding_t
@@ -369,6 +377,11 @@ struct ScriptVariant_t
 	ScriptVariant_t( const Vector *val, bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_VECTOR )		{ if ( !bCopy ) { m_pVector = val; } else { m_pVector = new Vector( *val ); m_flags |= SV_FREE; } }
 	ScriptVariant_t( const QAngle &val, bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_VECTOR )		{ if ( !bCopy ) { m_pAngle = &val; } else { m_pAngle = new QAngle( val ); m_flags |= SV_FREE; } }
 	ScriptVariant_t( const QAngle *val, bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_VECTOR )		{ if ( !bCopy ) { m_pAngle = val; } else { m_pAngle = new QAngle( *val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const Quaternion &val, bool bCopy = false ) : m_flags( 0 ), m_type( FIELD_QUATERNION ) { if ( !bCopy ) { m_pQuat = &val; } else { m_pQuat = new Quaternion( val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const Quaternion *val, bool bCopy = false ) : m_flags( 0 ), m_type( FIELD_QUATERNION ) { if ( !bCopy ) { m_pQuat = val; } else { m_pQuat = new Quaternion( *val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const matrix3x4_t &val, bool bCopy = false ) : m_flags( 0 ), m_type( FIELD_MATRIX3X4 ) { if ( !bCopy ) { m_pMatrix = &val; } else { m_pMatrix = new matrix3x4_t( val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const matrix3x4_t *val, bool bCopy = false ) : m_flags( 0 ), m_type( FIELD_MATRIX3X4 ) { if ( !bCopy ) { m_pMatrix = val; } else { m_pMatrix = new matrix3x4_t( *val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const char *val , bool bCopy = false ) :	m_flags( 0 ),	m_type( FIELD_CSTRING )		{ if ( !bCopy ) { m_pszString = val; } else { m_pszString = strdup( val ); m_flags |= SV_FREE; } }
 
 	bool IsNull() const						{ return (m_type == FIELD_VOID ); }
 
@@ -377,6 +390,8 @@ struct ScriptVariant_t
 	operator const char *() const			{ Assert( m_type == FIELD_CSTRING );	return ( m_pszString ) ? m_pszString : ""; }
 	operator const Vector &() const			{ Assert( m_type == FIELD_VECTOR );		static Vector vecNull(0, 0, 0); return (m_pVector) ? *m_pVector : vecNull; }
 	operator const QAngle &() const			{ Assert( m_type == FIELD_VECTOR );		static QAngle vecNull(0, 0, 0); return (m_pAngle) ? *m_pAngle : vecNull; }
+	operator const Quaternion &() const     { Assert( m_type == FIELD_QUATERNION ); static Quaternion vecNull(0, 0, 0, 0); return (m_pQuat) ? *m_pQuat : vecNull; }
+	operator const matrix3x4_t &() const    { Assert( m_type == FIELD_MATRIX3X4 );  static matrix3x4_t vecNull(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); return (m_pMatrix) ? *m_pMatrix : vecNull; }
 	operator char() const					{ Assert( m_type == FIELD_CHARACTER );	return m_char; }
 	operator bool() const					{ Assert( m_type == FIELD_BOOLEAN );	return m_bool; }
 	operator HSCRIPT() const				{ Assert( m_type == FIELD_HSCRIPT );	return m_hScript; }
@@ -388,12 +403,16 @@ struct ScriptVariant_t
 	void operator=( const Vector *vec )		{ m_type = FIELD_VECTOR; m_pVector = vec; }
 	void operator=( const QAngle &vec )		{ m_type = FIELD_VECTOR; m_pAngle = &vec; }
 	void operator=( const QAngle *vec )		{ m_type = FIELD_VECTOR; m_pAngle = vec; }
+	void operator=( const Quaternion &vec ) { m_type = FIELD_QUATERNION; m_pQuat = &vec; }
+	void operator=( const Quaternion *vec ) { m_type = FIELD_QUATERNION; m_pQuat = vec; }
+	void operator=( const matrix3x4_t &vec ) { m_type = FIELD_MATRIX3X4; m_pMatrix = &vec; }
+	void operator=( const matrix3x4_t *vec ) { m_type = FIELD_MATRIX3X4; m_pMatrix = vec; }
 	void operator=( const char *psz )		{ m_type = FIELD_CSTRING; m_pszString = psz; }
 	void operator=( char c )				{ m_type = FIELD_CHARACTER; m_char = c; }
 	void operator=( bool b ) 				{ m_type = FIELD_BOOLEAN; m_bool = b; }
 	void operator=( HSCRIPT h ) 			{ m_type = FIELD_HSCRIPT; m_hScript = h; }
 
-	void Free()								{ if ( ( m_flags & SV_FREE ) && ( m_type == FIELD_HSCRIPT || m_type == FIELD_VECTOR || m_type == FIELD_CSTRING ) ) delete m_pszString; } // Generally only needed for return results
+	void Free()								{ if ( ( m_flags & SV_FREE ) && ( m_type == FIELD_HSCRIPT || m_type == FIELD_VECTOR || m_type == FIELD_CSTRING || m_type == FIELD_QUATERNION ) ) delete m_pszString; } // Generally only needed for return results
 
 	template <typename T>
 	T Get()
@@ -433,10 +452,7 @@ struct ScriptVariant_t
 		{
 			DevWarning( "No free conversion of %s script variant to %s right now\n",
 				ScriptFieldTypeName( m_type ), ScriptFieldTypeName<T>() );
-			if ( destType != FIELD_VECTOR )
-			{
-				*pDest = 0;
-			}
+			*pDest = {0};
 		}
 		return false;
 	}
@@ -500,6 +516,18 @@ struct ScriptVariant_t
 			((Vector *)(pDest->m_pVector))->Init( m_pVector->x, m_pVector->y, m_pVector->z );
 			pDest->m_flags |= SV_FREE;
 		}
+		else if ( m_type == FIELD_QUATERNION ) 
+		{
+			pDest->m_pQuat = new Quaternion;
+			((Quaternion *)(pDest->m_pQuat))->Init( m_pQuat->x, m_pQuat->y, m_pQuat->z, m_pQuat->w );
+			pDest->m_flags |= SV_FREE;
+		}
+		else if ( m_type == FIELD_MATRIX3X4 ) 
+		{
+			pDest->m_pMatrix = new matrix3x4_t;
+			MatrixCopy( *m_pMatrix, *(matrix3x4_t *)pDest->m_pMatrix );
+			pDest->m_flags |= SV_FREE;
+		}
 		else if ( m_type == FIELD_CSTRING ) 
 		{
 			pDest->m_pszString = strdup( m_pszString );
@@ -519,6 +547,8 @@ struct ScriptVariant_t
 		const char *	m_pszString;
 		const Vector *	m_pVector;
 		const QAngle *	m_pAngle;
+		const Quaternion *m_pQuat;
+		const matrix3x4_t *m_pMatrix;
 		char			m_char;
 		bool			m_bool;
 		HSCRIPT			m_hScript;
