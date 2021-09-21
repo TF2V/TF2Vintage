@@ -734,6 +734,21 @@ bool SQVM::IsFalse(SQObjectPtr &o)
     return false;
 }
 
+bool SQVM::GETPARENT_OP(SQObjectPtr &o,SQObjectPtr &target)
+{
+	SQObjectPtr _null;
+	switch(sq_type(o)) {
+	case OT_TABLE: target = _table(o)->_delegate?_table(o)->_delegate:_null;
+		break;
+	case OT_CLASS: target = _class(o)->_base?_class(o)->_base:_null;
+		break;
+	default:
+		Raise_Error(_SC("the %s type doesn't have a parent slot"), GetTypeName(o));
+		return false;
+	}
+	return true;
+}
+
 extern SQInstructionDesc g_InstrDesc[];
 bool SQVM::Execute(SQObjectPtr &closure, SQInteger nargs, SQInteger stackbase,SQObjectPtr &outres, SQBool raiseerror,ExecutionType et)
 {
@@ -1026,6 +1041,7 @@ query_suspend:
                 }
                 _array(STK(arg0))->Append(val); continue;
                 }
+            case _OP_GETPARENT: _GUARD(GETPARENT_OP(STK(arg1),TARGET)); continue;
             case _OP_COMPARITH: {
                 SQInteger selfidx = (((SQUnsignedInteger)arg1&0xFFFF0000)>>16);
                 _GUARD(DerefInc(arg3, TARGET, STK(selfidx), STK(arg2), STK(arg1&0x0000FFFF), false, selfidx));
@@ -1142,7 +1158,6 @@ query_suspend:
             case _OP_NEWSLOTA:
                 _GUARD(NewSlotA(STK(arg1),STK(arg2),STK(arg3),(arg0&NEW_SLOT_ATTRIBUTES_FLAG) ? STK(arg2-1) : SQObjectPtr(),(arg0&NEW_SLOT_STATIC_FLAG)?true:false,false));
                 continue;
-			case _OP_GETPARENT:
             case _OP_GETBASE:{
                 SQClosure *clo = _closure(ci->_closure);
                 if(clo->_base) {
