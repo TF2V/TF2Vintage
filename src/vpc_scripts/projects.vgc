@@ -133,5 +133,10 @@ $Project "vvis_launcher"
 
 $Project "vscript"
 {
-	"vscript\vscript.vpc" [$WIN32]
+	"vscript\vscript.vpc"
+}
+
+$Project "vsquirrel"
+{
+	"vscript\languages\squirrel\vsquirrel.vpc"
 }

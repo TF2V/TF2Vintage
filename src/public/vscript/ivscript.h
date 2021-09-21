@@ -1221,13 +1221,14 @@ public:
 	void GetStruct( T *pStruct, HSCRIPT hScope = NULL )
 	{
 		ScriptStructDesc_t *pDesc = GetScriptDescForStruct( T );
+		if ( hScope == NULL ) hScope = m_hScope;
 
 		FOR_EACH_VEC( pDesc->m_MemberBindings, idx )
 		{
 			ScriptStructMemberBinding_t const &binding = pDesc->m_MemberBindings[idx];
 
 			ScriptVariant_t res;
-			if( GetVM()->GetValue( hScope ? hScope : m_hScope, binding.m_pszScriptName, &res ) )
+			if( GetVM()->GetValue( hScope, binding.m_pszScriptName, &res ) )
 			{
 				switch ( binding.m_nMemberType )
 				{

@@ -1023,14 +1023,17 @@ int CSquirrelVM::GetNumTableEntries( HSCRIPT hScope )
 
 void CSquirrelVM::WriteState( CUtlBuffer *pBuffer )
 {
+#ifndef VSQUIRREL_TEST
 	pBuffer->PutInt( SAVE_VERSION );
 	pBuffer->PutInt64( m_nUniqueKeySerial );
 
 	WriteSquirrelState( GetVM(), pBuffer );
+#endif
 }
 
 void CSquirrelVM::ReadState( CUtlBuffer *pBuffer )
 {
+#ifndef VSQUIRREL_TEST
 	if ( pBuffer->GetInt() != SAVE_VERSION )
 	{
 		DevMsg( "Incompatible script version\n" );
@@ -1041,11 +1044,14 @@ void CSquirrelVM::ReadState( CUtlBuffer *pBuffer )
 	m_nUniqueKeySerial = Max( m_nUniqueKeySerial, serial );
 
 	ReadSquirrelState( GetVM(), pBuffer );
+#endif
 }
 
 void CSquirrelVM::DumpState()
 {
+#ifndef VSQUIRREL_TEST
 	DumpSquirrelState( GetVM() );
+#endif
 }
 
 bool CSquirrelVM::ConnectDebugger()
