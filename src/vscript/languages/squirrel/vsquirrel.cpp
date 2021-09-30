@@ -164,11 +164,13 @@ private:
 	static SQInteger			CallConstructor( HSQUIRRELVM pVM );
 	static SQInteger			ReleaseHook( SQUserPointer data, SQInteger size );
 	static SQInteger			ExternalReleaseHook( SQUserPointer data, SQInteger size );
-	static SQInteger			GetDeveloper( HSQUIRRELVM pVM );
-	static SQInteger			GetFunctionSignature( HSQUIRRELVM pVM );
-	static SQInteger			TranslateCall( HSQUIRRELVM pVM );
 	static SQInteger			InstanceToString( HSQUIRRELVM pVM );
 	static SQInteger			InstanceIsValid( HSQUIRRELVM pVM );
+	static SQInteger			InstanceGetStub( HSQUIRRELVM pVM );
+	static SQInteger			InstanceSetStub( HSQUIRRELVM pVM );
+	static SQInteger			TranslateCall( HSQUIRRELVM pVM );
+	static SQInteger			GetDeveloper( HSQUIRRELVM pVM );
+	static SQInteger			GetFunctionSignature( HSQUIRRELVM pVM );
 	static void					PrintFunc( HSQUIRRELVM, const SQChar *, ... );
 	static void					ErrorFunc( HSQUIRRELVM, const SQChar *, ... );
 	static int					QueryContinue( HSQUIRRELVM );
@@ -609,23 +611,25 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 			sq_pop( GetVM(), 2 );
 			return false;
 		}
+
+		sq_pop( GetVM(), 1 );
 	}
-	sq_pop( GetVM(), 1 );
 
 	if ( pClassDesc->m_pBaseDesc )
 	{
 		RegisterClass( pClassDesc->m_pBaseDesc );
 
-		sq_pushroottable( GetVM() );
 		sq_pushstring( GetVM(), pClassDesc->m_pBaseDesc->m_pszScriptName, -1 );
 		if ( SQ_FAILED( sq_get( GetVM(), -2 ) ) )
 		{
 			sq_pop( GetVM(), 1 );
 			return false;
 		}
-		sq_pop( GetVM(), 2 );
+
+		sq_pop( GetVM(), 1 );
 	}
 
+	sq_pop( GetVM(), 1 );
 
 	HSQOBJECT hObject = CreateClass( pClassDesc );
 	if ( hObject != INVALID_HSQOBJECT )
@@ -640,6 +644,12 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 			sq_createslot( GetVM(), -3 );
 		}
 
+		sq_pushstring( GetVM(), MM_GET, -1 );
+		sq_newclosure( GetVM(), &CSquirrelVM::InstanceGetStub, 0 );
+		sq_createslot( GetVM(), -3 );
+		sq_pushstring( GetVM(), MM_SET, -1 );
+		sq_newclosure( GetVM(), &CSquirrelVM::InstanceSetStub, 0 );
+		sq_createslot( GetVM(), -3 );
 		// _tostring is used for printing objects
 		sq_pushstring( GetVM(), MM_TOSTRING, -1 );
 		sq_newclosure( GetVM(), &CSquirrelVM::InstanceToString, 0 );
@@ -1553,43 +1563,6 @@ HSQOBJECT CSquirrelVM::LookupObject( char const *szName, HSCRIPT hScope, bool bR
 	return pObject;
 }
 
-SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
-{
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getuserdata( pVM, sq_gettop( pVM ), &up, &tag );
-	ScriptClassDesc_t *pClassDesc = *(ScriptClassDesc_t **)up;
-
-	ScriptInstance_t *pInstance = new ScriptInstance_t;
-	pInstance->m_pClassDesc = pClassDesc;
-	pInstance->m_pInstance = pClassDesc->m_pfnConstruct();
-
-	sq_setinstanceup( pVM, 1, pInstance );
-	sq_setreleasehook( pVM, 1, &CSquirrelVM::ReleaseHook );
-
-	return SQ_OK;
-}
-
-SQInteger CSquirrelVM::ReleaseHook( SQUserPointer data, SQInteger size )
-{
-	ScriptInstance_t *pObject = (ScriptInstance_t *)data;
-	if( pObject->m_pClassDesc->m_pfnDestruct )
-	{
-		pObject->m_pClassDesc->m_pfnDestruct( pObject->m_pInstance );
-		delete pObject;
-	}
-
-	return SQ_OK;
-}
-
-SQInteger CSquirrelVM::ExternalReleaseHook( SQUserPointer data, SQInteger size )
-{
-	ScriptInstance_t *pObject = (ScriptInstance_t *)data;
-	if( pObject )
-		delete pObject;
-
-	return SQ_OK;
-}
-
 SQInteger CSquirrelVM::GetDeveloper( HSQUIRRELVM pVM )
 {
 	sq_pushinteger( pVM, GetVScript( pVM )->developer.GetInt() );
@@ -1817,6 +1790,53 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 	return pFuncBinding->m_desc.m_ReturnType != FIELD_VOID;
 }
 
+SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
+{
+	ScriptClassDesc_t *pClassDesc = NULL;
+	sq_gettypetag( pVM, 1, (SQUserPointer *)&pClassDesc );
+	if ( !pClassDesc->m_pfnConstruct )
+	{
+		return sqstd_throwerrorf( pVM, "Unable to construct instances of %s.", pClassDesc->m_pszScriptName );
+	}
+
+	void *pvInstance = pClassDesc->m_pfnConstruct();
+
+	HSQOBJECT hErrorString = GetVScript( pVM )->m_ErrorString;
+	if ( !sq_isnull( hErrorString ) )
+	{
+		sq_pushobject( pVM, hErrorString );
+		sq_resetobject( &GetVScript( pVM )->m_ErrorString );
+		return sq_throwobject( pVM );
+	}
+
+	ScriptInstance_t *pInstance = new ScriptInstance_t;
+	pInstance->m_pClassDesc = pClassDesc;
+	pInstance->m_pInstance = pvInstance;
+
+	sq_setinstanceup( pVM, 1, pInstance );
+	sq_setreleasehook( pVM, 1, &CSquirrelVM::ReleaseHook );
+
+	return SQ_OK;
+}
+
+SQInteger CSquirrelVM::ReleaseHook( SQUserPointer data, SQInteger size )
+{
+	ScriptInstance_t *pObject = (ScriptInstance_t *)data;
+	if ( pObject->m_pClassDesc->m_pfnDestruct )
+	{
+		pObject->m_pClassDesc->m_pfnDestruct( pObject->m_pInstance );
+		delete pObject;
+	}
+
+	return SQ_OK;
+}
+
+SQInteger CSquirrelVM::ExternalReleaseHook( SQUserPointer data, SQInteger size )
+{
+	delete (ScriptInstance_t *)data;
+	return SQ_OK;
+}
+
 SQInteger CSquirrelVM::InstanceToString( HSQUIRRELVM pVM )
 {
 	ScriptInstance_t *pInstance = NULL;
@@ -1850,6 +1870,215 @@ SQInteger CSquirrelVM::InstanceIsValid( HSQUIRRELVM pVM )
 	sq_getinstanceup( pVM, 1, (SQUserPointer *)&pInstance, NULL );
 	sq_pushbool( pVM, pInstance && pInstance->m_pInstance );
 	return 1;
+}
+
+SQInteger CSquirrelVM::InstanceGetStub( HSQUIRRELVM pVM )
+{
+	ScriptInstance_t *pInstance = NULL;
+	sq_getinstanceup( pVM, 1, (SQUserPointer *)&pInstance, NULL );
+
+	const SQChar *pString = NULL;
+	if ( SQ_FAILED( sq_getstring( pVM, 2, &pString ) ) )
+		return sq_throwerror( pVM, "Expected _get( string )" );
+
+	auto const &members = pInstance->m_pClassDesc->m_MemberBindings;
+	auto pvInstance = pInstance->m_pInstance;
+	if( pvInstance == NULL )
+		return sq_throwerror( pVM, "Null instance." );
+
+	FOR_EACH_VEC( members, i )
+	{
+		if ( V_strcmp( members[i].m_pszScriptName, pString ) == 0 )
+		{
+			ptrdiff_t nOffset = members[i].m_unMemberOffs;
+			size_t nSize = members[i].m_unMemberSize;
+			switch ( members[i].m_nMemberType )
+			{
+				case FIELD_INTEGER:
+				{
+					sq_pushinteger( pVM, *(int *)( (uintp)pvInstance + nOffset ) );
+					return 1;
+				}
+				case FIELD_FLOAT:
+				{
+					sq_pushfloat( pVM, *(float *)( (uintp)pvInstance + nOffset ) );
+					return 1;
+				}
+				case FIELD_BOOLEAN:
+				{
+					sq_pushbool( pVM, *(bool *)( (uintp)pvInstance + nOffset ) );
+					return 1;
+				}
+				case FIELD_CSTRING:
+				{
+					SQChar sString[1024];
+					V_memcpy( sString, (void *)( (uintp)pvInstance + nOffset ), nSize );
+					sq_pushstring( pVM, sString, sizeof( sString ) );
+					return 1;
+				}
+				case FIELD_VECTOR:
+				{
+					sq_pushobject( pVM, GetVScript( pVM )->m_VectorClass );
+					sq_createinstance( pVM, -1 );
+
+					Vector *pVector = NULL;
+					sq_getinstanceup( pVM, -1, (SQUserPointer *)&pVector, NULL );
+					V_memcpy( pVector, (void *)( (uintp)pvInstance + nOffset ), nSize );
+
+					// Remove the class object from stack so we are aligned
+					sq_remove( pVM, -2 );
+					return 1;
+				}
+				case FIELD_QUATERNION:
+				{
+					sq_pushobject( pVM, GetVScript( pVM )->m_QuaternionClass );
+					sq_createinstance( pVM, -1 );
+
+					Quaternion *pQuat = NULL;
+					sq_getinstanceup( pVM, -1, (SQUserPointer *)&pQuat, NULL );
+					V_memcpy( pQuat, (void *)( (uintp)pvInstance + nOffset ), nSize );
+
+					// Remove the class object from stack so we are aligned
+					sq_remove( pVM, -2 );
+					return 1;
+				}
+				case FIELD_MATRIX3X4:
+				{
+					sq_pushobject( pVM, GetVScript( pVM )->m_MatrixClass );
+					sq_createinstance( pVM, -1 );
+
+					matrix3x4_t *pMatrix = NULL;
+					sq_getinstanceup( pVM, -1, (SQUserPointer *)&pMatrix, NULL );
+					V_memcpy( pMatrix, (void *)( (uintp)pvInstance + nOffset ), nSize );
+
+					// Remove the class object from stack so we are aligned
+					sq_remove( pVM, -2 );
+					return 1;
+				}
+				default:
+					return sqstd_throwerrorf( pVM, "Unsupported data type (%s).", ScriptFieldTypeName( members[i].m_nMemberType ) );
+			}
+		}
+	}
+
+	return 0;
+}
+
+SQInteger CSquirrelVM::InstanceSetStub( HSQUIRRELVM pVM )
+{
+	ScriptInstance_t *pInstance = NULL;
+	sq_getinstanceup( pVM, 1, (SQUserPointer *)&pInstance, NULL );
+
+	const SQChar *pString = NULL;
+	if ( SQ_FAILED( sq_getstring( pVM, 2, &pString ) ) )
+		return sq_throwerror( pVM, "Expected _set( string, value )" );
+
+	auto const &members = pInstance->m_pClassDesc->m_MemberBindings;
+	auto pvInstance = pInstance->m_pInstance;
+	if ( pvInstance == NULL )
+		return sq_throwerror( pVM, "Null instance." );
+
+	FOR_EACH_VEC( members, i )
+	{
+		if ( V_strcmp( members[i].m_pszScriptName, pString ) == 0 )
+		{
+			ptrdiff_t nOffset = members[i].m_unMemberOffs;
+			size_t nSize = members[i].m_unMemberSize;
+			switch ( members[i].m_nMemberType )
+			{
+				case FIELD_INTEGER:
+				{
+					SQInteger n = 0;
+					if ( SQ_FAILED( sq_getinteger( pVM, 3, &n ) ) )
+						return sq_throwerror( pVM, "Expected _set( string, integer )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), &n, nSize );
+					break;
+				}
+				case FIELD_FLOAT:
+				{
+					SQFloat f = 0.0;
+					if ( SQ_FAILED( sq_getfloat( pVM, 3, &f ) ) )
+						return sq_throwerror( pVM, "Expected _set( string, float )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), &f, nSize );
+					break;
+				}
+				case FIELD_BOOLEAN:
+				{
+					SQBool b = SQFalse;
+					if ( SQ_FAILED( sq_getbool( pVM, 3, &b ) ) )
+						return sq_throwerror( pVM, "Expected _set( string, boolean )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), &b, nSize );
+					break;
+				}
+				case FIELD_CHARACTER:
+				{
+					char const *pChar = NULL;
+					if ( SQ_FAILED( sq_getstring( pVM, 3, &pChar ) ) )
+						return sq_throwerror( pVM, "Expected _set( string, string )" );
+					if ( pChar == NULL )
+						pChar = "\0";
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), pChar, nSize );
+					break;
+				}
+				case FIELD_CSTRING:
+				{
+					char const *pszString = "";
+					if ( SQ_FAILED( sq_getstring( pVM, 3, &pszString ) ) )
+						return sq_throwerror( pVM, "Expected _set( string, string )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), pszString, nSize );
+					break;
+				}
+				case FIELD_VECTOR:
+				{
+					SQUserPointer p = NULL;
+					sq_getinstanceup( pVM, 3, &p, VECTOR_TYPE_TAG );
+					if ( p == NULL )
+						return sq_throwerror( pVM, "Expected _set( string, Vector )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), p, nSize );
+					break;
+				}
+				case FIELD_QUATERNION:
+				{
+					SQUserPointer p = NULL;
+					sq_getinstanceup( pVM, 3, &p, QUATERNION_TYPE_TAG );
+					if ( p == NULL )
+						return sq_throwerror( pVM, "Expected _set( string, Quaternion )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), p, nSize );
+					break;
+				}
+				case FIELD_MATRIX3X4:
+				{
+					SQUserPointer p = NULL;
+					sq_getinstanceup( pVM, 3, &p, MATRIX_TYPE_TAG );
+					if ( p == NULL )
+						return sq_throwerror( pVM, "Expected _set( string, matrix3x4_t )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), p, nSize );
+					break;
+				}
+				case FIELD_HSCRIPT:
+				{
+					HSQOBJECT hObject = _null_;
+					if ( SQ_FAILED( sq_getstackobj( pVM, 3, &hObject ) ) )
+						return sq_throwerror( pVM, "Expected _set( string, Handle )" );
+
+					V_memcpy( (void *)( (uintp)pvInstance + nOffset ), &_rawval( hObject ), nSize );
+					break;
+				}
+				default:
+					return sqstd_throwerrorf( pVM, "Unsupported data type (%s).", ScriptFieldTypeName( members[i].m_nMemberType ) );
+			}
+		}
+	}
+
+	return SQ_OK;
 }
 
 void CSquirrelVM::PrintFunc( HSQUIRRELVM pVM, const SQChar *fmt, ... )
