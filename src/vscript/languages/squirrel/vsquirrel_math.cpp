@@ -747,7 +747,7 @@ SQInteger MatrixConstruct( HSQUIRRELVM pVM )
 	matrix3x4_t matrix;
 	for ( int i=0; i < 12; ++i )
 	{
-		sq_getfloat( pVM, i + 1, &matrix[i / 4][i % 4] );
+		sq_getfloat( pVM, i + 2, &matrix[i / 4][i % 4] );
 	}
 
 	SQUserPointer p;
