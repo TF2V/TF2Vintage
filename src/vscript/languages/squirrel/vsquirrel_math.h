@@ -11,6 +11,4 @@
 
 SQRESULT RegisterMathBindings( HSQUIRRELVM pVM );
 
-SQInteger VectorRelease( SQUserPointer up, SQInteger size );
-
 #endif
