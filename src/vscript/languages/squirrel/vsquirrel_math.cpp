@@ -197,7 +197,7 @@ SQInteger VectorIterate( HSQUIRRELVM pVM )
 
 	// Accessing x, y or z
 	if ( szAccessor[0] - 'x' < 3 )
-		sq_pushstring( pVM, results[ szAccessor[0] - 'x' ], -1 );
+		sq_pushstring( pVM, results[(szAccessor[0] - 'x') + 1], 1 );
 	else
 		sq_pushnull( pVM );
 
@@ -637,7 +637,7 @@ SQInteger QuaternionIterate( HSQUIRRELVM pVM )
 
 	// Accessing w, x, y or z
 	if ( szAccessor[0] - 'w' < 4 )
-		sq_pushstring( pVM, results[ szAccessor[0] - 'w' ], -1 );
+		sq_pushstring( pVM, results[(szAccessor[0] - 'w') + 1], 1 );
 	else
 		sq_pushnull( pVM );
 
