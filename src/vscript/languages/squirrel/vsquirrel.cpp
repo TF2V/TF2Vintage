@@ -77,11 +77,6 @@ class CSquirrelVM : public IScriptVM
 public:
 	CSquirrelVM( void );
 
-	enum
-	{
-		MAX_FUNCTION_PARAMS = 14
-	};
-
 	bool				Init( void );
 	void				Shutdown( void );
 
@@ -132,7 +127,7 @@ public:
 
 	enum
 	{
-		SAVE_VERSION = 2
+		SAVE_VERSION = 3
 	};
 	void				WriteState( CUtlBuffer *pBuffer );
 	void				ReadState( CUtlBuffer *pBuffer );
@@ -153,6 +148,10 @@ private:
 	HSQOBJECT					CreateClass( ScriptClassDesc_t *pClassDesc );
 	bool						CreateInstance( ScriptClassDesc_t *pClassDesc, ScriptInstance_t *pInstance, SQRELEASEHOOK fnRelease );
 
+	enum
+	{
+		MAX_FUNCTION_PARAMS = 14
+	};
 	void						RegisterFunctionGuts( ScriptFunctionBinding_t *pFunction, ScriptClassDesc_t *pClassDesc = NULL );
 	void						RegisterDocumentation( HSQOBJECT pClosure, ScriptFunctionBinding_t *pFunction, ScriptClassDesc_t *pClassDesc = NULL );
 
@@ -439,7 +438,7 @@ void CSquirrelVM::ReleaseScope( HSCRIPT hScript )
 		sq_pushroottable( GetVM() );
 		sq_pushobject( GetVM(), *pObject );
 
-		// this pops off the paramaeters automatically
+		// this pops off the parameters automatically
 		sq_call( GetVM(), 2, SQFalse, SQ_CALL_RAISE_ERROR );
 
 		// pop off the closure
@@ -475,7 +474,7 @@ void CSquirrelVM::ReleaseFunction( HSCRIPT hScript )
 	if ( hScript )
 	{
 		sq_release( GetVM(), (HSQOBJECT *)hScript );
-		delete hScript;
+		delete (HSQOBJECT *)hScript;
 	}
 }
 
@@ -627,31 +626,26 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 		sq_pop( GetVM(), 2 );
 	}
 
-	HSQOBJECT pObject = CreateClass( pClassDesc );
-	SQClass *pClass = _class( pObject );
 
-	if ( pObject != INVALID_HSQOBJECT )
+	HSQOBJECT hObject = CreateClass( pClassDesc );
+	if ( hObject != INVALID_HSQOBJECT )
 	{
-		sq_pushobject( GetVM(), pObject );
+		sq_pushobject( GetVM(), hObject );
 
 		// register our constructor if we have one
 		if ( pClassDesc->m_pfnConstruct )
 		{
-			sq_pushstring( GetVM(), "constructor", -1 );
-
-			ScriptClassDesc_t **pClassDescription = (ScriptClassDesc_t **)sq_newuserdata( GetVM(), sizeof( ScriptClassDesc_t * ) );
-			*pClassDescription = pClassDesc;
-
-			sq_newclosure( GetVM(), &CSquirrelVM::CallConstructor, 1 );
+			sq_pushstring( GetVM(), _SC("constructor"), -1 );
+			sq_newclosure( GetVM(), &CSquirrelVM::CallConstructor, 0 );
 			sq_createslot( GetVM(), -3 );
 		}
 
 		// _tostring is used for printing objects
-		sq_pushstring( GetVM(), "_tostring", -1 );
+		sq_pushstring( GetVM(), MM_TOSTRING, -1 );
 		sq_newclosure( GetVM(), &CSquirrelVM::InstanceToString, 0 );
 		sq_createslot( GetVM(), -3 );
 		// helper to determine we are a VScript instance
-		sq_pushstring( GetVM(), "IsValid", -1 );
+		sq_pushstring( GetVM(), _SC("IsValid"), -1 );
 		sq_newclosure( GetVM(), &CSquirrelVM::InstanceIsValid, 0 );
 		sq_createslot( GetVM(), -3 );
 
@@ -664,7 +658,7 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 		sq_pop( GetVM(), 1 );
 	}
 
-	m_ScriptClasses.FastInsert( (intp)pClassDesc, pClass );
+	m_ScriptClasses.FastInsert( (intp)pClassDesc, _class( hObject ) );
 	return true;
 }
 
@@ -1224,9 +1218,9 @@ void CSquirrelVM::PushVariant( HSQUIRRELVM pVM, ScriptVariant_t const &Variant )
 			sq_pushobject( pVM, GetVScript( pVM )->m_VectorClass );
 			sq_createinstance( pVM, -1 );
 
-			Vector *pVector = new Vector( Variant );
-			sq_setinstanceup( pVM, -1, (SQUserPointer)pVector );
-			sq_setreleasehook( pVM, -1, &VectorRelease );
+			Vector *pVector = NULL;
+			sq_getinstanceup( pVM, -1, (SQUserPointer *)&pVector, NULL );
+			V_memcpy( pVector, Variant.m_pVector, sizeof(Vector) );
 
 			// Remove the class object from stack so we are aligned
 			sq_remove( pVM, -2 );
@@ -1240,7 +1234,7 @@ void CSquirrelVM::PushVariant( HSQUIRRELVM pVM, ScriptVariant_t const &Variant )
 
 			Quaternion *pQuat = NULL;
 			sq_getinstanceup( pVM, -1, (SQUserPointer *)&pQuat, NULL );
-			V_memcpy( pQuat, Variant.m_pQuat, sizeof( Quaternion ) );
+			V_memcpy( pQuat, Variant.m_pQuat, sizeof(Quaternion) );
 
 			// Remove the class object from stack so we are aligned
 			sq_remove( pVM, -2 );
@@ -1254,7 +1248,7 @@ void CSquirrelVM::PushVariant( HSQUIRRELVM pVM, ScriptVariant_t const &Variant )
 
 			matrix3x4_t *pMatrix = NULL;
 			sq_getinstanceup( pVM, -1, (SQUserPointer *)&pMatrix, NULL );
-			V_memcpy( pMatrix, Variant.m_pMatrix, sizeof( matrix3x4_t ) );
+			V_memcpy( pMatrix, Variant.m_pMatrix, sizeof(matrix3x4_t) );
 
 			// Remove the class object from stack so we are aligned
 			sq_remove( pVM, -2 );
@@ -1297,12 +1291,13 @@ HSQOBJECT CSquirrelVM::CreateClass( ScriptClassDesc_t *pClassDesc )
 		return INVALID_HSQOBJECT;
 	}
 
+	sq_settypetag( GetVM(), -1, pClassDesc );
+
 	HSQOBJECT pObject = _null_;
 	sq_getstackobj( GetVM(), -1, &pObject );
 	sq_addref( GetVM(), &pObject );
-	sq_settypetag( GetVM(), -1, pClassDesc );
+	
 	sq_createslot( GetVM(), -3 );
-
 	sq_pop( GetVM(), 1 );
 
 	return pObject;
@@ -1767,17 +1762,18 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 				break;
 			}
 			default:
+			{
 				AssertMsg( 0, "Unsupported type" );
 				return false;
+			}
 		}
 	}
 
 	SQUserPointer pContext = NULL;
 	if ( pFuncBinding->m_flags & SF_MEMBER_FUNC )
 	{
-		SQUserPointer up = NULL;
-		sq_getinstanceup( pVM, 1, &up, NULL );
-		ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
+		ScriptInstance_t *pInstance = NULL;
+		sq_getinstanceup( pVM, 1, (SQUserPointer *)&pInstance, NULL );
 		if ( pInstance == NULL || pInstance->m_pInstance == NULL )
 			return sq_throwerror( pVM, "Accessed null instance" );
 
@@ -1808,10 +1804,10 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 		parameters[i].Free();
 	}
 
-	HSQOBJECT pErrorString = GetVScript( pVM )->m_ErrorString;
-	if ( !sq_isnull( pErrorString ) )
+	HSQOBJECT hErrorString = GetVScript( pVM )->m_ErrorString;
+	if ( !sq_isnull( hErrorString ) )
 	{
-		sq_pushobject( pVM, pErrorString );
+		sq_pushobject( pVM, hErrorString );
 		sq_resetobject( &GetVScript( pVM )->m_ErrorString );
 		return sq_throwobject( pVM );
 	}
@@ -1823,15 +1819,14 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 
 SQInteger CSquirrelVM::InstanceToString( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL;
-	sq_getinstanceup( pVM, 1, &up, NULL );
-	ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
+	ScriptInstance_t *pInstance = NULL;
+	sq_getinstanceup( pVM, 1, (SQUserPointer *)&pInstance, NULL );
 	if ( pInstance && pInstance->m_pInstance )
 	{
 		IScriptInstanceHelper *pHelper = pInstance->m_pClassDesc->pHelper;
 		if ( pHelper )
 		{
-			char szInstance[64];
+			char szInstance[128] = "";
 			if ( pHelper->ToString( pInstance->m_pInstance, szInstance, sizeof( szInstance ) ) )
 			{
 				sq_pushstring( pVM, szInstance, -1 );
@@ -1845,17 +1840,15 @@ SQInteger CSquirrelVM::InstanceToString( HSQUIRRELVM pVM )
 
 	SQObjectPtr hObject;
 	sq_getstackobj( pVM, 1, &hObject );
-	sqstd_pushstringf( pVM, "(instance : 0x%p)", _instance( hObject ) );
+	sqstd_pushstringf( pVM, "(%s : 0x%p)", GetTypeName( hObject ), _instance( hObject ) );
 	return 1;
 }
 
 SQInteger CSquirrelVM::InstanceIsValid( HSQUIRRELVM pVM )
 {
-	SQUserPointer up = NULL, tag = NULL;
-	sq_getinstanceup( pVM, 1, &up, tag );
-	ScriptInstance_t *pInstance = (ScriptInstance_t *)up;
+	ScriptInstance_t *pInstance = NULL;
+	sq_getinstanceup( pVM, 1, (SQUserPointer *)&pInstance, NULL );
 	sq_pushbool( pVM, pInstance && pInstance->m_pInstance );
-
 	return 1;
 }
 
