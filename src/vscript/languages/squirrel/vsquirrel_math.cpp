@@ -23,8 +23,9 @@
 #define sq_pushvector(vm, vector) \
 	sq_getclass( vm, -1 ); \
 	sq_createinstance( vm, -1 ); \
-	sq_setinstanceup( vm, -1, vector ); \
-	sq_setreleasehook( vm, -1, &VectorRelease ); \
+	SQUserPointer p; \
+	sq_getinstanceup( vm, -1, &p, 0 ); \
+	new( p ) Vector( vector ); \
 	sq_remove( vm, -2 );
 
 Vector GetVectorByValue( HSQUIRRELVM pVM, int nIndex )
@@ -51,29 +52,24 @@ Vector GetVectorByValue( HSQUIRRELVM pVM, int nIndex )
 
 SQInteger VectorConstruct( HSQUIRRELVM pVM )
 {
-	Vector *pVector = new Vector;
+	Vector vector;
 
 	int i, _top = sq_gettop( pVM );
 	for ( i=0; i < _top - 1 && i < 3; ++i )
 	{
-		sq_getfloat( pVM, i + 2, &( *pVector )[i] );
+		sq_getfloat( pVM, i + 2, &vector[i] );
 	}
 
 	if ( i < 3 )
 	{
 		for( ; i<3; ++i )
-			(*pVector)[i] = 0;
+			vector[i] = 0;
 	}
 
-	sq_setinstanceup( pVM, 1, pVector );
-	sq_setreleasehook( pVM, 1, &VectorRelease );
+	SQUserPointer p;
+	sq_getinstanceup( pVM, 1, &p, NULL );
+	V_memcpy( p, &vector, sizeof( vector ) );
 
-	return 0;
-}
-
-SQInteger VectorRelease( SQUserPointer up, SQInteger size )
-{
-	delete (Vector *)up;
 	return 0;
 }
 
@@ -210,10 +206,7 @@ SQInteger VectorAdd( HSQUIRRELVM pVM )
 	Vector RHS = GetVectorByValue( pVM, 2 );
 
 	// Create a new vector so we can keep the values of the other
-	Vector *pNewVector = new Vector;
-	*pNewVector = LHS + RHS;
-
-	sq_pushvector( pVM, pNewVector );
+	sq_pushvector( pVM, LHS + RHS );
 
 	return 1;
 }
@@ -224,10 +217,7 @@ SQInteger VectorSubtract( HSQUIRRELVM pVM )
 	Vector RHS = GetVectorByValue( pVM, 2 );
 
 	// Create a new vector so we can keep the values of the other
-	Vector *pNewVector = new Vector;
-	*pNewVector = LHS - RHS;
-
-	sq_pushvector( pVM, pNewVector );
+	sq_pushvector( pVM, LHS - RHS );
 
 	return 1;
 }
@@ -238,10 +228,7 @@ SQInteger VectorMultiply( HSQUIRRELVM pVM )
 	Vector RHS = GetVectorByValue( pVM, 2 );
 
 	// Create a new vector so we can keep the values of the other
-	Vector *pNewVector = new Vector;
-	*pNewVector = LHS * RHS;
-
-	sq_pushvector( pVM, pNewVector );
+	sq_pushvector( pVM, LHS * RHS );
 
 	return 1;
 }
@@ -252,10 +239,7 @@ SQInteger VectorDivide( HSQUIRRELVM pVM )
 	Vector RHS = GetVectorByValue( pVM, 2 );
 
 	// Create a new vector so we can keep the values of the other
-	Vector *pNewVector = new Vector;
-	*pNewVector = LHS / RHS;
-
-	sq_pushvector( pVM, pNewVector );
+	sq_pushvector( pVM, LHS / RHS );
 
 	return 1;
 }
@@ -375,10 +359,7 @@ SQInteger VectorCrossProduct( HSQUIRRELVM pVM )
 	sq_checkvector( pVM, pRHS );
 
 	// Create a new vector so we can keep the values of the other
-	Vector *pNewVector = new Vector;
-	*pNewVector = pLHS->Cross( *pRHS );
-
-	sq_pushvector( pVM, pNewVector );
+	sq_pushvector( pVM, pLHS->Cross( *pRHS ) );
 
 	return 1;
 }
@@ -437,6 +418,7 @@ SQRESULT RegisterVector( HSQUIRRELVM pVM )
 
 	// Setup class table
 	sq_settypetag( pVM, -1, VECTOR_TYPE_TAG );
+	sq_setclassudsize( pVM, -1, sizeof(Vector) );
 
 	for ( int i = 0; i < ARRAYSIZE( g_VectorFuncs ); ++i )
 	{
