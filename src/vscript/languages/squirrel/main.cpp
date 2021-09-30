@@ -6,6 +6,7 @@
 
 #include <time.h>
 #include <Windows.h>
+#undef RegisterClass
 
 IScriptVM *g_pScriptVM = NULL;
 
@@ -26,27 +27,76 @@ bool TestError( ScriptErrorLevel_t eLevel, const char *pszText )
 	return true;
 }
 
-matrix3x4_t const &ScriptMatrixSetColumn( Vector vecset, int column, matrix3x4_t mat )
+class CMyClass
 {
-	static matrix3x4_t result;
-	MatrixCopy( mat, result );
-	MatrixSetColumn( vecset, column, result );
-	return result;
+	ALLOW_SCRIPT_ACCESS();
+public:
+	CMyClass() : a( 7 ), b( 3.33 ), c( 1, 2, 3 ) {}
+	bool Foo( int );
+	void Bar( void );
+	float FooBar( int, const char * );
+	float OverlyTechnicalName( bool );
+
+protected:
+	int a;
+	float b;
+	Vector c;
+};
+
+bool CMyClass::Foo( int test )
+{
+	return true;
 }
 
-QAngle const &ScriptMatrixAngles( matrix3x4_t mat )
+void CMyClass::Bar( void )
 {
-	static QAngle result;
-	MatrixAngles( mat, result );
-	return result;
 }
 
-Quaternion const &ScriptMatrixQuaternion( matrix3x4_t mat )
+float CMyClass::FooBar( int test1, const char *test2 )
 {
-	static Quaternion result;
-	MatrixQuaternion( mat, result );
-	return result;
+	return 13.37f;
 }
+
+float CMyClass::OverlyTechnicalName( bool test )
+{
+	return M_PI/180;
+}
+
+BEGIN_SCRIPTDESC_ROOT_NAMED( CMyClass, "CMyClass", SCRIPT_SINGLETON "" )
+	DEFINE_SCRIPTFUNC( Foo, "" )
+	DEFINE_SCRIPTFUNC( Bar, "" )
+	DEFINE_SCRIPTFUNC( FooBar, "" )
+	DEFINE_SCRIPTFUNC_NAMED( OverlyTechnicalName, "SimpleMemberName", "" )
+	DEFINE_MEMBERVAR( a, FIELD_INTEGER, "" )
+	DEFINE_MEMBERVAR( b, FIELD_FLOAT, "" )
+	DEFINE_MEMBERVAR( c, FIELD_VECTOR, "" )
+END_SCRIPTDESC();
+
+class CMyDerivedClass : public CMyClass
+{
+	ALLOW_SCRIPT_ACCESS();
+public:
+	CMyDerivedClass() : d( true ) {}
+	float DerivedFunc() const;
+
+private:
+	bool d;
+};
+
+BEGIN_SCRIPTDESC( CMyDerivedClass, CMyClass, SCRIPT_SINGLETON "" )
+	DEFINE_SCRIPTFUNC( DerivedFunc, "" )
+	DEFINE_MEMBERVAR( a, FIELD_INTEGER, "" )
+	DEFINE_MEMBERVAR( b, FIELD_FLOAT, "" )
+	DEFINE_MEMBERVAR( c, FIELD_VECTOR, "" )
+	DEFINE_MEMBERVAR( d, FIELD_BOOLEAN, "" )
+END_SCRIPTDESC();
+
+float CMyDerivedClass::DerivedFunc() const
+{
+	return M_PI*2;
+}
+
+CMyDerivedClass derivedInstance;
 
 
 int main( int argc, char **argv )
@@ -73,9 +123,11 @@ int main( int argc, char **argv )
 
 	ScriptRegisterFunction( g_pScriptVM, TestReturn, "" );
 
-	ScriptRegisterFunctionNamed( g_pScriptVM, ScriptMatrixSetColumn, "MatrixSetColumn", "Sets the column of a matrix." );
-	ScriptRegisterFunctionNamed( g_pScriptVM, ScriptMatrixAngles, "MatrixAngles", "Gets the angles and position of a matrix." );
-	ScriptRegisterFunctionNamed( g_pScriptVM, ScriptMatrixQuaternion, "MatrixQuaternion", "Converts a matrix to a quaternion." );
+	// Manual class exposure
+	g_pScriptVM->RegisterClass( GetScriptDescForClass( CMyClass ) );
+
+	// Auto registration by instance
+	g_pScriptVM->RegisterInstance( &derivedInstance, "theInstance" );
 
 	if ( argc == 3 && *argv[2] == 'd' )
 	{
@@ -108,11 +160,6 @@ int main( int argc, char **argv )
 			HSCRIPT hScript = g_pScriptVM->CompileScript( pBuf, V_GetFileName( pszScript ) );
 			if ( hScript )
 			{
-				ScriptVariant_t	Table;
-				g_pScriptVM->CreateTable( Table );
-				g_pScriptVM->SetValue( Table, "controlpoint_1_vector", Vector( 23, 4, 15 ) );
-				scope.SetValue( "mytable", Table );
-
 				if ( scope.Run( hScript ) != SCRIPT_ERROR )
 				{
 					printf( "----------------------------------------\n" );
