@@ -51,8 +51,7 @@ public:
 	int GetAttributeIndex( const char *classname );
 	ISchemaAttributeType *GetAttributeType( const char *type ) const;
 
-	virtual CEconItemDefinition *CreateNewItemDefinition( void );
-	virtual CEconAttributeDefinition *CreateNewAttribDefinition( void );
+	bool RegisterScriptFunctions( void );
 
 	KeyValues *GetSchemaKeyValues( void ) const { return m_pSchema; }
 
@@ -68,6 +67,7 @@ protected:
 private:
 	KeyValues *m_pSchema;
 	bool m_bInited;
+	bool m_bScriptInit;
 };
 
 CEconItemSchema *GetItemSchema();

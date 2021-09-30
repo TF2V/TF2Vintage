@@ -3,6 +3,7 @@
 #include "script_parser.h"
 #include "activitylist.h"
 #include "attribute_types.h"
+#include "vscript_shared.h"
 
 #if defined(CLIENT_DLL)
 #define UTIL_VarArgs  VarArgs
@@ -345,7 +346,7 @@ public:
 			if ( V_stricmp( pData->GetName(), "default" ) == 0 )
 				continue;
 
-			CEconItemDefinition *pItem = GetItemSchema()->CreateNewItemDefinition();
+			CEconItemDefinition *pItem = new CEconItemDefinition();
 			int index = atoi( pData->GetName() );
 			pItem->index = index;
 
@@ -559,7 +560,7 @@ public:
 	{
 		for ( KeyValues *pSubData = pKeyValuesData->GetFirstTrueSubKey(); pSubData != NULL; pSubData = pSubData->GetNextTrueSubKey() )
 		{
-			CEconAttributeDefinition *pAttribute = GetItemSchema()->CreateNewAttribDefinition();
+			CEconAttributeDefinition *pAttribute = new CEconAttributeDefinition();
 			pAttribute->index = V_atoi( pSubData->GetName() );
 
 			V_strcpy_safe( pAttribute->name, pSubData->GetString( "name", "( unnamed )" ) );
@@ -830,7 +831,8 @@ CEconSchemaParser g_EconSchemaParser;
 CEconItemSchema::CEconItemSchema() :
 	m_Items( DefLessFunc(uint32) ),
 	m_Attributes( DefLessFunc(uint32) ),
-	m_bInited( false )
+	m_bInited( false ),
+	m_bScriptInit( false )
 {
 }
 
@@ -869,6 +871,12 @@ bool CEconItemSchema::Init( void )
 		Msg( "Processing item schema took %.02fms. Parsed %d items and %d attributes.\n", ( flEndTime - flStartTime ) * 1000.0f, m_Items.Count(), m_Attributes.Count() );
 
 		m_bInited = true;
+	}
+
+	if ( !m_bScriptInit )
+	{
+		RegisterScriptFunctions();
+		m_bScriptInit = true;
 	}
 
 	return true;
@@ -1076,12 +1084,10 @@ ISchemaAttributeType *CEconItemSchema::GetAttributeType( const char *name ) cons
 	return nullptr;
 }
 
-CEconItemDefinition *CEconItemSchema::CreateNewItemDefinition( void )
+bool CEconItemSchema::RegisterScriptFunctions( void )
 {
-	return new CEconItemDefinition;
-}
+	m_bScriptInit = true;
 
-CEconAttributeDefinition *CEconItemSchema::CreateNewAttribDefinition( void )
-{
-	return new CEconAttributeDefinition;
+
+	return true;
 }

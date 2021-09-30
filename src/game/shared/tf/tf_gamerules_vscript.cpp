@@ -7,6 +7,7 @@
 #include "cbase.h"
 #include "filesystem.h"
 #include "tf_gamerules.h"
+#include "econ_item_system.h"
 #include "vscript_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -143,4 +144,9 @@ void CTFGameRules::RegisterScriptFunctions( void )
 #if defined( GAME_DLL )
 	g_pScriptVM->RegisterInstance( &g_ConvarsVScript, "Convars" );
 #endif
+
+	if ( GetItemSchema() )
+	{
+		GetItemSchema()->RegisterScriptFunctions();
+	}
 }
