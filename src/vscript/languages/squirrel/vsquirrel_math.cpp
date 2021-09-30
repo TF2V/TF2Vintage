@@ -739,6 +739,12 @@ SQInteger MatrixConstruct( HSQUIRRELVM pVM )
 	return SQ_OK;
 }
 
+SQInteger MatrixTypeInfo( HSQUIRRELVM pVM )
+{
+	sq_pushstring( pVM, "matrix3x4_t", -1 );
+	return 1;
+}
+
 SQInteger MatrixToString( HSQUIRRELVM pVM )
 {
 	SQUserPointer up = NULL;
@@ -778,6 +784,11 @@ SQRESULT RegisterMatrix( HSQUIRRELVM pVM )
 	sq_pushstring( pVM, MM_TOSTRING, -1 );
 	sq_newclosure( pVM, MatrixToString, 0 );
 	sq_setnativeclosurename( pVM, -1, MM_TOSTRING );
+	sq_newslot( pVM, -3, SQFalse );
+
+	sq_pushstring( pVM, MM_TYPEOF, -1 );
+	sq_newclosure( pVM, MatrixTypeInfo, 0 );
+	sq_setnativeclosurename( pVM, -1, MM_TYPEOF );
 	sq_newslot( pVM, -3, SQFalse );
 
 	// Add to VM
