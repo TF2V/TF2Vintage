@@ -6,6 +6,7 @@
 #include "squirrel.h"
 #include "sqobject.h"
 #include "sqstdstring.h"
+#include "sqstdaux.h"
 
 #include "vscript/ivscript.h"
 #include "vsquirrel_math.h"
@@ -97,7 +98,7 @@ SQInteger VectorGet( HSQUIRRELVM pVM )
 		return 1;
 	}
 
-	return sq_throwerror( pVM, CFmtStr( "Index out of range in Vector table access. Expected ('x', 'y', 'z') got '%s'", pString[0] ) );
+	return sqstd_throwerrorf( pVM, "Index out of range in Vector table access. Expected ('x', 'y', 'z') got '%s'", pString[0] );
 }
 
 SQInteger VectorSet( HSQUIRRELVM pVM )
@@ -128,7 +129,7 @@ SQInteger VectorSet( HSQUIRRELVM pVM )
 		return 1;
 	}
 
-	return sq_throwerror( pVM, CFmtStr( "Index out of range in Vector table access. Expected ('x', 'y', 'z') got '%s'", pString[0] ) );
+	return sqstd_throwerrorf( pVM, "Index out of range in Vector table access. Expected ('x', 'y', 'z') got '%s'", pString[0] );
 }
 
 SQInteger VectorToString( HSQUIRRELVM pVM )
@@ -179,11 +180,11 @@ SQInteger VectorIterate( HSQUIRRELVM pVM )
 	{
 		sq_getstring( pVM, 2, &szAccessor );
 		if ( !szAccessor || !*szAccessor )
-			return sq_throwerror( pVM, "" );;
+			return sq_throwerror( pVM, "Bad Vector table access: Null key." );
 	}
 
 	if ( szAccessor[1] != '\0' )
-		return sq_throwerror( pVM, "" );;
+		return sq_throwerror( pVM, "Bad Vector table access: Malformed key." );
 
 	static char const *const results[] ={
 		"x",
@@ -262,7 +263,7 @@ SQInteger VectorToKeyValue( HSQUIRRELVM pVM )
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	sq_pushstring( pVM, CFmtStr( "%f %f %f", pVector->x, pVector->y, pVector->z ), -1 );
+	sqstd_pushstringf( pVM, "%f %f %f", pVector->x, pVector->y, pVector->z );
 	return 1;
 }
 
@@ -460,7 +461,7 @@ SQInteger QuaternionConstruct( HSQUIRRELVM pVM )
 {
 	int top = sq_gettop( pVM );
 	if ( top > 1 && top != 5 )
-		return sq_throwerror( pVM, CFmtStr( "Bad arguments passed to Quaternion constructor, expected 4, got %d", (top - 1) ) );
+		return sqstd_throwerrorf( pVM, "Bad arguments passed to Quaternion constructor, expected 4, got %d", (top - 1) );
 
 	Quaternion quat;
 	for ( int i=0; i < 4; ++i )
@@ -508,7 +509,7 @@ SQInteger QuaternionGet( HSQUIRRELVM pVM )
 			sq_pushfloat( pVM, pQuat->z );
 			break;
 		default:
-			return sq_throwerror( pVM, CFmtStr( "Index out of range in Quaternion table access. Expected ('x', 'y', 'z', 'w') got '%s'", pString[0] ) );
+			return sqstd_throwerrorf( pVM, "Index out of range in Quaternion table access. Expected ('x', 'y', 'z', 'w') got '%s'", pString[0] );
 	}
 
 	return 1;
@@ -525,11 +526,11 @@ SQInteger QuaternionSet( HSQUIRRELVM pVM )
 	sq_getstring( pVM, 2, &pString );
 	// Are we using the table accessor correctly?
 	if ( pString == NULL || *pString == '\0' )
-		return sq_throwerror( pVM, "Bad Quaternion table access: Null string." );;
+		return sq_throwerror( pVM, "Bad Quaternion table access: Null string." );
 
 	// Error on using additional characters
 	if ( pString[1] != '\0' )
-		return sq_throwerror( pVM, "Bad Quaternion table access: Malformed string." );;
+		return sq_throwerror( pVM, "Bad Quaternion table access: Malformed string." );
 
 	// Accessing w, x, y or z
 	SQFloat flValue = 0;
@@ -549,7 +550,7 @@ SQInteger QuaternionSet( HSQUIRRELVM pVM )
 			pQuat->z = flValue;
 			break;
 		default:
-			return sq_throwerror( pVM, CFmtStr( "Index out of range in Quaternion table access. Expected ('x', 'y', 'z', 'w') got '%s'", pString[0] ) );
+			return sqstd_throwerrorf( pVM, "Index out of range in Quaternion table access. Expected ('x', 'y', 'z', 'w') got '%s'", pString[0] );
 	}
 
 	sq_pushfloat( pVM, flValue );
@@ -604,11 +605,11 @@ SQInteger QuaternionIterate( HSQUIRRELVM pVM )
 	{
 		sq_getstring( pVM, 2, &szAccessor );
 		if ( !szAccessor || !*szAccessor )
-			return sq_throwerror( pVM, "" );;
+			return sq_throwerror( pVM, "Bad Quaternion table access: Null string." );
 	}
 
 	if ( szAccessor[1] != '\0' )
-		return sq_throwerror( pVM, "" );;
+		return sq_throwerror( pVM, "Bad Quaternion table access: Malformed string." );
 
 	static char const *const results[] ={
 		"w",
@@ -633,7 +634,7 @@ SQInteger QuaternionToKeyValue( HSQUIRRELVM pVM )
 	Quaternion *pQuat = (Quaternion *)up;
 	sq_checkquaternion( pVM, pQuat );
 
-	sq_pushstring( pVM, CFmtStr( "%f %f %f %f", pQuat->x, pQuat->y, pQuat->z, pQuat->w ), -1 );
+	sqstd_pushstringf( pVM, "%f %f %f %f", pQuat->x, pQuat->y, pQuat->z, pQuat->w );
 	return 1;
 }
 
@@ -650,7 +651,7 @@ SQInteger QuaternionFromKeyValue( HSQUIRRELVM pVM )
 
 	float x, y, z, w;
 	if ( sscanf_s( pInput, "%f %f %f %f", &x, &y, &z, &w ) < 4 )
-		return sq_throwerror( pVM, "Expected format: 'float float float'" );
+		return sq_throwerror( pVM, "Expected format: 'float float float float'" );
 
 	pQuat->Init( x, y, z, w );
 
@@ -724,7 +725,7 @@ SQInteger MatrixConstruct( HSQUIRRELVM pVM )
 {
 	int top = sq_gettop( pVM );
 	if ( top > 1 && top != 13 )
-		return sq_throwerror( pVM, CFmtStr( "Bad arguments passed to matrix3x4_t constructor, expected 12, got %d", (top - 1) ) );
+		return sqstd_throwerrorf( pVM, "Bad arguments passed to matrix3x4_t constructor, expected 12, got %d", (top - 1) );
 
 	matrix3x4_t matrix;
 	for ( int i=0; i < 12; ++i )
