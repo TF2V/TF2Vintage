@@ -215,7 +215,6 @@ public:
 	virtual void			SetPickupTouch( void );
 	virtual void 			DefaultTouch( CBaseEntity *pOther );	// default weapon touch
 	virtual void			GiveTo( CBaseEntity *pOther );
-	void					ScriptGiveTo( HSCRIPT hOther ) { GiveTo( ToEnt( hOther ) ); }
 
 	// HUD Hints
 	virtual bool			ShouldDisplayAltFireHUDHint();
@@ -339,9 +338,7 @@ public:
 	virtual char			*GetDeathNoticeName( void );	// Get the string to print death notices with
 
 	CBaseCombatCharacter	*GetOwner() const;
-	HSCRIPT					ScriptGetOwner( void ) { return ToHScript( GetOwner() ); }
 	void					SetOwner( CBaseCombatCharacter *owner );
-	void					ScriptSetOwner( HSCRIPT hScriptOwner ) { SetOwner( ToEnt( hScriptOwner )->MyCombatCharacterPointer() ); }
 	virtual void			OnPickedUp( CBaseCombatCharacter *pNewOwner );
 
 	virtual void			AddViewmodelBob( CBaseViewModel *viewmodel, Vector &origin, QAngle &angles ) {};
@@ -394,15 +391,6 @@ public:
 	virtual int				GetSecondaryAmmoType( void )  const { return m_iSecondaryAmmoType; }
 	virtual int				Clip1() { return m_iClip1; }
 	virtual int				Clip2() { return m_iClip2; }
-#ifdef GAME_DLL
-	void					ScriptSetClip1( int iClip1 ) { m_iClip1 = iClip1; }
-	void					ScriptSetClip2( int iClip2 ) { m_iClip2 = iClip2; }
-	void					ScriptSetClips( int nClips );
-#endif
-	int						ScriptGetMaxAmmo1();
-	int						ScriptGetMaxAmmo2();
-	int						ScriptGetClips();
-	int						ScriptGetMaxClips();
 
 	// Ammo quantity queries for weapons that do not use clips. These are only
 	// used to determine how much ammo is in a weapon that does not have an owner.
@@ -431,6 +419,20 @@ public:
 	virtual void			Activate( void );
 
 	virtual bool ShouldUseLargeViewModelVROverride() { return false; }
+
+	////////////////////////////////////////////////////////////////
+	// VScript Methods
+	virtual const char*	GetWeaponScriptName() { return GetClassname(); }
+
+	HSCRIPT				ScriptGetOwner( void ) { return ToHScript( GetOwner() ); }
+	void				ScriptSetOwner( HSCRIPT hScriptOwner );
+
+	void				ScriptGiveTo( HSCRIPT hOther ) { GiveTo( ToEnt( hOther ) ); }
+
+	void				ScriptSetClip1( int iClip1 ) { m_iClip1 = iClip1; }
+	void				ScriptSetClip2( int iClip2 ) { m_iClip2 = iClip2; }
+	int					ScriptGetMaxAmmo1();
+	int					ScriptGetMaxAmmo2();
 public:
 // Server Only Methods
 #if !defined( CLIENT_DLL )
@@ -665,6 +667,7 @@ protected:
 	COutputEvent			m_OnPlayerPickup;	// Fired when the player picks up the weapon.
 	COutputEvent			m_OnNPCPickup;		// Fired when an NPC picks up the weapon.
 	COutputEvent			m_OnCacheInteraction;	// For awarding lambda cache achievements in HL2 on 360. See .FGD file for details 
+	COutputEvent			m_OnDropped;
 
 #else // Client .dll only
 	bool					m_bJustRestored;

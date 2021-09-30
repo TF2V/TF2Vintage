@@ -502,8 +502,6 @@ public:
 	virtual void			SetOwnerEntity( CBaseEntity* pOwner );
 	void					SetEffectEntity( CBaseEntity *pEffectEnt );
 	CBaseEntity				*GetEffectEntity() const;
-	HSCRIPT					GetScriptOwnerEntity();
-	virtual void			SetScriptOwnerEntity( HSCRIPT pOwner );
 
 	// Only CBaseEntity implements these. CheckTransmit calls the virtual ShouldTransmit to see if the
 	// entity wants to be sent. If so, it calls SetTransmit, which will mark any dependents for transmission too.
@@ -557,7 +555,6 @@ public:
 
 	// initialization
 	virtual void Spawn( void );
-	void ScriptSpawn( void );
 	virtual void Precache( void ) {}
 
 	virtual void SetModel( const char *szModelName );
@@ -594,7 +591,6 @@ public:
 	CBaseEntity *NextMovePeer( void );
 
 	void		SetName( string_t newTarget );
-	void		ScriptSetName( const char *newName );
 	void		SetParent( string_t newParent, CBaseEntity *pActivator, int iAttachment = -1 );
 	
 	// Set the movement parent. Your local origin and angles will become relative to this parent.
@@ -940,8 +936,6 @@ public:
 
 	// This is what you should call to apply damage to an entity.
 	int TakeDamage( const CTakeDamageInfo &info );
-	void ScriptTakeDamage( float flDamage, int ndamageType, HSCRIPT hAttacker );
-	void ScriptTakeDamageParams( HSCRIPT hInflictor, HSCRIPT hAttacker, HSCRIPT hWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, int ndamageType );
 	virtual void AdjustDamageDirection( const CTakeDamageInfo &info, Vector &dir, CBaseEntity *pEnt ) {}
 
 	virtual int		TakeHealth( float flHealth, int bitsDamageType );
@@ -1099,7 +1093,6 @@ public:
 	virtual void MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 	virtual int	GetTracerAttachment( void );
 	virtual void FireBullets( const FireBulletsInfo_t &info );
-	void ScriptFireBullets( HSCRIPT info );
 	virtual void DoImpactEffect( trace_t &tr, int nDamageType ); // give shooter a chance to do a custom impact.
 
 	// OLD VERSION! Use the struct version
@@ -1256,8 +1249,6 @@ public:
 	// in the other space, so setting the abs velocity will also set the local vel
 	void			SetLocalAngularVelocity( const QAngle &vecAngVelocity );
 	const QAngle&	GetLocalAngularVelocity( ) const;
-	const Vector&	ScriptGetLocalAngularVelocity( void );
-	void			ScriptSetLocalAngularVelocity( float pitchVel, float yawVel, float rollVel );
 
 	// FIXME: While we're using (dPitch, dYaw, dRoll) as our local angular velocity
 	// representation, we can't actually solve this problem
@@ -1331,8 +1322,6 @@ public:
 
 	// This defines collision bounds in OBB space
 	void					SetCollisionBounds( const Vector& mins, const Vector &maxs );
-	const Vector&			ScriptGetBoundingMins( void );
-	const Vector&			ScriptGetBoundingMaxs( void );
 
 	// NOTE: The world space center *may* move when the entity rotates.
 	virtual const Vector&	WorldSpaceCenter( ) const;
@@ -1388,8 +1377,6 @@ public:
 	// See CSoundEmitterSystem
 	void					EmitSound( const char *soundname, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter filter( this ), and EmitSound( filter, entindex(), etc. );
 	void					EmitSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter filter( this ), and EmitSound( filter, entindex(), etc. );
-	void					ScriptEmitSound( const char *soundname );
-	void					ScriptStopSound( const char *soundname );
 	void					StopSound( const char *soundname );
 	void					StopSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle );
 	void					GenderExpandString( char const *in, char *out, int maxlen );
@@ -1397,7 +1384,6 @@ public:
 	virtual void ModifyEmitSoundParams( EmitSound_t &params );
 
 	static float GetSoundDuration( const char *soundname, char const *actormodel );
-	float		ScriptSoundDuration( const char *soundname, const char *actormodel );
 
 	static bool	GetParametersForSound( const char *soundname, CSoundParameters &params, char const *actormodel );
 	static bool	GetParametersForSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, CSoundParameters &params, char const *actormodel );
@@ -1904,15 +1890,24 @@ public:
 	void ScriptThink( void );
 	const char *GetScriptId( void );
 	HSCRIPT GetScriptScope( void );
+
 	void RunPrecacheScripts( void );
 	void RunOnPostSpawnScripts( void );
-	HSCRIPT ScriptGetModelKeyValues( void );
+	void ScriptSpawn( void );
 
+	void ScriptUtilRemove( void );
+
+	HSCRIPT GetScriptOwnerEntity();
+	void SetScriptOwnerEntity( HSCRIPT pOwner );
 	HSCRIPT ScriptGetMoveParent( void );
 	HSCRIPT ScriptGetRootMoveParent( void );
 	HSCRIPT ScriptFirstMoveChild( void );
 	HSCRIPT ScriptNextMovePeer( void );
 
+	void ScriptTakeDamage( float flDamage, int nDamageType, HSCRIPT hAttacker );
+	void ScriptTakeDamageParams( HSCRIPT hInflictor, HSCRIPT hAttacker, HSCRIPT hWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, int ndamageType );
+	void ScriptFireBullets( HSCRIPT info );
+	
 	const Vector &ScriptEyePosition( void );
 	void ScriptSetAngles( float fPitch, float fYaw, float fRoll );
 	const Vector &ScriptGetAngles( void );
@@ -1920,13 +1915,24 @@ public:
 	const Vector &ScriptGetLocalAngles( void );
 
 	void ScriptSetSize( const Vector &mins, const Vector &maxs );
-	void ScriptUtilRemove( void );
+	const Vector &ScriptGetBoundingMins( void );
+	const Vector &ScriptGetBoundingMaxs( void );
 
 	void ScriptSetOrigin( const Vector &v );
 	void ScriptSetForward( const Vector &v );
+	const Vector &ScriptGetLocalAngularVelocity( void );
+	void ScriptSetLocalAngularVelocity( float pitchVel, float yawVel, float rollVel );
 	const Vector &ScriptGetForward( void );
 	const Vector &ScriptGetLeft( void );
 	const Vector &ScriptGetUp( void );
+
+	void ScriptSetName( const char *newName );
+
+	void ScriptEmitSound( const char *soundname );
+	void ScriptStopSound( const char *soundname );
+	float ScriptSoundDuration( const char *soundname, const char *actormodel );
+
+	HSCRIPT ScriptGetModelKeyValues( void );
 
 	string_t		m_iszVScripts;
 	string_t		m_iszScriptThinkFunction;
