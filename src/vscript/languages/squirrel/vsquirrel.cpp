@@ -402,10 +402,10 @@ HSCRIPT CSquirrelVM::CreateScope( const char *pszScope, HSCRIPT hParent )
 	}
 
 	// this pops off the parameters automatically
-	HSQOBJECT pScope ={OT_NULL, NULL};
+	HSQOBJECT hScope = _null_;
 	if ( SQ_SUCCEEDED( sq_call( GetVM(), 3, SQTrue, SQ_CALL_RAISE_ERROR ) ) )
 	{
-		sq_getstackobj( GetVM(), -1, &pScope );
+		sq_getstackobj( GetVM(), -1, &hScope );
 
 		// a result is pushed on success, pop it off
 		sq_pop( GetVM(), 1 );
@@ -415,14 +415,14 @@ HSCRIPT CSquirrelVM::CreateScope( const char *pszScope, HSCRIPT hParent )
 	sq_pop( GetVM(), 1 );
 	
 	// valid return?
-	if ( sq_isnull( pScope ) )
-		return NULL;
+	if ( sq_isnull( hScope ) )
+		return INVALID_HSCRIPT;
 	
-	sq_addref( GetVM(), &pScope );
+	sq_addref( GetVM(), &hScope );
 
 	HSQOBJECT *pObject = new HSQOBJECT;
-	pObject->_type = pScope._type;
-	pObject->_unVal = pScope._unVal;
+	pObject->_type = hScope._type;
+	pObject->_unVal = hScope._unVal;
 
 	return (HSCRIPT)pObject;
 }
@@ -686,16 +686,16 @@ void CSquirrelVM::RegisterConstant( ScriptConstantBinding_t *pScriptConstant )
 
 void CSquirrelVM::RegisterEnum( ScriptEnumDesc_t *pEnumDesc )
 {
-	// register to the const table so users can't change it
+	// register to the const table
 	sq_pushconsttable( GetVM() );
 	sq_pushstring( GetVM(), pEnumDesc->m_pszScriptName, -1 );
 
 	// Check if name is already taken
 	if ( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
 	{
-		HSQOBJECT pObject ={OT_NULL, NULL};
-		sq_getstackobj( GetVM(), -1, &pObject );
-		if ( !sq_isnull( pObject ) )
+		HSQOBJECT hObject = _null_;
+		sq_getstackobj( GetVM(), -1, &hObject );
+		if ( !sq_isnull( hObject ) )
 		{
 			sq_pop( GetVM(), 2 );
 			return;
@@ -894,13 +894,13 @@ bool CSquirrelVM::SetValue( HSCRIPT hScope, const char *pszKey, const ScriptVari
 
 void CSquirrelVM::CreateTable( ScriptVariant_t &Table )
 {
-	HSQOBJECT pObject = INVALID_HSQOBJECT;
+	HSQOBJECT hObject = INVALID_HSQOBJECT;
 	sq_newtable( GetVM() );
 
-	sq_getstackobj( GetVM(), -1, &pObject );
-	sq_addref( GetVM(), &pObject );
+	sq_getstackobj( GetVM(), -1, &hObject );
+	sq_addref( GetVM(), &hObject );
 
-	ConvertToVariant( GetVM(), pObject, &Table );
+	ConvertToVariant( GetVM(), hObject, &Table );
 
 	sq_pop( GetVM(), 1 );
 }
@@ -1626,7 +1626,7 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 
 	ScriptFunctionBinding_t *pFuncBinding = NULL;
 	sq_getuserpointer( pVM, sq_gettop( pVM ), (SQUserPointer *)&pFuncBinding );
-	CUtlVector<ScriptDataType_t> const &fnParams = pFuncBinding->m_desc.m_Parameters;
+	auto const &fnParams = pFuncBinding->m_desc.m_Parameters;
 
 	parameters.SetCount( fnParams.Count() );
 
@@ -1890,8 +1890,8 @@ SQInteger CSquirrelVM::InstanceGetStub( HSQUIRRELVM pVM )
 	{
 		if ( V_strcmp( members[i].m_pszScriptName, pString ) == 0 )
 		{
-			ptrdiff_t nOffset = members[i].m_unMemberOffs;
-			size_t nSize = members[i].m_unMemberSize;
+			ptrdiff_t const nOffset = members[i].m_unMemberOffs;
+			size_t const nSize = members[i].m_unMemberSize;
 			switch ( members[i].m_nMemberType )
 			{
 				case FIELD_INTEGER:

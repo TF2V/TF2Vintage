@@ -303,10 +303,6 @@ public:
 // 
 // An odd concept. Classes are capable of pretending they
 // have member variables which VScript can get and set.
-// 
-// There's no default way of documenting these variables, so even though
-// these are not actually binding anything, this is here to allow VScript
-// to describe these fake member variables in its documentation.
 //---------------------------------------------------------
 struct ScriptMemberBinding_t
 {

@@ -1,6 +1,5 @@
 #include "mathlib/mathlib.h"
 #include "tier0/platform.h"
-#include "tier0/icommandline.h"
 #include "vscript/ivscript.h"
 #include "vsquirrel.h"
 
@@ -37,7 +36,7 @@ public:
 	float FooBar( int, const char * );
 	float OverlyTechnicalName( bool );
 
-protected:
+private:
 	int a;
 	float b;
 	Vector c;
@@ -50,6 +49,7 @@ bool CMyClass::Foo( int test )
 
 void CMyClass::Bar( void )
 {
+	Msg( "Bar\n" );
 }
 
 float CMyClass::FooBar( int test1, const char *test2 )
@@ -76,7 +76,7 @@ class CMyDerivedClass : public CMyClass
 {
 	ALLOW_SCRIPT_ACCESS();
 public:
-	CMyDerivedClass() : d( true ) {}
+	CMyDerivedClass() : CMyClass(), d( true ) {}
 	float DerivedFunc() const;
 
 private:
@@ -115,7 +115,7 @@ int main( int argc, char **argv )
 	g_pScriptVM->SetOutputCallback( TestOutput );
 	g_pScriptVM->SetErrorCallback( TestError );
 
-	MathLib_Init( 2.2f, 2.2f, 0.0f, 2, true, true, false, false );
+	MathLib_Init( 2.2f, 2.2f, 0.0f, 2, true, true, true, false );
 
 	RandomSeed( time( NULL ) );
 	ScriptRegisterFunction( g_pScriptVM, RandomInt, "" );

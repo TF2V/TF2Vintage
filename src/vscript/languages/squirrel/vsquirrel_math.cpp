@@ -54,22 +54,14 @@ Vector GetVectorByValue( HSQUIRRELVM pVM, int nIndex )
 SQInteger VectorConstruct( HSQUIRRELVM pVM )
 {
 	Vector vector;
-
-	int i, _top = sq_gettop( pVM );
-	for ( i=0; i < _top - 1 && i < 3; ++i )
+	for ( int i=0; i < 3; ++i )
 	{
 		sq_getfloat( pVM, i + 2, &vector[i] );
 	}
 
-	if ( i < 3 )
-	{
-		for( ; i<3; ++i )
-			vector[i] = 0;
-	}
-
-	SQUserPointer p;
-	sq_getinstanceup( pVM, 1, &p, NULL );
-	V_memcpy( p, &vector, sizeof( vector ) );
+	SQUserPointer up;
+	sq_getinstanceup( pVM, 1, &up, NULL );
+	V_memcpy( up, &vector, sizeof(Vector) );
 
 	return 0;
 }
@@ -372,9 +364,7 @@ SQInteger VectorNormalize( HSQUIRRELVM pVM )
 	Vector *pVector = (Vector *)up;
 	sq_checkvector( pVM, pVector );
 
-	const float flLength = VectorNormalize( *pVector );
-
-	sq_pushfloat( pVM, flLength );
+	sq_pushfloat( pVM, pVector->NormalizeInPlace() );
 	return 1;
 }
 
@@ -469,9 +459,9 @@ SQInteger QuaternionConstruct( HSQUIRRELVM pVM )
 		sq_getfloat( pVM, i + 2, &quat[i] );
 	}
 
-	SQUserPointer p;
-	sq_getinstanceup( pVM, 1, &p, NULL );
-	V_memcpy( p, &quat, sizeof( quat ) );
+	SQUserPointer up;
+	sq_getinstanceup( pVM, 1, &up, NULL );
+	V_memcpy( up, &quat, sizeof(Quaternion) );
 
 	return 0;
 }
@@ -733,9 +723,9 @@ SQInteger MatrixConstruct( HSQUIRRELVM pVM )
 		sq_getfloat( pVM, i + 2, &matrix[i / 4][i % 4] );
 	}
 
-	SQUserPointer p;
-	sq_getinstanceup( pVM, 1, &p, NULL );
-	V_memcpy( p, &matrix, sizeof( matrix ) );
+	SQUserPointer up;
+	sq_getinstanceup( pVM, 1, &up, NULL );
+	V_memcpy( up, &matrix, sizeof(matrix3x4_t) );
 
 	return SQ_OK;
 }
