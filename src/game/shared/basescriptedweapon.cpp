@@ -57,22 +57,13 @@ CBaseScriptedWeapon::~CBaseScriptedWeapon()
 //-----------------------------------------------------------------------------
 void CBaseScriptedWeapon::Precache()
 {
-#if defined( USES_ECON_ITEMS )
-	// If were we Econ generated then setup our weapon name using it,
-	// else rely on the mapper to name their entities correctly
-	CEconItemDefinition *pItemDef = GetItem()->GetStaticData();
-	if ( pItemDef )
-	{
-		if ( pItemDef->GetVScriptName() )
-			SetClassname( pItemDef->GetVScriptName() );
-	}
-#endif
+	BaseClass::Precache();
 
 #if defined( GAME_DLL )
 	// Setup our script ID
 	ValidateScriptScope();
 
-	m_iszVScripts = AllocPooledString( GetClassname() );
+	m_iszVScripts = AllocPooledString( GetWeaponScriptName() );
 
 	m_ScriptScope.Init( STRING( m_iszScriptId ) );
 	VScriptRunScript( STRING( m_iszVScripts ), m_ScriptScope, true );
@@ -91,6 +82,8 @@ void CBaseScriptedWeapon::Spawn()
 #endif
 
 	BaseClass::Spawn();
+
+	m_ScriptScope.CallFunc( "Spawn" );
 }
 
 //-----------------------------------------------------------------------------
@@ -98,6 +91,7 @@ void CBaseScriptedWeapon::Spawn()
 //-----------------------------------------------------------------------------
 void CBaseScriptedWeapon::PrimaryAttack()
 {
+	m_ScriptScope.CallFunc( "PrimaryAttack" );
 }
 
 //-----------------------------------------------------------------------------
@@ -105,6 +99,7 @@ void CBaseScriptedWeapon::PrimaryAttack()
 //-----------------------------------------------------------------------------
 void CBaseScriptedWeapon::SecondaryAttack()
 {
+	m_ScriptScope.CallFunc( "SecondaryAttack" );
 }
 
 //-----------------------------------------------------------------------------
@@ -113,6 +108,9 @@ void CBaseScriptedWeapon::SecondaryAttack()
 bool CBaseScriptedWeapon::CanDeploy( void )
 {
 	bool bResult = true;
+
+	m_ScriptScope.CallFunc( "CanDeploy", &bResult);
+
 	return bResult;
 }
 
@@ -122,6 +120,9 @@ bool CBaseScriptedWeapon::CanDeploy( void )
 bool CBaseScriptedWeapon::Deploy( void )
 {
 	bool bResult = BaseClass::Deploy();
+
+	m_ScriptScope.CallFunc( "Deploy", &bResult);
+
 	return bResult;
 }
 
@@ -131,6 +132,9 @@ bool CBaseScriptedWeapon::Deploy( void )
 bool CBaseScriptedWeapon::CanHolster( void )
 {
 	bool bResult = true;
+
+	m_ScriptScope.CallFunc( "CanHolster", &bResult);
+
 	return bResult;
 }
 
@@ -140,6 +144,10 @@ bool CBaseScriptedWeapon::CanHolster( void )
 bool CBaseScriptedWeapon::Holster( CBaseCombatWeapon *pSwitchingTo )
 {
 	bool bResult = BaseClass::Holster( pSwitchingTo );
+
+	m_ScriptScope.PushArg( ToHScript( pSwitchingTo ) );
+	m_ScriptScope.CallFunc( "Holster", &bResult );
+
 	return bResult;
 }
 
@@ -154,6 +162,9 @@ bool CBaseScriptedWeapon::ScriptHolster( HSCRIPT pSwitchingTo )
 void CBaseScriptedWeapon::OnActiveStateChanged( int iOldState )
 {
 	BaseClass::OnActiveStateChanged( iOldState );
+
+	m_ScriptScope.PushArg( iOldState );
+	m_ScriptScope.CallFunc( "OnActiveStateChanged" );
 }
 
 //-----------------------------------------------------------------------------
@@ -163,9 +174,9 @@ void CBaseScriptedWeapon::Equip( CBaseCombatCharacter *pOwner )
 {
 	BaseClass::Equip( pOwner );
 
-#if defined( GAME_DLL )
 	m_ScriptScope.SetValue( "owner", ToHScript( pOwner ) );
-#endif
+
+	m_ScriptScope.CallFunc( "Equip" );
 }
 
 void CBaseScriptedWeapon::ScriptEquip( HSCRIPT pOwner )
@@ -180,9 +191,25 @@ void CBaseScriptedWeapon::Detach()
 {
 	BaseClass::Detach();
 
-#if defined( GAME_DLL )
+	m_ScriptScope.CallFunc( "Detach" );
+
 	m_ScriptScope.SetValue( "owner", INVALID_HSCRIPT );
+}
+
+char const *CBaseScriptedWeapon::GetWeaponScriptName()
+{
+#if defined( USES_ECON_ITEMS )
+	// If were we Econ generated then setup our weapon name using it,
+	// else rely on the mapper to name their entities correctly
+	CEconItemDefinition *pItemDef = GetItem()->GetStaticData();
+	if ( pItemDef )
+	{
+		if ( pItemDef->GetVScriptName() )
+			return pItemDef->GetVScriptName();
+	}
 #endif
+
+	return GetClassname();
 }
 
 #if defined( GAME_DLL )
@@ -192,6 +219,13 @@ void CBaseScriptedWeapon::Detach()
 void CBaseScriptedWeapon::HandleAnimEvent( animevent_t *pEvent )
 {
 	BaseClass::HandleAnimEvent( pEvent );
+
+	m_ScriptScope.PushArg( pEvent->event, 
+						   pEvent->type, 
+						   pEvent->options, 
+						   pEvent->eventtime, 
+						   ToHScript( pEvent->pSource ) );
+	m_ScriptScope.CallFunc( "HandleAnimEvent");
 }
 #else
 //-----------------------------------------------------------------------------

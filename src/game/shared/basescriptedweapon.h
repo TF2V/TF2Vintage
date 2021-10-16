@@ -156,6 +156,8 @@ public:
 	void				ScriptEquip( HSCRIPT pOwner );
 	virtual void		Detach();
 
+	char const*			GetWeaponScriptName( void ) OVERRIDE;
+
 #if defined(CLIENT_DLL)
 	virtual void OnPreDataChanged( DataUpdateType_t updateType );
 	virtual void OnDataChanged( DataUpdateType_t updateType );
