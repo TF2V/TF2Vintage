@@ -108,7 +108,6 @@ struct ScriptWeaponInfo_t : public FileWeaponInfo_t
 {
 	DECLARE_STRUCT_SCRIPTDESC();
 	ScriptWeaponInfo_t()
-		: FileWeaponInfo_t()
 	{
 		Q_strncpy( szPrintName, WEAPON_PRINTNAME_MISSING, MAX_WEAPON_STRING );
 		iDefaultClip1 = iMaxClip1 = -1;
@@ -125,25 +124,6 @@ struct ScriptWeaponInfo_t : public FileWeaponInfo_t
 		iRumbleEffect = -1;
 	}
 };
-class CScriptedWeaponData
-{
-	DECLARE_CLASS_NOBASE( CScriptedWeaponData )
-public:
-	DECLARE_EMBEDDED_NETWORKVAR();
-
-	bool BInit( CScriptedWeaponScope &scope, FileWeaponInfo_t *pWeaponInfo );
-	void UpdateWeaponInfo( void ) { *m_pWeaponInfo = m_ScriptWeaponInfo.Get(); }
-	operator FileWeaponInfo_t const &() const { Assert( m_pWeaponInfo ); return *m_pWeaponInfo; }
-	FileWeaponInfo_t const *operator->() const { Assert( m_pWeaponInfo ); return m_pWeaponInfo; }
-
-private:
-	CNetworkVar( ScriptWeaponInfo_t, m_ScriptWeaponInfo );
-	FileWeaponInfo_t *m_pWeaponInfo;
-};
-
-inline void NetworkVarConstruct( ScriptWeaponInfo_t &var ) {
-	Construct( &var );
-}
 
 class CBaseScriptedWeapon : public CBaseCombatWeapon
 {
@@ -182,14 +162,7 @@ public:
 #endif
 
 private:
-#if defined( GAME_DLL )
 	CScriptedWeaponScope m_ScriptScope;
-#endif
-	CNetworkVarEmbedded( CScriptedWeaponData, m_WeaponData );
-	CNetworkVar( int, m_nWeaponDataChanged );
-#if defined(CLIENT_DLL)
-	int m_nWeaponDataChangedOld;
-#endif
 };
 
 #endif
