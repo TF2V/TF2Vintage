@@ -227,59 +227,38 @@ bool CSquirrelVM::Init( void )
 	
 	sq_setprintfunc( GetVM(), &CSquirrelVM::PrintFunc, &CSquirrelVM::ErrorFunc );
 
-	// register libraries
-	sq_pushroottable( GetVM() );
-	sqstd_register_stringlib( GetVM() );
-	sqstd_register_mathlib( GetVM() );
-	sqstd_register_timelib( GetVM() );
-	sqstd_seterrorhandlers( GetVM() );
-	sq_pop( GetVM(), 1 );
-
 	if ( IsDebug() || developer.GetInt() )
 		sq_enabledebuginfo( GetVM(), SQTrue );
+	{
+		// register libraries
+		sq_pushroottable( GetVM() );
 
-	// register root functions
-	sq_pushroottable( GetVM() );
-	sq_pushstring( GetVM(), "developer", -1 );
-	sq_newclosure( GetVM(), &CSquirrelVM::GetDeveloper, 0 );
-	sq_setnativeclosurename( GetVM(), -1, "developer" );
-	sq_createslot( GetVM(), -3 );
-	sq_pushstring( GetVM(), "GetFunctionSignature", -1 );
-	sq_newclosure( GetVM(), &CSquirrelVM::GetFunctionSignature, 0 );
-	sq_setnativeclosurename( GetVM(), -1, "GetFunctionSignature" );
-	sq_createslot( GetVM(), -3 );
-	sq_pop( GetVM(), 1 );
+		sqstd_register_stringlib( GetVM() );
+		sqstd_register_mathlib( GetVM() );
+		sqstd_register_timelib( GetVM() );
+
+		sqstd_seterrorhandlers( GetVM() );
+
+		// register root functions
+		sq_pushstring( GetVM(), "developer", -1 );
+		sq_newclosure( GetVM(), &CSquirrelVM::GetDeveloper, 0 );
+		sq_setnativeclosurename( GetVM(), -1, "developer" );
+		sq_createslot( GetVM(), -3 );
+		sq_pushstring( GetVM(), "GetFunctionSignature", -1 );
+		sq_newclosure( GetVM(), &CSquirrelVM::GetFunctionSignature, 0 );
+		sq_setnativeclosurename( GetVM(), -1, "GetFunctionSignature" );
+		sq_createslot( GetVM(), -3 );
+
+		// pop off root table
+		sq_pop( GetVM(), 1 );
+	}
 
 	RegisterMathBindings( GetVM() );
 
-	// store a reference to the Vector class for instancing
-	sq_pushroottable( GetVM() );
-	sq_pushstring( GetVM(), "Vector", -1 );
-	if( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
-	{
-		sq_getstackobj( GetVM(), -1, &m_VectorClass );
-		sq_addref( GetVM(), &m_VectorClass );
-		// Pop the result
-		sq_pop( GetVM(), 1 );
-	}
-	sq_pushstring( GetVM(), "Quaternion", -1 );
-	if( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
-	{
-		sq_getstackobj( GetVM(), -1, &m_QuaternionClass );
-		sq_addref( GetVM(), &m_QuaternionClass );
-
-		sq_pop( GetVM(), 1 );
-	}
-	sq_pushstring( GetVM(), "matrix3x4_t", -1 );
-	if( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
-	{
-		sq_getstackobj( GetVM(), -1, &m_MatrixClass );
-		sq_addref( GetVM(), &m_MatrixClass );
-
-		sq_pop( GetVM(), 1 );
-	}
-	// Pop off root table
-	sq_pop( GetVM(), 1 );
+	// store a reference to our classes for instancing
+	m_VectorClass = LookupObject( "Vector" );
+	m_QuaternionClass = LookupObject( "Quaternion" );
+	m_MatrixClass = LookupObject( "matrix3x4_t" );
 
 	m_ScriptClasses.Init( 256 );
 
