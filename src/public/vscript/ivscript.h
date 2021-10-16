@@ -663,32 +663,46 @@ struct ScriptEnumDesc_t
 // 
 //-----------------------------------------------------------------------------
 
+#define ScriptAddConstantToEnumDesc( pEnumDesc, constant, description )								ScriptAddConstantToEnumDescNamed( pEnumDesc, constant #constant, description );
+#define ScriptAddConstantToEnumDescNamed( pEnumDesc, constant, scriptName, description )			do { ScriptConstantBinding_t *pBinding = &((pEnumDesc)->m_ConstantBindings[(pEnumDesc)->m_ConstantBindings.AddToTail()]); pBinding->m_pszScriptName = scriptName; pBinding->m_pszDescription = description; pBinding->m_data = constant; pBinding->m_flags = SF_MEMBER_FUNC; } while (0)
+
+#if defined(MSVC) && (_MSC_VER < 1800)
+#define DEFINE_ENUM_SCRIPTDESC_FUNCTION( enumName ) \
+		ScriptClassDesc_t *GetScriptEnumDesc(ScriptEnum##enumName##Desc_t *)
+#else
+#define DEFINE_ENUM_SCRIPTDESC_FUNCTION( enumName ) \
+		template<> ScriptStructDesc_t *GetScriptEnumDesc<ScriptEnum##enumName##Desc_t>(ScriptEnum##enumName##Desc_t *)
+#endif
+
 #define BEGIN_SCRIPTENUM( enumName, description ) \
 		struct ScriptEnum##enumName##Desc_t : public ScriptEnumDesc_t \
 		{ \
-			void RegisterDesc(); \
-		}; \
-		ScriptEnum##enumName##Desc_t g_##enumName##_EnumDesc; \
-		\
-		void ScriptEnum##enumName##Desc_t::RegisterDesc() \
+		} g_##enumName##_EnumDesc; \
+		DEFINE_ENUM_SCRIPTDESC_FUNCTION( enumName ) \
 		{ \
 			static bool bInitialized; \
 			if ( bInitialized ) \
-				return; \
+			{ \
+				return &g_##enumName##_EnumDesc; \
+			} \
 			\
 			bInitialized = true; \
 			\
-			m_pszScriptName = #enumName; \
-			m_pszDescription = description; \
+			ScriptEnumDesc_t *pDesc = &g_##enumName##_EnumDesc; \
+			pDesc->m_pszScriptName = #enumName; \
+			pDesc->m_pszDescription = description; \
 
 #define DEFINE_ENUMCONST( constant, description )							DEFINE_ENUMCONST_NAMED( constant, #constant, description )
-#define DEFINE_ENUMCONST_NAMED( constant, scriptName, description )			do { ScriptConstantBinding_t *pBinding = &(m_ConstantBindings[m_ConstantBindings.AddToTail()]); pBinding->m_pszScriptName = scriptName; pBinding->m_pszDescription = description; pBinding->m_data = constant; pBinding->m_flags = SF_MEMBER_FUNC; } while (0);
+#define DEFINE_ENUMCONST_NAMED( constant, scriptName, description )			ScriptAddConstantToEnumDescNamed( pDesc, constant, scriptName, description );
 
 #define END_SCRIPTENUM() \
+			return pDesc; \
 		}
 
+template<typename T>
+ScriptEnumDesc_t *GetScriptEnumDesc( T* );
 
-#define GetScriptDescForEnum( enumName ) GetScriptDesc( ( className *)NULL )
+#define GetScriptDescForEnum( enumName ) GetScriptEnumDesc( ( ScriptEnum##enumName##Desc_t *)NULL )
 
 //-----------------------------------------------------------------------------
 // 
