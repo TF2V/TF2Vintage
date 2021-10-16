@@ -54,7 +54,7 @@ extern "C"
 	}
 }
 
-static const SQObjectPtr _null_;
+static SQObjectPtr const _null_;
 
 typedef struct
 {
@@ -576,7 +576,7 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 	if ( !sq_isnull( m_ErrorString ) )
 	{
 		sq_pushobject( GetVM(), m_ErrorString );
-		sq_resetobject( &m_ErrorString );
+		m_ErrorString = _null_;
 		sq_throwobject( GetVM() );
 		return SCRIPT_ERROR;
 	}
@@ -1777,17 +1777,17 @@ SQInteger CSquirrelVM::TranslateCall( HSQUIRRELVM pVM )
 		parameters[i].Free();
 	}
 
-	HSQOBJECT hErrorString = GetVScript( pVM )->m_ErrorString;
+	HSQOBJECT &hErrorString = GetVScript( pVM )->m_ErrorString;
 	if ( !sq_isnull( hErrorString ) )
 	{
 		sq_pushobject( pVM, hErrorString );
-		sq_resetobject( &GetVScript( pVM )->m_ErrorString );
+		GetVScript( pVM )->m_ErrorString = _null_;
 		return sq_throwobject( pVM );
 	}
 
 	PushVariant( pVM, returnValue );
 
-	return pFuncBinding->m_desc.m_ReturnType != FIELD_VOID;
+	return (SQBool)bHasReturn;
 }
 
 SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
@@ -1801,11 +1801,11 @@ SQInteger CSquirrelVM::CallConstructor( HSQUIRRELVM pVM )
 
 	void *pvInstance = pClassDesc->m_pfnConstruct();
 
-	HSQOBJECT hErrorString = GetVScript( pVM )->m_ErrorString;
+	HSQOBJECT &hErrorString = GetVScript( pVM )->m_ErrorString;
 	if ( !sq_isnull( hErrorString ) )
 	{
 		sq_pushobject( pVM, hErrorString );
-		sq_resetobject( &GetVScript( pVM )->m_ErrorString );
+		GetVScript( pVM )->m_ErrorString = _null_;
 		return sq_throwobject( pVM );
 	}
 
