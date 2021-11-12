@@ -8,7 +8,7 @@
 #include "networkvar.h"
 #include "basecombatweapon_shared.h"
 #include "vscript/ivscript.h"
-#include <type_traits>
+#include "tier1/utlhashtable.h"
 
 
 #if defined( CLIENT_DLL )
@@ -16,33 +16,10 @@
 #endif
 
 
-class CScriptedWeaponScopeBase
-{
-public:
-	static IScriptVM *GetVM( void )
-	{
-		if ( m_pVM )
-		{
-			return m_pVM;
-		}
-		else
-		{
-			extern IScriptVM *g_pScriptVM;
-			return g_pScriptVM;
-		}
-	}
-
-	static void GetVMOverride( IScriptVM *pVM )
-	{
-		m_pVM = pVM;
-	}
-private:
-	static IScriptVM *m_pVM;
-};
-class CScriptedWeaponScope : public CScriptScopeT<CScriptedWeaponScopeBase>
+class CScriptedWeaponScope : public CScriptScope
 {
 	typedef CUtlVectorFixed<ScriptVariant_t, 14> CScriptArgArray;
-	typedef CUtlMap<char const *, CScriptFuncHolder> CScriptFuncMap;
+	typedef CUtlHashtable<char const *, CScriptFuncHolder> CScriptFuncMap;
 public:
 	CScriptedWeaponScope();
 	~CScriptedWeaponScope();
@@ -68,8 +45,8 @@ public:
 	ScriptStatus_t CallFunc( char const *pszFuncName, T *pReturn = NULL )
 	{
 		// See if we used this function previously...
-		int nIndex = m_FuncMap.Find( pszFuncName );
-		if ( nIndex == m_FuncMap.InvalidIndex() )
+		uint nIndex = m_FuncMap.Find( pszFuncName );
+		if ( nIndex == m_FuncMap.InvalidHandle() )
 		{	// ...and cache it if not
 			CScriptFuncHolder holder;
 			HSCRIPT hFunction = GetVM()->LookupFunction( pszFuncName, m_hScope );
