@@ -395,7 +395,7 @@ HSCRIPT CSquirrelVM::CreateScope( const char *pszScope, HSCRIPT hParent )
 	
 	// valid return?
 	if ( sq_isnull( hScope ) )
-		return INVALID_HSCRIPT;
+		return NULL;
 	
 	sq_addref( GetVM(), &hScope );
 
@@ -484,7 +484,7 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 		}
 	}
 
-	SQInteger initialTop = GetVM()->_top;
+	SQInteger initialTop = sq_gettop( GetVM() );
 	HSQOBJECT &pClosure = *(HSQOBJECT *)hFunction;
 	sq_pushobject( GetVM(), pClosure );
 
@@ -546,10 +546,10 @@ ScriptStatus_t CSquirrelVM::ExecuteFunction( HSCRIPT hFunction, ScriptVariant_t 
 	// pop off the closure
 	sq_pop( GetVM(), 1 );
 
-	if ( GetVM()->_top != initialTop )
+	if ( sq_gettop( GetVM() ) != initialTop )
 	{
 		Warning( "Callstack mismatch in VScript/Squirrel!\n" );
-		Assert( GetVM()->_top == initialTop );
+		Assert( sq_gettop( GetVM() ) == initialTop );
 	}
 
 	if ( !sq_isnull( m_ErrorString ) )
