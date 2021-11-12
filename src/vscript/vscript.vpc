@@ -9,10 +9,6 @@ $Macro OUTBINDIR	"$SRCDIR\..\game\tf2vintage\bin"
 
 $include "$SRCDIR\vpc_scripts\source_dll_base.vpc"
 
-$Macro LUALIBDIR	"..\..\..\lib\public"			[$WINDOWS && !$POSIX]
-$Macro LUALIBDIR	"..\..\..\lib\pibluc\linux32"	[$POSIX]
-$Macro LUALIB		"lua51.lib"						[$WINDOWS && !$POSIX]
-$Macro LUALIB		"libluajit.a"					[$POSIX]
 
 $Configuration
 {
@@ -163,7 +159,7 @@ $Project "VScript"
 	{
 		$Lib 	mathlib
 		$Lib 	tier1
-		$Lib	lua51			[$WINDOWS]
-		$Lib	libluajit		[$POSIX]
+		$Lib	"$LIBCOMMON\lua51"			[$WINDOWS]
+		$Lib	"$LIBCOMMON$PLATSUBDIR\libluajit"		[$POSIX]
 	}
 }
