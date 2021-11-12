@@ -199,12 +199,23 @@ private:
 
 	ScriptOutputFunc_t m_OutputFunc;
 	ScriptErrorFunc_t m_ErrorFunc;
+
+	static SQRegFunction s_ScriptClassDelegates[];
 };
 
 inline CSquirrelVM *GetVScript( HSQUIRRELVM pVM )
 {
 	return static_cast<CSquirrelVM *>( sq_getsharedforeignptr(pVM) );
 }
+
+SQRegFunction CSquirrelVM::s_ScriptClassDelegates[] ={
+	{ _SC( "constructor" ), CSquirrelVM::CallConstructor,	0, NULL },
+	{MM_GET,				CSquirrelVM::InstanceGetStub,	2, ".s"},
+	{MM_SET,				CSquirrelVM::InstanceSetStub,	3, ".s."},
+	{MM_TOSTRING,			CSquirrelVM::InstanceToString,	1, "."},
+	{_SC( "IsValid" ),		CSquirrelVM::InstanceIsValid,	1, "."},
+	{NULL,					NULL}
+};
 
 
 CSquirrelVM::CSquirrelVM( void )
@@ -584,41 +595,36 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 	}
 
 	HSQOBJECT hObject = CreateClass( pClassDesc );
-	if ( hObject != INVALID_HSQOBJECT )
+	if ( hObject == INVALID_HSQOBJECT )
+		return false;
+
+	sq_pushobject( GetVM(), hObject );
+
+	SQRegFunction *pReg = s_ScriptClassDelegates;
+	// register our constructor if we have one
+	if ( pClassDesc->m_pfnConstruct )
 	{
-		sq_pushobject( GetVM(), hObject );
-
-		// register our constructor if we have one
-		if ( pClassDesc->m_pfnConstruct )
-		{
-			sq_pushstring( GetVM(), _SC("constructor"), -1 );
-			sq_newclosure( GetVM(), &CSquirrelVM::CallConstructor, 0 );
-			sq_createslot( GetVM(), -3 );
-		}
-
-		sq_pushstring( GetVM(), MM_GET, -1 );
-		sq_newclosure( GetVM(), &CSquirrelVM::InstanceGetStub, 0 );
+		sq_pushstring( GetVM(), pReg->name, -1 );
+		sq_newclosure( GetVM(), pReg->f, 0 );
 		sq_createslot( GetVM(), -3 );
-		sq_pushstring( GetVM(), MM_SET, -1 );
-		sq_newclosure( GetVM(), &CSquirrelVM::InstanceSetStub, 0 );
-		sq_createslot( GetVM(), -3 );
-		// _tostring is used for printing objects
-		sq_pushstring( GetVM(), MM_TOSTRING, -1 );
-		sq_newclosure( GetVM(), &CSquirrelVM::InstanceToString, 0 );
-		sq_createslot( GetVM(), -3 );
-		// helper to determine we are a VScript instance
-		sq_pushstring( GetVM(), _SC("IsValid"), -1 );
-		sq_newclosure( GetVM(), &CSquirrelVM::InstanceIsValid, 0 );
-		sq_createslot( GetVM(), -3 );
-
-		// register member functions
-		FOR_EACH_VEC( pClassDesc->m_FunctionBindings, i )
-		{
-			RegisterFunctionGuts( &pClassDesc->m_FunctionBindings[i], pClassDesc );
-		}
-
-		sq_pop( GetVM(), 1 );
 	}
+
+	while ( ( ++pReg)->name != NULL )
+	{
+		sq_pushstring( GetVM(), pReg->name, -1 );
+		sq_newclosure( GetVM(), pReg->f, 0 );
+		sq_setnativeclosurename( GetVM(), -1, pReg->name );
+		sq_createslot( GetVM(), -3 );
+	}
+
+	// register member functions
+	FOR_EACH_VEC( pClassDesc->m_FunctionBindings, i )
+	{
+		RegisterFunctionGuts( &pClassDesc->m_FunctionBindings[i], pClassDesc );
+	}
+
+	sq_pop( GetVM(), 1 );
+
 
 	m_ScriptClasses.FastInsert( (intp)pClassDesc, _class( hObject ) );
 	return true;
