@@ -578,37 +578,10 @@ bool CSquirrelVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 	if ( hndl != m_ScriptClasses.InvalidHandle() )
 		return true;
 
-	sq_pushroottable( GetVM() );
-	sq_pushstring( GetVM(), pClassDesc->m_pszScriptName, -1 );
-
-	if ( SQ_SUCCEEDED( sq_get( GetVM(), -2 ) ) )
-	{
-		SQObjectPtr hObject;
-		sq_getstackobj( GetVM(), -1, &hObject );
-		if ( !sq_isnull(hObject) )
-		{
-			sq_pop( GetVM(), 2 );
-			return false;
-		}
-
-		sq_pop( GetVM(), 1 );
-	}
-
 	if ( pClassDesc->m_pBaseDesc )
 	{
 		RegisterClass( pClassDesc->m_pBaseDesc );
-
-		sq_pushstring( GetVM(), pClassDesc->m_pBaseDesc->m_pszScriptName, -1 );
-		if ( SQ_FAILED( sq_get( GetVM(), -2 ) ) )
-		{
-			sq_pop( GetVM(), 1 );
-			return false;
-		}
-
-		sq_pop( GetVM(), 1 );
 	}
-
-	sq_pop( GetVM(), 1 );
 
 	HSQOBJECT hObject = CreateClass( pClassDesc );
 	if ( hObject != INVALID_HSQOBJECT )
