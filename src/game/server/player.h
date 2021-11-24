@@ -337,18 +337,13 @@ public:
 
 	virtual Vector			EyePosition( void );			// position of eyes
 	const QAngle&			EyeAngles( void );
-	const Vector&			ScriptEyeAngles( void );
 	void					EyePositionAndVectors( Vector *pPosition, Vector *pForward, Vector *pRight, Vector *pUp );
 	virtual const QAngle&	LocalEyeAngles( void );		// Direction of eyes
 	void					EyeVectors( Vector *pForward, Vector *pRight = NULL, Vector *pUp = NULL );
 	void					CacheVehicleView( void );	// Calculate and cache the position of the player in the vehicle
-	const Vector&			ScriptEyeForward( void );
-	const Vector&			ScriptEyeRight( void );
-	const Vector&			ScriptEyeUp( void );
 
 	// Sets the view angles
 	void					SnapEyeAngles( const QAngle &viewAngles );
-	void					ScriptSnapEyeAngles( const Vector &viewAngles );
 
 	virtual QAngle			BodyAngles();
 	virtual Vector			BodyTarget( const Vector &posSrc, bool bNoisy);
@@ -389,7 +384,6 @@ public:
 	void					ShowViewModel( bool bShow );
 	void					ShowCrosshair( bool bShow );
 
-	bool					ScriptIsPlayerNoclipping( void ) { return ( GetMoveType() == MOVETYPE_NOCLIP ); }
 	virtual void			NoClipStateChanged( void ) {};
 
 	// View model prediction setup
@@ -609,9 +603,7 @@ public:
 	virtual void 			ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set );
 
 	const QAngle& GetPunchAngle();
-	const Vector& ScriptGetPunchAngle();
 	void SetPunchAngle( const QAngle &punchAngle );
-	void ScriptSetPunchAngle( const Vector &punchAngle );
 
 	virtual void DoMuzzleFlash();
 
@@ -1242,6 +1234,16 @@ private:
 public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false ) const;	// returns the solid mask for the given player, so bots can have a more-restrictive set
 
+	// ----------------------------------------------------------------------------
+	// VScript accessors
+	// ----------------------------------------------------------------------------
+	const QAngle&		ScriptEyeAngles( void );
+	const Vector&		ScriptEyeForward( void );
+	const Vector&		ScriptEyeRight( void );
+	const Vector&		ScriptEyeUp( void );
+
+	const Vector&		ScriptGetPunchAngle();
+	void				ScriptSetPunchAngle( const Vector &punchAngle );
 };
 
 typedef CHandle<CBasePlayer> CBasePlayerHandle;
@@ -1371,22 +1373,6 @@ inline float CBasePlayer::GetTimeSinceWeaponFired( void ) const
 inline bool CBasePlayer::IsFiringWeapon( void ) const
 {
 	return m_weaponFiredTimer.HasStarted() && m_weaponFiredTimer.IsLessThen( 1.0f );
-}
-
-inline const Vector &CBasePlayer::ScriptEyeAngles(void)
-{
-	static Vector vecEyes;
-
-	QAngle ang = EyeAngles();
-	vecEyes.Init( ang.x, ang.y, ang.z );
-
-	return vecEyes;
-}
-
-inline void CBasePlayer::ScriptSnapEyeAngles( Vector const &viewAngles )
-{
-	QAngle angles( viewAngles.x, viewAngles.y, viewAngles.z );
-	SnapEyeAngles( angles );
 }
 
 inline const Vector &CBasePlayer::ScriptEyeForward( void )
