@@ -8,6 +8,7 @@
 #include "filesystem.h"
 #include "tf_gamerules.h"
 #include "econ_item_system.h"
+#include "tf_fx_shared.h"
 #include "vscript_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -140,6 +141,7 @@ void CTFGameRules::RegisterScriptFunctions( void )
 {
 	ScriptRegisterFunctionNamed( g_pScriptVM, AttribHookValueFloat, "GetAttribFloatValue", "Fetch an attribute that is assigned to the provided weapon" );
 	ScriptRegisterFunctionNamed( g_pScriptVM, AttribHookValueInt, "GetAttribIntValue", "Fetch an attribute that is assigned to the provided weapon" );
+	ScriptRegisterFunction( g_pScriptVM, FX_FireBullets, "(playerIndex, origin, angles, weaponID, weaponMode, seed, spread, damage, isCritical)\nOn client: Performs all the visuals. On server: Traces damage to entities." );
 
 #if defined( GAME_DLL )
 	g_pScriptVM->RegisterInstance( &g_ConvarsVScript, "Convars" );
