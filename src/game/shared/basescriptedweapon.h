@@ -101,6 +101,14 @@ struct ScriptWeaponInfo_t : public FileWeaponInfo_t
 		iRumbleEffect = -1;
 	}
 };
+struct ScriptShootSound_t
+{
+	DECLARE_STRUCT_SCRIPTDESC();
+
+	ScriptShootSound_t() { V_memset( aShootSounds, 0, sizeof( aShootSounds ) ); }
+	char aShootSounds[NUM_SHOOT_SOUND_TYPES][MAX_WEAPON_STRING];
+};
+
 
 class CBaseScriptedWeapon : public CBaseCombatWeapon
 {

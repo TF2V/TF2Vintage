@@ -802,8 +802,8 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 // 
 //-----------------------------------------------------------------------------
 
-#define ScriptAddMemberToStructDesc(pStructDesc, struct, memberType, memberName)						ScriptAddMemberToStructDescNamed(pStructDesc, struct, memberType, memberName, #memberName )
-#define ScriptAddMemberToStructDescNamed(pStructDesc, struct, memberType, memberName, scriptName)		do { ScriptStructMemberBinding_t *pBinding = &((pStructDesc)->m_MemberBindings[(pStructDesc)->m_MemberBindings.AddToTail()]); pBinding->m_nMemberType = memberType; pBinding->m_pszMemberName = #memberName; pBinding->m_pszScriptName = scriptName; pBinding->m_unMemberOffs = offsetof(struct, memberName); pBinding->m_unMemberSize = sizeof(((struct *)0)->memberName); } while( 0 )
+#define ScriptAddMemberToStructDesc(pStructDesc, struct, memberType, memberName, description)						ScriptAddMemberToStructDescNamed(pStructDesc, struct, memberType, memberName, #memberName, description )
+#define ScriptAddMemberToStructDescNamed(pStructDesc, struct, memberType, memberName, scriptName, description)		do { ScriptMemberBinding_t *pBinding = &((pStructDesc)->m_MemberBindings[(pStructDesc)->m_MemberBindings.AddToTail()]); pBinding->m_nMemberType = memberType; pBinding->m_pszMemberName = #memberName; pBinding->m_pszScriptName = scriptName; pBinding->m_pszDescription = description; pBinding->m_unMemberOffs = offsetof(struct, memberName); pBinding->m_unMemberSize = sizeof(((struct *)0)->memberName); } while( 0 )
 
 #define ScriptInitStructDesc(pStructDesc, structName, description)										ScriptInitStructDescNamed( pStructDesc, structName, #structName, description )
 #define ScriptInitStructDescNamed(pStructDesc, structName, scriptName, description)						do { (pStructDesc)->m_pszScriptName = scriptName; (pStructDesc)->m_pszStructName = #structName; (pStructDesc)->m_pszDescription = description; } while ( 0 )	
@@ -842,8 +842,8 @@ typedef bool ( *ScriptErrorFunc_t )( ScriptErrorLevel_t eLevel, const char *pszT
 		ScriptStructDesc_t *pDesc = &g_##structName##_ScriptDesc; \
 		ScriptInitStructDescNamed( pDesc, structName, #structName, description ); \
 
-#define DEFINE_STRUCT_MEMBER(memberType, memberName)						ScriptAddMemberToStructDesc( pDesc, _structName, memberType, memberName );
-#define DEFINE_STRUCT_MEMBER_NAMED(memberType, memberName, scriptName)		ScriptAddMemberToStructDescNamed( pDesc, _structName, memberType, memberName, scriptName );
+#define DEFINE_STRUCT_MEMBER(memberType, memberName, description)						ScriptAddMemberToStructDesc( pDesc, _structName, memberType, memberName, description );
+#define DEFINE_STRUCT_MEMBER_NAMED(memberType, memberName, scriptName, description)		ScriptAddMemberToStructDescNamed( pDesc, _structName, memberType, memberName, scriptName, description );
 
 #define END_STRUCT_SCRIPTDESC() \
 		return pDesc; \
