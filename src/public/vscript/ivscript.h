@@ -994,16 +994,6 @@ public:
 	virtual bool RegisterClass( ScriptClassDesc_t *pClassDesc ) = 0;
 
 	//--------------------------------------------------------
-	// External constants
-	//--------------------------------------------------------
-	virtual void RegisterConstant( ScriptConstantBinding_t *pScriptConstant ) = 0;
-
-	//--------------------------------------------------------
-	// External enums
-	//--------------------------------------------------------
-	virtual void RegisterEnum( ScriptEnumDesc_t *pEnumDesc ) = 0;
-
-	//--------------------------------------------------------
 	// External instances. Note class will be auto-registered.
 	//--------------------------------------------------------
 
@@ -1055,6 +1045,16 @@ public:
 	//----------------------------------------------------------------------------
 
 	virtual bool RaiseException( const char *pszExceptionText ) = 0;
+
+	//--------------------------------------------------------
+	// External constants
+	//--------------------------------------------------------
+	virtual void RegisterConstant( ScriptConstantBinding_t *pScriptConstant ) = 0;
+
+	//--------------------------------------------------------
+	// External enums
+	//--------------------------------------------------------
+	virtual void RegisterEnum( ScriptEnumDesc_t *pEnumDesc ) = 0;
 
 	//----------------------------------------------------------------------------
 	// Call API
