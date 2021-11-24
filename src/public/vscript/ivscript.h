@@ -376,22 +376,13 @@ struct ScriptClassDesc_t
 //		}
 //
 //---------------------------------------------------------
-struct ScriptStructMemberBinding_t
-{
-	ScriptStructMemberBinding_t() : m_pszMemberName( 0 ), m_nMemberType( FIELD_TYPEUNKNOWN ), m_unMemberOffs( 0 ), m_unMemberSize( 0 ), m_pszScriptName( 0 ) {}
-	char const *		m_pszScriptName;
-	char const *		m_pszMemberName;
-	ScriptDataType_t	m_nMemberType;
-	ptrdiff_t			m_unMemberOffs;
-	uint32				m_unMemberSize;
-};
 struct ScriptStructDesc_t
 {
 	ScriptStructDesc_t() : m_pszDescription( 0 ), m_pszStructName( 0 ), m_pszScriptName( 0 ) {}
 	const char *							m_pszScriptName;
 	const char *							m_pszStructName;
 	const char *							m_pszDescription;
-	CUtlVector<ScriptStructMemberBinding_t> m_MemberBindings;
+	CUtlVector<ScriptMemberBinding_t>		m_MemberBindings;
 };
 
 //---------------------------------------------------------
@@ -1318,7 +1309,7 @@ public:
 
 		FOR_EACH_VEC( pDesc->m_MemberBindings, idx )
 		{
-			ScriptStructMemberBinding_t const &binding = pDesc->m_MemberBindings[idx];
+			ScriptMemberBinding_t const &binding = pDesc->m_MemberBindings[idx];
 
 			ScriptVariant_t res;
 			if( GetVM()->GetValue( hScope, binding.m_pszScriptName, &res ) )
