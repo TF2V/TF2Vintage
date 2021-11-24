@@ -316,6 +316,25 @@ struct ScriptMemberBinding_t
 };
 
 //---------------------------------------------------------
+// Function bindings allow script functions to run C++ functions.
+// Hooks allow C++ functions to run script functions.
+// 
+// This was previously done with raw function lookups, but Mapbase adds more and
+// it's hard to keep track of them without proper standards or documentation.
+// 
+// At the moment, this simply plugs hook documentation into VScript and maintains
+// the same function lookup method on the inside, but it's intended to be open for
+// more complex hook mechanisms with proper parameters in the future.
+//---------------------------------------------------------
+struct ScriptHook_t
+{
+	ScriptFunctionBinding_t		m_func;
+	void *						m_pOriginalBytes;
+	uint32						m_unFunctionBytes;
+	CUtlStringList				m_ParamNames;
+};
+
+//---------------------------------------------------------
 
 struct ScriptClassDesc_t
 {
@@ -326,11 +345,14 @@ struct ScriptClassDesc_t
 	const char *						m_pszDescription;
 	ScriptClassDesc_t *					m_pBaseDesc;
 	CUtlVector<ScriptFunctionBinding_t> m_FunctionBindings;
-	CUtlVector<ScriptMemberBinding_t>	m_MemberBindings;
 
 	void *(*m_pfnConstruct)();
 	void (*m_pfnDestruct)( void *);
 	IScriptInstanceHelper *				pHelper; // optional helper
+
+//---------------------------------------------------------
+	CUtlVector<ScriptHook_t>			m_Hooks;
+	CUtlVector<ScriptMemberBinding_t>	m_MemberBindings;
 };
 
 //---------------------------------------------------------
@@ -761,6 +783,40 @@ ScriptEnumDesc_t *GetScriptEnumDesc( T* );
 #define DEFINE_SCRIPTFUNC_NAMED( func, scriptName, description )							ScriptAddFunctionToClassDescNamed( pDesc, _className, func, scriptName, description );
 #define DEFINE_SCRIPT_CONSTRUCTOR()															ScriptAddConstructorToClassDesc( pDesc, _className );
 #define DEFINE_SCRIPT_INSTANCE_HELPER( p )													pDesc->pHelper = (p);
+
+// Use this for hooks which have no parameters
+#define DEFINE_SIMPLE_SCRIPTHOOK( hook, hookName, returnType, description )	\
+	do { \
+		ScriptHook_t *pHook = &(pDesc->m_Hooks[pDesc->m_Hooks.AddToTail()]); \
+		pHook->m_func.m_desc.m_pszFunction = #hook; \
+		pHook->m_func.m_desc.m_pszScriptName = hookName; \
+		pHook->m_func.m_pFunction = ScriptConvertFuncPtrToVoid( &_className::hook ); \
+		pHook->m_func.m_flags = SF_MEMBER_FUNC; \
+		pHook->m_func.m_desc.m_pszDescription = description; \
+		pHook->m_func.m_desc.m_ReturnType = returnType; \
+	} while (0);
+
+#define BEGIN_SCRIPTHOOK( hook, hookName, returnType, description ) \
+	do { \
+		ScriptHook_t *pHook = &(pDesc->m_Hooks[pDesc->m_Hooks.AddToTail()]); \
+		pHook->m_func.m_desc.m_Parameters.RemoveAll(); \
+		pHook->m_func.m_desc.m_Parameters.SetGrowSize( 1 ); \
+		pHook->m_func.m_desc.m_pszFunction = #hook; \
+		pHook->m_func.m_desc.m_pszScriptName = hookName; \
+		pHook->m_func.m_pFunction = ScriptConvertFuncPtrToVoid( &_className::hook ); \
+		pHook->m_func.m_flags = SF_MEMBER_FUNC; \
+		pHook->m_func.m_desc.m_pszDescription = description; \
+		pHook->m_func.m_desc.m_ReturnType = returnType;
+
+#define DEFINE_SCRIPTHOOK_PARAM( paramName, type ) \
+	if( 0 ) {} else { \
+		pHook->m_ParamNames.CopyAndAddToTail( #paramName ); \
+		pHook->m_func.m_desc.m_Parameters.AddToTail( type ); \
+	}
+
+#define END_SCRIPTHOOK() \
+	} while (0);
+
 #define DEFINE_MEMBERVAR( memberName, memberType, description  )							DEFINE_MEMBERVAR_NAMED( memberName, memberType, #memberName, description )
 #define DEFINE_MEMBERVAR_NAMED( memberName, memberType, scriptName, description )			ScriptAddMemberToClassDescNamed( pDesc, _className, memberType, memberName, scriptName, description );
 
