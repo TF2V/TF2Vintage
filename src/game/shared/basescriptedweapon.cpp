@@ -2,6 +2,9 @@
 #include "npcevent.h"
 #include "ammodef.h"
 #include "weapon_parse.h"
+#if defined(TF_VINTAGE) || defined(TF_VINTAGE_CLIENT)
+	#include "tf_weaponbase.h"
+#endif
 #include "basescriptedweapon.h"
 
 typedef struct
@@ -10,18 +13,22 @@ typedef struct
 	int m_iFlagValue;
 } itemFlags_t;
 
+LINK_ENTITY_TO_CLASS( weapon_scripted, CBaseScriptedWeapon );
+
+BEGIN_DATADESC( CBaseScriptedWeapon )
+	DEFINE_AUTO_ARRAY( m_szWeaponScriptName, FIELD_CHARACTER )
+END_DATADESC()
+
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseScriptedWeapon, DT_BaseScriptedWeapon )
 
-#if defined( CLIENT_DLL )
 BEGIN_PREDICTION_DATA( CBaseScriptedWeapon )
 END_PREDICTION_DATA()
-#endif
 
 BEGIN_NETWORK_TABLE( CBaseScriptedWeapon, DT_BaseScriptedWeapon )
 #if defined(CLIENT_DLL)
-
+	RecvPropString( RECVINFO( m_szWeaponScriptName ) ),
 #else
-
+	SendPropString( SENDINFO( m_szWeaponScriptName ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -196,10 +203,13 @@ void CBaseScriptedWeapon::Detach()
 	m_ScriptScope.SetValue( "owner", INVALID_HSCRIPT );
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 char const *CBaseScriptedWeapon::GetWeaponScriptName()
 {
 #if defined( USES_ECON_ITEMS )
-	// If were we Econ generated then setup our weapon name using it,
+	// If we were Econ generated then setup our weapon name using it,
 	// else rely on the mapper to name their entities correctly
 	CEconItemDefinition *pItemDef = GetItem()->GetStaticData();
 	if ( pItemDef )
@@ -208,6 +218,8 @@ char const *CBaseScriptedWeapon::GetWeaponScriptName()
 			return pItemDef->GetVScriptName();
 	}
 #endif
+	if ( m_szWeaponScriptName[0] != '\0' )
+		return m_szWeaponScriptName;
 
 	return GetClassname();
 }

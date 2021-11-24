@@ -15,6 +15,13 @@
 #define CBaseScriptedWeapon C_BaseScriptedWeapon
 #endif
 
+#if defined(TF_VINTAGE) || defined(TF_VINTAGE_CLIENT)
+#include "tf_weaponbase.h"
+#define SCRIPTED_WEAPON_DERIVE_FROM CTFWeaponBase
+#else
+#define SCRIPTED_WEAPON_DERIVE_FROM CBaseCombatWeapon
+#endif
+
 
 class CScriptedWeaponScope : public CScriptScope
 {
@@ -110,12 +117,13 @@ struct ScriptShootSound_t
 };
 
 
-class CBaseScriptedWeapon : public CBaseCombatWeapon
+class CBaseScriptedWeapon : public SCRIPTED_WEAPON_DERIVE_FROM
 {
-	DECLARE_CLASS( CBaseScriptedWeapon, CBaseCombatWeapon );
+	DECLARE_CLASS( CBaseScriptedWeapon, SCRIPTED_WEAPON_DERIVE_FROM );
 public:
 	DECLARE_NETWORKCLASS();
 	DECLARE_PREDICTABLE();
+	DECLARE_DATADESC();
 	DECLARE_ENT_SCRIPTDESC();
 
 	CBaseScriptedWeapon();
@@ -148,8 +156,9 @@ public:
 	virtual void OnDataChanged( DataUpdateType_t updateType );
 #endif
 
-private:
 	CScriptedWeaponScope m_ScriptScope;
+protected:
+	CNetworkString( m_szWeaponScriptName, 64 );
 };
 
 #endif
