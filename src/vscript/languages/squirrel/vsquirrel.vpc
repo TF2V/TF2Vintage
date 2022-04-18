@@ -11,7 +11,7 @@ $Configuration
 {
 	$Compiler
 	{
-		$AdditionalIncludeDirectories	"$BASE,$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus"
+		$AdditionalIncludeDirectories	"$BASE;$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus"
 		$PreprocessorDefinitions		"$BASE;PROTECTED_THINGS_DISABLE;VSQUIRREL_TEST"
 	}
 }

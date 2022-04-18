@@ -1,6 +1,7 @@
 #include "mathlib/mathlib.h"
 #include "tier0/platform.h"
 #include "vscript/ivscript.h"
+#include "tier1/convar.h"
 #include "vsquirrel.h"
 
 #include <time.h>
@@ -85,9 +86,6 @@ private:
 
 BEGIN_SCRIPTDESC( CMyDerivedClass, CMyClass, SCRIPT_SINGLETON "" )
 	DEFINE_SCRIPTFUNC( DerivedFunc, "" )
-	DEFINE_MEMBERVAR( a, FIELD_INTEGER, "" )
-	DEFINE_MEMBERVAR( b, FIELD_FLOAT, "" )
-	DEFINE_MEMBERVAR( c, FIELD_VECTOR, "" )
 	DEFINE_MEMBERVAR( d, FIELD_BOOLEAN, "" )
 END_SCRIPTDESC();
 
@@ -99,6 +97,7 @@ float CMyDerivedClass::DerivedFunc() const
 CMyDerivedClass derivedInstance;
 
 
+ConVar developer( "developer", "1", FCVAR_HIDDEN, "Control debug output from Squirrel VM" );
 int main( int argc, char **argv )
 {
 	if ( argc < 2 )
