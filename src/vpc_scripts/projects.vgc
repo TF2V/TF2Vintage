@@ -28,7 +28,6 @@ $Project "fgdlib"
 $Project "game_shader_dx9"
 {
 	"materialsystem\stdshaders\game_shader_dx9_hl2mp.vpc" [$HL2MP]
-	"materialsystem\stdshaders\game_shader_dx9_tf2vintage.vpc" [($WIN32||$POSIX) && $TF2VINTAGE]
 }
 
 $Project "glview"
@@ -134,5 +133,10 @@ $Project "vvis_launcher"
 
 $Project "vscript"
 {
-	"vscript\vscript.vpc" [$WIN32]
+	"vscript\vscript.vpc"
+}
+
+$Project "angelscript"
+{
+	"thirdparty\angelscript_2.32.0\sdk\angelscript.vpc"
 }

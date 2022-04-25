@@ -58,6 +58,7 @@ src/lib/public/tier1.pdb
 src/lib/public/vgui_controls.lib
 src/lib/public/vgui_controls.pdb
 src/thirdparty/bullet/build/lib
+src/lib/common/angelscript.lib
 
 # misc files
 fgdlib.lib
