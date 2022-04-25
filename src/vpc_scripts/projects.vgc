@@ -136,7 +136,7 @@ $Project "vscript"
 	"vscript\vscript.vpc"
 }
 
-$Project "vsquirrel"
+$Project "angelscript"
 {
-	"vscript\languages\squirrel\vsquirrel.vpc"
+	"thirdparty\angelscript_2.32.0\sdk\angelscript.vpc"
 }

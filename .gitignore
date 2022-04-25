@@ -49,6 +49,7 @@ src/lib/public/raytrace.lib
 src/lib/public/tier1.lib
 src/lib/public/vgui_controls.lib
 src/thirdparty/bullet/build/lib
+src/lib/common/angelscript.lib
 
 # misc files
 fgdlib.lib
