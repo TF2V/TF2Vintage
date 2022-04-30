@@ -3,6 +3,7 @@
 #include "angelscript.h"
 
 #include "vscript/ivscript.h"
+#include "as_vector.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
