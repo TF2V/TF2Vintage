@@ -149,8 +149,6 @@ public:
 
     SQInteger _ninstructions;
     SQInstruction _instructions[1];
-
-    SQJITFUNC _jitfunc;
 };
 
 #endif //_SQFUNCTION_H_

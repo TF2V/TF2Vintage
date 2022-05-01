@@ -198,8 +198,6 @@ typedef SQInteger (*SQREADFUNC)(SQUserPointer,SQUserPointer,SQInteger);
 
 typedef SQInteger (*SQLEXREADFUNC)(SQUserPointer);
 
-typedef SQBool (*SQJITFUNC)(HSQUIRRELVM);
-
 typedef struct tagSQRegFunction{
     const SQChar *name;
     SQFUNCTION f;

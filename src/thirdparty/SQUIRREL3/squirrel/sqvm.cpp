@@ -789,13 +789,7 @@ bool SQVM::Execute(SQObjectPtr &closure, SQInteger nargs, SQInteger stackbase,SQ
     }
 
 exception_restore:
-    if (sq_getjitenabled(this))
-    {
-        SQJITFUNC func = _closure(closure)->_function->_jitfunc;
-        if(!func) SQ_THROW();
-        return func(this);
-    }
-    else
+    
     //
     {
         for(;;)

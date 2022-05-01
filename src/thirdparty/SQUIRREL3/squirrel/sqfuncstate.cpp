@@ -5,7 +5,6 @@
 #ifndef NO_COMPILER
 #include "sqcompiler.h"
 #include "sqstring.h"
-#include "sqjit.h"
 #include "sqfuncproto.h"
 #include "sqtable.h"
 #include "sqopcodes.h"
@@ -622,8 +621,6 @@ SQFunctionProto *SQFuncState::BuildProto()
     memcpy(f->_instructions,&_instructions[0],_instructions.size()*sizeof(SQInstruction));
 
     f->_varparams = _varparams;
-
-    f->_jitfunc = sq_jitcompile(_thread(_ss->_root_vm),_name,f);
 
     return f;
 }
