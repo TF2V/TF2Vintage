@@ -1909,7 +1909,7 @@ void CTFPlayer::GiveDefaultItems()
 	// Give ammo. Must be done before weapons, so weapons know the player has ammo for them.
 	for ( int iAmmo = 0; iAmmo < TF_AMMO_COUNT; ++iAmmo )
 	{
-		GiveAmmo( GetMaxAmmo( iAmmo ), iAmmo, false, TF_AMMO_SOURCE_RESUPPLY );
+		GiveAmmo( GetMaxAmmo( iAmmo ), iAmmo, true, TF_AMMO_SOURCE_RESUPPLY );
 	}
 
 	// Give weapons.
