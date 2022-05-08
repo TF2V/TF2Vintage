@@ -57,7 +57,7 @@ ActionResult<CGhost> CGhostBehavior::Update( CGhost *me, float interval )
 			if ( !me->IsLineOfSightClear( pVictim ) || !me->IsRangeLessThan( pVictim, 192.0 ) )
 				continue;
 
-			pVictim->m_Shared.StunPlayer( 2.0, 0.0, 1.0, TF_STUNFLAGS_GHOSTSCARE, NULL );
+			pVictim->m_Shared.StunPlayer( 2.0, 0.0, 1.0, TF_STUNFLAGS_GHOSTSCARE, pVictim );
 		}
 	}
 

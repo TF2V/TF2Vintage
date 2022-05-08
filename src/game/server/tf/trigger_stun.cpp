@@ -91,7 +91,7 @@ bool CTriggerStun::StunEntity( CBaseEntity *pOther )
 			nStunFlags |= TF_STUNFLAG_SLOWDOWN;
 		}
 
-		pPlayer->m_Shared.StunPlayer( m_flStunDuration, 1.0 - m_flMoveSpeedReduction, 0.0f, nStunFlags, NULL );
+		pPlayer->m_Shared.StunPlayer( m_flStunDuration, 1.0 - m_flMoveSpeedReduction, 0.0f, nStunFlags, pPlayer );
 		m_outputOnStun.FireOutput( pOther, this );
 		m_stunEntities.AddToTail( pOther );
 
