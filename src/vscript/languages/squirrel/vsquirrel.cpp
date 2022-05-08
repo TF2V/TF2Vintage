@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright Â© Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -900,9 +900,11 @@ int CSquirrelVM::GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pK
 	ConvertToVariant( GetVM(), pKeyObj, pKey );
 	ConvertToVariant( GetVM(), pValueObj, pValue );
 
+	// The next index is set by reference in sq_next, so retrieve it here
 	int nNexti = 0;
 	sq_getinteger( GetVM(), -1, &nNexti );
 
+	// Pop index and table
 	sq_pop( GetVM(), 2 );
 
 	return nNexti;
@@ -918,17 +920,10 @@ bool CSquirrelVM::GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant_t 
 
 void CSquirrelVM::ReleaseValue( ScriptVariant_t &value )
 {
-	switch ( value.m_type )
-	{
-		case FIELD_HSCRIPT:
-			sq_release( GetVM(), (HSQOBJECT *)value.m_hScript );
-		case FIELD_VECTOR:
-		case FIELD_CSTRING:
-			value.Free();
-		default:
-			break;
-	}
-
+	if( value.m_type == FIELD_HSCRIPT )
+		sq_release( GetVM(), (HSQOBJECT *)value.m_hScript );
+	
+	value.Free();
 	value.m_type = FIELD_VOID;
 }
 
