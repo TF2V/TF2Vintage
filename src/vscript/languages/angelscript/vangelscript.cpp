@@ -129,6 +129,7 @@ private:
 	void OnException( asIScriptContext *ctx );
 	void OnLineCue( asIScriptContext *ctx );
 	void RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding, ScriptClassDesc_t *pClassDesc );
+	bool ConvertToVariant( void *pData, int iTypeID, ScriptVariant_t *pVariant );
 
 	asIScriptEngine*				m_pEngine;
 	CContextMgr						m_ContextMgr;
@@ -149,7 +150,7 @@ class CScriptClass
 {
 #pragma push_macro("new")
 #undef new
-	DECLARE_FIXEDSIZE_ALLOCATOR_MT( CScriptClass );
+	DECLARE_FIXEDSIZE_ALLOCATOR( CScriptClass );
 #pragma pop_macro("new")
 public:
 	CScriptClass( ScriptClassDesc_t *pClassDesc )
@@ -202,7 +203,7 @@ private:
 	char m_szUniqueId[256];
 	mutable volatile long m_unRefCount;
 };
-DEFINE_FIXEDSIZE_ALLOCATOR_MT( CScriptClass, 1, UTLMEMORYPOOL_GROW_FAST );
+DEFINE_FIXEDSIZE_ALLOCATOR( CScriptClass, 1, UTLMEMORYPOOL_GROW_FAST );
 
 
 CAngelScriptVM::CAngelScriptVM()
@@ -245,6 +246,7 @@ bool CAngelScriptVM::Init( void )
 
 	Verify( m_pEngine->RegisterGlobalFunction( "void print(const string &in)", asFUNCTION( PrintString ), asCALL_CDECL ) >= 0 );
 	Verify( m_pEngine->RegisterGlobalFunction( "void print(const any@)", asFUNCTION( PrintAny ), asCALL_CDECL ) >= 0 );
+	Verify( m_pEngine->RegisterGlobalFunction( "uint time()", asFUNCTION( GetTime ), asCALL_CDECL ) >= 0 );
 
 	m_nStringTypeID = m_pEngine->GetTypeIdByDecl( "string" );
 	m_nVectorTypeID = m_pEngine->GetTypeIdByDecl( "Vector3" );
@@ -597,6 +599,7 @@ void CAngelScriptVM::RegisterConstant( ScriptConstantBinding_t *pScriptConstant 
 			V_strcat_safe( szDecleration, "Matrix " );
 			break;
 		case FIELD_CSTRING:
+			AssertMsg( false, "Need to handle c-strings in constant registration" );
 			V_strcat_safe( szDecleration, "string " );
 			break;
 		default:
@@ -783,6 +786,7 @@ bool CAngelScriptVM::SetValue( HSCRIPT hScope, const char *pszKey, const ScriptV
 					V_strcpy_safe( szDecleration, "float " );
 					break;
 				case FIELD_CSTRING:
+					AssertMsg( false, "Need to handle conversion to c-strings" );
 					V_strcpy_safe( szDecleration, "string " );
 					break;
 				case FIELD_VECTOR:
@@ -838,6 +842,7 @@ bool CAngelScriptVM::SetValue( HSCRIPT hScope, const char *pszKey, const ScriptV
 				V_strcpy_safe( szDecleration, "float " );
 				break;
 			case FIELD_CSTRING:
+				AssertMsg( false, "Need to handle c-strings in constant registration" );
 				V_strcpy_safe( szDecleration, "string " );
 				break;
 			case FIELD_VECTOR:
@@ -901,65 +906,8 @@ int CAngelScriptVM::GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t 
 				void *pData = NULL;
 				if ( it.GetValue( &pData, it.GetTypeId() ) )
 				{
-					switch ( it.GetTypeId() )
-					{
-						case asTYPEID_BOOL:
-						{
-							*pValue = *(bool *)pData;
-							return nNexti;
-						}
-						case asTYPEID_INT8:
-						{
-							*pValue = *(char *)pData;
-							return nNexti;
-						}
-						case asTYPEID_FLOAT:
-						{
-							*pValue = *(float *)pData;
-							return nNexti;
-						}
-						case asTYPEID_INT32:
-						{
-							*pValue = *(int *)pData;
-							return nNexti;
-						}
-					}
-
-					if ( it.GetTypeId() & asTYPEID_APPOBJECT )
-					{
-						int nRawTypeID = it.GetTypeId() & ~asTYPEID_APPOBJECT;
-						if ( nRawTypeID == m_nVectorTypeID )
-						{
-							Vector *pVector = new Vector( *(Vector *)pData );
-							*pValue = pVector;
-							pValue->m_flags |= SV_FREE;
-
-							return nNexti;
-						}
-						else if ( nRawTypeID == m_nQuaternionTypeID )
-						{
-							Quaternion *pQuat = new Quaternion( *(Quaternion *)pData );
-							*pValue = pQuat;
-							pValue->m_flags |= SV_FREE;
-
-							return nNexti;
-						}
-						else if ( nRawTypeID == m_nMatrixTypeID )
-						{
-							matrix3x4_t *pMatrix = new matrix3x4_t( *(matrix3x4_t *)pData );
-							*pValue = pMatrix;
-							pValue->m_flags |= SV_FREE;
-
-							return nNexti;
-						}
-						else
-						{
-							((CScriptClass *)pData)->AddRef();
-							*pValue = (HSCRIPT)pData;
-
-							return nNexti;
-						}
-					}
+					ConvertToVariant( pData, it.GetTypeId(), pValue );
+					return nNexti;
 				}
 			}
 		}
@@ -982,49 +930,34 @@ bool CAngelScriptVM::GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant
 			void *pData = NULL;
 			if ( pScope->pTable->Get( pszKey, pData, iTypeID ) )
 			{
-				switch ( iTypeID )
-				{
-					case asTYPEID_BOOL:
-						*pValue = *(bool *)pData;
-						return true;
-					case asTYPEID_FLOAT:
-						*pValue = *(float *)pData;
-						return true;
-					case asTYPEID_INT8:
-						*pValue = *(char *)pData;
-						return true;
-					case asTYPEID_INT32:
-						*pValue = *(int *)pData;
-						return true;
-				}
+				return ConvertToVariant( pData, iTypeID, pValue );
+			}
+		}
 
-				if ( iTypeID & asTYPEID_APPOBJECT )
+		if ( pScope->pModule )
+		{
+			int iGlobIndex = pScope->pModule->GetGlobalVarIndexByName( pszKey );
+			if ( iGlobIndex >= 0 )
+			{
+				int iTypeID = 0;
+				if ( pScope->pModule->GetGlobalVar( iGlobIndex, NULL, NULL, &iTypeID, NULL ) >= 0 )
 				{
-					int nRawTypeID = iTypeID & ~asTYPEID_APPOBJECT;
-					if ( nRawTypeID == m_nVectorTypeID )
-					{
-						Vector *pVector = new Vector( *(Vector *)pData );
-						*pValue = pVector;
-						pValue->m_flags |= SV_FREE;
-					}
-					else if ( nRawTypeID == m_nQuaternionTypeID )
-					{
-						Quaternion *pQuat = new Quaternion( *(Quaternion *)pData );
-						*pValue = pQuat;
-						pValue->m_flags |= SV_FREE;
-					}
-					else if ( nRawTypeID == m_nMatrixTypeID )
-					{
-						matrix3x4_t *pMatrix = new matrix3x4_t( *(matrix3x4_t *)pData );
-						*pValue = pMatrix;
-						pValue->m_flags |= SV_FREE;
-					}
-					else
-					{
-						((CScriptClass *)pData)->AddRef();
-						*pValue = (HSCRIPT)pData;
-					}
+					void *pData = pScope->pModule->GetAddressOfGlobalVar( iGlobIndex );
+					return ConvertToVariant( pData, iTypeID, pValue );
 				}
+			}
+		}
+	}
+	else
+	{
+		int iGlobIndex = m_pEngine->GetGlobalPropertyIndexByName( pszKey );
+		if ( iGlobIndex >= 0 )
+		{
+			int iTypeID = 0;
+			void *pData = NULL;
+			if ( m_pEngine->GetGlobalPropertyByIndex( iGlobIndex, NULL, NULL, &iTypeID, NULL, NULL, &pData, NULL ) >= 0 )
+			{
+				return ConvertToVariant( pData, iTypeID, pValue );
 			}
 		}
 	}
@@ -1066,6 +999,7 @@ bool CAngelScriptVM::ClearValue( HSCRIPT hScope, const char *pszKey )
 		}
 	}
 
+	// TODO: Global properties?
 	Assert( false );
 	return false;
 }
@@ -1391,6 +1325,74 @@ void CAngelScriptVM::TranslateCall( asIScriptGeneric *gen )
 			gen->SetReturnAddress( returnValue.m_hScript );
 			break;
 	}
+}
+
+bool CAngelScriptVM::ConvertToVariant( void *pData, int iTypeID, ScriptVariant_t *pVariant )
+{
+	switch ( iTypeID )
+	{
+		case asTYPEID_BOOL:
+			*pVariant = *(bool *)pData;
+			return true;
+		case asTYPEID_FLOAT:
+			*pVariant = *(float *)pData;
+			return true;
+		case asTYPEID_INT8:
+			*pVariant = *(char *)pData;
+			return true;
+		case asTYPEID_INT32:
+			*pVariant = *(int *)pData;
+			return true;
+	}
+
+	if ( iTypeID & asTYPEID_APPOBJECT )
+	{
+		int nRawTypeID = iTypeID & ~asTYPEID_APPOBJECT;
+		if ( nRawTypeID == m_nVectorTypeID )
+		{
+			Vector *pVector = new Vector( *(Vector *)pData );
+			*pVariant = pVector;
+			pVariant->m_flags |= SV_FREE;
+
+			return true;
+		}
+		else if ( nRawTypeID == m_nQuaternionTypeID )
+		{
+			Quaternion *pQuat = new Quaternion( *(Quaternion *)pData );
+			*pVariant = pQuat;
+			pVariant->m_flags |= SV_FREE;
+
+			return true;
+		}
+		else if ( nRawTypeID == m_nMatrixTypeID )
+		{
+			matrix3x4_t *pMatrix = new matrix3x4_t( *(matrix3x4_t *)pData );
+			*pVariant = pMatrix;
+			pVariant->m_flags |= SV_FREE;
+
+			return true;
+		}
+		else if ( nRawTypeID == m_nStringTypeID )
+		{
+			std::string *str = (std::string *)pData;
+			char *pszString = new char[ str->length() ];
+			str->copy( pszString, str->length() );
+
+			*pVariant = pszString;
+			pVariant->m_flags |= SV_FREE;
+
+			return true;
+		}
+		else
+		{
+			((CScriptClass *)pData)->AddRef();
+			*pVariant = (HSCRIPT)pData;
+
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void CAngelScriptVM::PrintAny( CScriptAny *pAny )
