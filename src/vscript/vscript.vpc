@@ -49,6 +49,8 @@ $Project "VScript"
 		$File   "languages/squirrel/sq_vmstate.cpp"
 		$File	"languages/lua/lua_vm.cpp"
 		$File	"languages/lua/lua_vector.cpp"
+		$File	"languages/angelscript/vangelscript.cpp"
+		$File	"languages/angelscript/as_vector.cpp"
 	}
 
 	$Folder	"Public Header Files"
@@ -66,6 +68,8 @@ $Project "VScript"
 		$File   "languages/squirrel/sq_vmstate.h"
 		$File	"languages/lua/lua_vm.h"
 		$File	"languages/lua/lua_vector.h"
+		$File	"languages/angelscript/vangelscript.h"
+		$File	"languages/angelscript/as_vector.h"
 	}
 
 	$Folder "Squirrel Lang"
@@ -155,11 +159,29 @@ $Project "VScript"
 		}
 	}
 
+	$Folder "AngelScript"
+	{
+		$Folder "Source Files"
+		{
+			$File	"languages\angelscript\as_jit.cpp"
+			$File	"languages\angelscript\virtual_asm_linux.cpp"		[$POSIX]
+			$File	"languages\angelscript\virtual_asm_windows.cpp"		[$WINDOWS]
+			$File	"languages\angelscript\virtual_asm_x86.cpp"
+		}
+
+		$Folder "Header Files"
+		{
+			$File 	"languages\angelscript\as_jit.h"
+			$File	"languages\angelscript\virtual_asm.h"
+		}
+	}
+
 	$Folder	"Link Libraries" 
 	{
 		$Lib 	mathlib
 		$Lib 	tier1
 		$Lib	"$LIBCOMMON\lua51"			[$WINDOWS]
 		$Lib	"$LIBCOMMON$PLATSUBDIR\libluajit"		[$POSIX]
+		$Lib	"$LIBCOMMON\angelscript"
 	}
 }
