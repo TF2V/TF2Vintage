@@ -1132,9 +1132,7 @@ asUINT CAngelScriptVM::GetTime( void )
 
 void *CAngelScriptVM::Alloc( size_t s )
 {
-	void *mem = malloc( s );
-	V_memset( mem, 0, s );
-	return mem;
+	return calloc( 1, s );
 }
 
 void CAngelScriptVM::Free( void *p )
@@ -1142,7 +1140,7 @@ void CAngelScriptVM::Free( void *p )
 	free( p );
 }
 
-int CAngelScriptVM::OnInclude( char const *pszFromFile, char const *pszToFile, CScriptBuilder *pBuilder, void *pvParam )
+int CAngelScriptVM::OnInclude( char const *pszFromFile, char const *pszSection, CScriptBuilder *pBuilder, void *pvParam )
 {
 	FILE *fp = NULL;
 	if ( fopen_s( &fp, pszFromFile, "rb" ) )
@@ -1159,7 +1157,7 @@ int CAngelScriptVM::OnInclude( char const *pszFromFile, char const *pszToFile, C
 
 	fclose( fp );
 
-	return pBuilder->AddSectionFromMemory( pszFromFile, (char *)buf.Base() );
+	return pBuilder->AddSectionFromMemory( "Include", (char *)buf.Base());
 }
 
 asIScriptContext *CAngelScriptVM::OnRequestContext( asIScriptEngine *engine, void *pvParam )
@@ -1303,11 +1301,6 @@ void CAngelScriptVM::TranslateCall( asIScriptGeneric *gen )
 								parameters.Base(),
 								parameters.Count(),
 								bHasReturn ? &returnValue : NULL );
-
-	for ( int i=0; i < parameters.Count(); ++i )
-	{
-		parameters[i].Free();
-	}
 
 	switch ( returnValue.m_type )
 	{
@@ -1454,11 +1447,12 @@ void CAngelScriptVM::PrintFunc( asSMessageInfo *msg )
 
 void CAngelScriptVM::OnException( asIScriptContext *ctx )
 {
+	// TODO: Output
 }
 
 void CAngelScriptVM::OnLineCue( asIScriptContext *ctx )
 {
-
+	// TODO: Output if debug
 }
 
 
