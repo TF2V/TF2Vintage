@@ -28,13 +28,22 @@ public:
 
 protected:
 	CNetworkArray( int,	m_iTotalScore, MAX_PLAYERS+1 );
-	CNetworkArray( int, m_iDomination, MAX_PLAYERS + 1 );
+	CNetworkArray( int, m_iDomination, MAX_PLAYERS+1 );
 	CNetworkArray( int, m_iMaxHealth, MAX_PLAYERS+1 );
-	CNetworkArray( int, m_iPlayerClass, MAX_PLAYERS + 1 );
-	CNetworkArray( Vector, m_iColors, MAX_PLAYERS + 1 );
-	CNetworkArray( int, m_iKillstreak, MAX_PLAYERS + 1 );
-	CNetworkArray( bool, m_bArenaSpectator, MAX_PLAYERS + 1 );
-	CNetworkArray( int, m_iMaxBuffedHealth, MAX_PLAYERS + 1 );
+	CNetworkArray( int, m_iMaxBuffedHealth, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iPlayerClass, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iChargeLevel, MAX_PLAYERS+1 );
+	CNetworkArray( int,	m_iDamage, MAX_PLAYERS+1 );
+	CNetworkArray( int,	m_iDamageAssist, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iDamageBoss, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iHealing, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iHealingAssist, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iDamageBlocked, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iCurrencyCollected, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iBonusPoints, MAX_PLAYERS+1 );
+	CNetworkArray( Vector, m_iColors, MAX_PLAYERS+1 );
+	CNetworkArray( int, m_iKillstreak, MAX_PLAYERS+1 );
+	CNetworkArray( bool, m_bArenaSpectator, MAX_PLAYERS+1 );
 };
 
 #endif // TF_PLAYER_RESOURCE_H

@@ -1,0 +1,10 @@
+"Subrect"
+{
+	"$Material"	"decals/decals_mod2x"
+	"$Pos"		"0 388"
+	"$Size"		"64 64"
+	"$decalscale" 	.35
+//	"$modelmaterial" "decals/scorch1model"
+}
+
+

@@ -53,7 +53,7 @@ bool CTFRevolver::DefaultReload( int iClipSize1, int iClipSize2, int iActivity )
 
 	if ( pPlayer->IsPlayerClass( TF_CLASS_SPY ) )
 	{
-		if ( pPlayer->m_Shared.InCond( TF_COND_STEALTHED ) )
+		if ( pPlayer->m_Shared.InCond( TF_COND_STEALTHED ) || pPlayer->m_Shared.IsFeignDeathReady() )
 		{
 			return false;
 		}
@@ -87,8 +87,8 @@ void CTFRevolver::GetWeaponCrosshairScale( float &flScale )
 		/*const float flTimeBase = pOwner->GetFinalPredictedTime();
 		const float flFireInterval = ( ( gpGlobals->interpolation_amount * gpGlobals->interpolation_amount ) + flTimeBase ) - GetLastFireTime();
 		flScale = ( Clamp( ( flFireInterval + -1.0f ) * -2.0f, 0.0f, 1.0f ) * 1.75f ) + 0.75f;*/
-		float flFireInterval = Min( gpGlobals->curtime - GetLastFireTime(), 1.25f );
-		flScale = Clamp( ( flFireInterval / 1.25f ), 0.334f, 1.0f );
+		float flFireInterval = Min( gpGlobals->curtime - GetLastFireTime(), 1.00f );
+		flScale = Clamp( ( flFireInterval / 1.00f ), 0.334f, 1.0f );
 	}
 }
 

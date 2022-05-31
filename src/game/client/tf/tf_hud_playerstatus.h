@@ -123,6 +123,7 @@ public:
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void Reset();
 
+	void	SetAllowAnimations( bool bSet ) { m_bAnimate = bSet; }
 	void	SetHealth( int iNewHealth, int iMaxHealth, int iMaxBuffedHealth );
 	void	HideHealthBonusImage( void );
 
@@ -156,6 +157,9 @@ private:
 	int					m_nBonusHealthOrigY;
 	int					m_nBonusHealthOrigW;
 	int					m_nBonusHealthOrigH;
+
+	int					m_iAnimState;
+	bool				m_bAnimate;
 
 	CPanelAnimationVar( int, m_nHealthBonusPosAdj, "HealthBonusPosAdj", "25" );
 	CPanelAnimationVar( float, m_flHealthDeathWarning, "HealthDeathWarning", "0.49" );

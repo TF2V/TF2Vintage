@@ -6,6 +6,7 @@
 #include "cbase.h"
 #include "filters.h"
 #include "team_control_point.h"
+#include "tf_bot.h"
 #include "tf_gamerules.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -102,7 +103,6 @@ void CFilterTFTeam::InputRoundActivate( inputdata_t &input )
 //
 // Class filter
 //
-
 class CFilterTFClass : public CBaseFilter
 {
 	DECLARE_CLASS( CFilterTFClass, CBaseFilter );
@@ -157,3 +157,102 @@ bool CFilterTFClass::PassesFilterImpl(CBaseEntity *pCaller, CBaseEntity *pEntity
 
 	return (pPlayer->GetTeamNumber() == GetTeamNumber() && pPlayer->IsPlayerClass(m_iAllowedClass));
 }
+
+//=============================================================================
+//
+// Tagged Team Fortress Bot filter
+//
+class CFilterTFBotHasTag : public CBaseFilter
+{
+	DECLARE_CLASS( CFilterTFBotHasTag, CBaseFilter );
+	
+public:
+
+	inline void Spawn() OVERRIDE
+	{
+		BaseClass::Spawn();
+
+		const char *tags = STRING( m_iszTags );
+		CSplitString splitTags( tags, " " );
+		for ( int i=0; i < splitTags.Count(); ++i )
+		{
+			m_tags.CopyAndAddToTail( splitTags[i] );
+		}
+	}
+
+	inline bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity ) OVERRIDE
+	{
+		CTFBot *pBot = ToTFBot( pEntity );
+
+		if ( !pBot )
+			return false;
+
+		bool bPasses = false;
+		for ( int i=0; i < m_tags.Count(); ++i )
+		{
+			const char *pszTag = m_tags[i];
+			if ( pBot->HasTag( pszTag ) )
+			{
+				bPasses = true;
+				if ( !m_bRequireAllTags )
+				{
+					break;
+				}
+			}
+			else if ( m_bRequireAllTags )
+			{
+				return false;
+			}
+		}
+
+		return bPasses;
+	}
+
+private:
+
+	CUtlStringList m_tags;
+	string_t m_iszTags;
+	bool m_bRequireAllTags;
+
+	DECLARE_DATADESC();
+};
+
+BEGIN_DATADESC( CFilterTFBotHasTag )
+	DEFINE_KEYFIELD( m_iszTags, FIELD_STRING, "tags" ),
+	DEFINE_KEYFIELD( m_bRequireAllTags, FIELD_BOOLEAN, "require_all_tags" ),
+END_DATADESC()
+
+LINK_ENTITY_TO_CLASS( filter_tf_bot_has_tag, CFilterTFBotHasTag );
+
+
+//=============================================================================
+//
+// Team Fortress Condition Filter
+//
+class CFilterTFCondition : public CBaseFilter
+{
+	DECLARE_CLASS( CFilterTFCondition, CBaseFilter );
+
+public:
+	inline bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity ) OVERRIDE
+	{
+		if ( !pEntity->IsPlayer() )
+			return false;
+
+		CTFPlayer *pTFPlayer = ToTFPlayer( pEntity );
+		return pTFPlayer && pTFPlayer->m_Shared.InCond( m_nCondition );
+	}
+
+private:
+
+	int m_nCondition;
+
+	DECLARE_DATADESC();
+};
+
+BEGIN_DATADESC( CFilterTFCondition )
+	DEFINE_KEYFIELD( m_nCondition, FIELD_INTEGER, "condition" ),
+END_DATADESC()
+
+
+LINK_ENTITY_TO_CLASS( filter_tf_condition, CFilterTFCondition );

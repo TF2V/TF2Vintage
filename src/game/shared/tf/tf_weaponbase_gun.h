@@ -48,8 +48,10 @@ public:
 
 	void ToggleZoom( void );
 
+	virtual int GetWeaponProjectileType( void ) const { return m_pWeaponInfo->GetWeaponData( m_iWeaponMode ).m_iProjectile; }
 	virtual CBaseEntity *FireProjectile( CTFPlayer *pPlayer );
 	virtual void		GetProjectileFireSetup( CTFPlayer *pPlayer, Vector vecOffset, Vector *vecSrc, QAngle *angForward, bool bHitTeammates = true, bool bUseHitboxes = false );
+	virtual QAngle		GetSpreadAngles( void );
 	void				GetProjectileReflectSetup( CTFPlayer *pPlayer, const Vector &vecPos, Vector *vecDeflect, bool bHitTeammates = true, bool bUseHitboxes = false );
 
 	virtual void FireBullet( CTFPlayer *pPlayer );
@@ -66,8 +68,9 @@ public:
 	CBaseEntity *FireGrenade( CTFPlayer *pPlayer );
 
 	virtual float GetWeaponSpread( void );
-	virtual float GetProjectileSpeed( void );
-	virtual float GetProjectileGravity( void );
+	virtual float GetProjectileSpeed( void ) { return 0.0f; }
+	virtual float GetProjectileGravity( void ) { return 0.001f; }
+	virtual float GetProjectileSpread( void ) { return 0.0f; }
 	virtual bool  IsFlameArrow( void );
 
 	void UpdatePunchAngles( CTFPlayer *pPlayer );

@@ -1,0 +1,77 @@
+name: Linux
+
+on: 
+  workflow_call:
+
+env:
+  STEAM_RUNTIME_PATH: /valve/steam-runtime
+  CCACHE_VERSION: 4.2.1
+  CCACHE_DIR: ${{ github.workspace }}/src/ccache
+
+jobs:
+  build:
+    runs-on:
+      ubuntu-20.04
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - id: get-date
+        run: |
+          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+      
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}
+          restore-keys: ${{ runner.os }}-
+      
+      - name: Download ccache
+        id: ccache
+        shell: cmake -P {0}
+        run: |
+          set(ccache_url "https://github.com/cristianadam/ccache/releases/download/v$ENV{CCACHE_VERSION}/${{ runner.os }}.tar.xz")
+          file(DOWNLOAD "${ccache_url}" ./ccache.tar.xz SHOW_PROGRESS)
+          execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./ccache.tar.xz)
+          file(COPY ./ccache DESTINATION src/devtools/bin/linux USE_SOURCE_PERMISSIONS)
+      
+      - name: Setup ccache
+        run: |
+          sudo mkdir -p game/tf2vintage/bin
+          cd src
+          sudo mkdir -p ./ccache/tmp
+          cd devtools/bin/linux
+          sudo ./ccache --set-config cache_dir=$CCACHE_DIR
+          sudo ./ccache --set-config compression_level=6
+      
+      - name: Restore cache
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: sudo bash .github/gh-cache.sh restore
+      
+      - name: Configure dependencies
+        run: sudo apt update && sudo apt install -y build-essential gcc-multilib g++-multilib
+
+      - name: Create project
+        run: cd src && sudo devtools/bin/vpc /tf2vintage +game /mksln TF2vintage
+      
+      - name: Download Steam runtime
+        run: |
+          cd /
+          sudo mkdir valve
+          cd valve
+          sudo wget http://media.steampowered.com/client/runtime/steam-runtime-sdk_latest.tar.xz
+          sudo tar xvf steam-runtime-sdk_latest.tar.xz
+          sudo mv steam-runtime-sdk_2013-09-05 steam-runtime
+          sudo bash $STEAM_RUNTIME_PATH/setup.sh --release --target="i386 amd64" --auto-upgrade
+
+      - name: Build project
+        run: cd src && sudo make -f TF2vintage.mak
+
+      - name: Upload product
+        uses: actions/upload-artifact@v2
+        with:
+          name: tf2vintage-linux
+          path: game/tf2vintage/bin/

@@ -20,6 +20,7 @@
 
 extern ConVar tf2_object_hard_limits;
 extern ConVar tf_fastbuild;
+extern ConVar tf2v_use_new_minibuildings;
 
 EXTERN_SEND_TABLE(DT_BaseCombatWeapon)
 
@@ -530,7 +531,13 @@ void CTFWeaponBuilder::StartPlacement( void )
 		m_hObjectBeingBuilt->StartPlacement( ToTFPlayer( GetOwner() ) );
 
 		// Stomp this here in the same frame we make the object, so prevent clientside warnings that it's under attack
-		m_hObjectBeingBuilt->m_iHealth = OBJECT_CONSTRUCTION_STARTINGHEALTH;
+		int nMiniSentry = 0;
+		if ( GetOwner() && ToTFPlayer(GetOwner() ) )
+			CALL_ATTRIB_HOOK_INT_ON_OTHER( ToTFPlayer( GetOwner() ), nMiniSentry, wrench_builds_minisentry );
+		if ( nMiniSentry == 1 && m_iObjectType == OBJ_SENTRYGUN )
+			m_hObjectBeingBuilt->m_iHealth = tf2v_use_new_minibuildings.GetBool() ? ( TF_MINISENTRY_HEALTH / 2 ) : TF_MINISENTRY_HEALTH;
+		else
+			m_hObjectBeingBuilt->m_iHealth = OBJECT_CONSTRUCTION_STARTINGHEALTH;
 	}
 }
 
@@ -699,6 +706,7 @@ bool CTFWeaponBuilder::AllowsAutoSwitchTo( void ) const
 
 IMPLEMENT_SERVERCLASS_ST( CTFWeaponSapper, DT_TFWeaponSapper )
 	SendPropFloat( SENDINFO( m_flWheatleyTalkingUntil ) ),
+	SendPropBool( SENDINFO( m_bRoboSapper ) ),
 END_SEND_TABLE()
 
 LINK_ENTITY_TO_CLASS( tf_weapon_sapper, CTFWeaponSapper );

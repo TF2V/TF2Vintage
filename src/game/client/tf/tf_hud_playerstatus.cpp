@@ -332,6 +332,13 @@ void CTFHealthPanel::Paint()
 	surface()->DrawTexturedPolygon( 4, vert );
 }
 
+
+enum
+{
+	HUD_HEALTH_NO_ANIM = 0,
+	HUD_HEALTH_BONUS_ANIM,
+};
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -358,6 +365,9 @@ CTFHudPlayerHealth::CTFHudPlayerHealth( Panel *parent, const char *name ) : Edit
 	
 	m_flNextThink = 0.0f;
 	m_nOffset = 0;
+
+	m_iAnimState = HUD_HEALTH_NO_ANIM;
+	m_bAnimate = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -367,6 +377,8 @@ void CTFHudPlayerHealth::Reset()
 {
 	m_flNextThink = gpGlobals->curtime + 0.05f;
 	m_nHealth = -1;
+
+	m_iAnimState = HUD_HEALTH_NO_ANIM;
 }
 
 //-----------------------------------------------------------------------------
@@ -440,7 +452,14 @@ void CTFHudPlayerHealth::SetHealth( int iNewHealth, int iMaxHealth, int	iMaxBuff
 				if ( !m_pHealthBonusImage->IsVisible() )
 				{
 					m_pHealthBonusImage->SetVisible( true );
+				}
+
+				if ( m_bAnimate && m_iAnimState != HUD_HEALTH_BONUS_ANIM )
+				{
+					g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( this, "HudHealthDyingPulseStop" );
 					g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( this, "HudHealthBonusPulse" );
+
+					m_iAnimState = HUD_HEALTH_BONUS_ANIM;
 				}
 
 				m_pHealthBonusImage->SetDrawColor( Color( 255, 255, 255, 255 ) );
@@ -521,6 +540,8 @@ void CTFHudPlayerHealth::HideHealthBonusImage( void )
 		m_pHealthBonusImage->SetVisible( false );
 		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( this, "HudHealthBonusPulseStop" );
 		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( this, "HudHealthDyingPulseStop" );
+
+		m_iAnimState = HUD_HEALTH_NO_ANIM;
 	}
 }
 

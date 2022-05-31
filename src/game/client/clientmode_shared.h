@@ -134,6 +134,9 @@ public:
 	virtual void	InfoPanelDisplayed() OVERRIDE { }
 	virtual bool	IsHTMLInfoPanelAllowed() OVERRIDE { return true; }
 
+	virtual void	OnDemoRecordStart( char const *pDemoBaseName ) { }
+	virtual void	OnDemoRecordStop( void ) { }
+
 protected:
 	CBaseViewport			*m_pViewport;
 

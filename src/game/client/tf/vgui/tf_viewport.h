@@ -30,6 +30,7 @@ private:
 	DECLARE_CLASS_SIMPLE( TFViewport, CBaseViewport );
 
 public:
+	TFViewport();
 
 	IViewPortPanel* CreatePanelByName(const char *szPanelName);
 	void CreateDefaultPanels( void );
@@ -40,6 +41,8 @@ public:
 	int GetDeathMessageStartHeight( void );
 
 	virtual void OnScreenSizeChanged( int iOldWide, int iOldTall );
+
+	virtual void OnTick();
 
 private:
 	void CenterWindow( vgui::Frame *win );

@@ -215,6 +215,7 @@ void CPDAPanel_Spy_Invis::OnTick( void )
 	}
 }
 
+// Pocket
 class CPDAPanel_Spy_Invis_Pocket : public CPDAPanel
 {
 	DECLARE_CLASS( CPDAPanel_Spy_Invis_Pocket, CPDAPanel );
@@ -254,3 +255,87 @@ void CPDAPanel_Spy_Invis_Pocket::OnTick( void )
 		}
 	}
 }
+
+// HM
+class CPDAPanel_Spy_Invis_Pocket_HM : public CPDAPanel
+{
+	DECLARE_CLASS( CPDAPanel_Spy_Invis_Pocket_HM, CPDAPanel );
+public:
+	CPDAPanel_Spy_Invis_Pocket_HM( vgui::Panel *parent, const char *panelName );
+
+	virtual void OnTick();
+
+private:
+	CircularProgressBar *m_pInvisProgress;
+};
+
+DECLARE_VGUI_SCREEN_FACTORY( CPDAPanel_Spy_Invis_Pocket_HM, "pda_panel_spy_invis_pocket_hm" );
+
+CPDAPanel_Spy_Invis_Pocket_HM::CPDAPanel_Spy_Invis_Pocket_HM( vgui::Panel *parent, const char *panelName )
+	: CPDAPanel( parent, "CPDAPanel_Spy_Invis_Pocket_HM" )
+{
+	vgui::ivgui()->AddTickSignal( GetVPanel() );
+
+	m_pInvisProgress = new CircularProgressBar( this, "InvisProgress" );
+}
+
+void CPDAPanel_Spy_Invis_Pocket_HM::OnTick( void )
+{
+	C_BaseCombatWeapon *pInvisWeapon = GetOwningWeapon();
+
+	if ( !pInvisWeapon )
+		return;
+
+	C_TFPlayer *pPlayer = ToTFPlayer( pInvisWeapon->GetOwner() );
+
+	if ( pPlayer && !pPlayer->IsDormant() )
+	{
+		if ( m_pInvisProgress )
+		{
+			m_pInvisProgress->SetProgress( pPlayer->m_Shared.GetSpyCloakMeter() / 100.0f );
+		}
+	}
+}
+
+// TTG
+class CPDAPanel_Spy_Invis_Pocket_TTG : public CPDAPanel
+{
+	DECLARE_CLASS( CPDAPanel_Spy_Invis_Pocket_TTG, CPDAPanel );
+public:
+	CPDAPanel_Spy_Invis_Pocket_TTG( vgui::Panel *parent, const char *panelName );
+
+	virtual void OnTick();
+
+private:
+	CircularProgressBar *m_pInvisProgress;
+};
+
+DECLARE_VGUI_SCREEN_FACTORY( CPDAPanel_Spy_Invis_Pocket_TTG, "pda_panel_spy_invis_pocket_ttg" );
+
+CPDAPanel_Spy_Invis_Pocket_TTG::CPDAPanel_Spy_Invis_Pocket_TTG( vgui::Panel *parent, const char *panelName )
+	: CPDAPanel( parent, "CPDAPanel_Spy_Invis_Pocket_TTG" )
+{
+	vgui::ivgui()->AddTickSignal( GetVPanel() );
+
+	m_pInvisProgress = new CircularProgressBar( this, "InvisProgress" );
+}
+
+void CPDAPanel_Spy_Invis_Pocket_TTG::OnTick( void )
+{
+	C_BaseCombatWeapon *pInvisWeapon = GetOwningWeapon();
+
+	if ( !pInvisWeapon )
+		return;
+
+	C_TFPlayer *pPlayer = ToTFPlayer( pInvisWeapon->GetOwner() );
+
+	if ( pPlayer && !pPlayer->IsDormant() )
+	{
+		if ( m_pInvisProgress )
+		{
+			m_pInvisProgress->SetProgress( pPlayer->m_Shared.GetSpyCloakMeter() / 100.0f );
+		}
+	}
+}
+
+// End of watches

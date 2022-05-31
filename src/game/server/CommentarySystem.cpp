@@ -662,6 +662,7 @@ public:
 		{
 			Msg( "Commentary: Could not find commentary data file '%s'. \n", szFullName );
 		}
+		pkvFile->deleteThis();
 
 		engine->LockNetworkStringTables( oldLock );
 	}

@@ -10,7 +10,6 @@
 #pragma once
 #endif
 
-#include "shareddefs.h"
 #include "mp_shareddefs.h"
 
 // Using MAP_DEBUG mode?
@@ -43,6 +42,9 @@ enum
 #define TF_TEAM_MVM_PLAYERS TF_TEAM_RED
 
 #define TF_TEAM_AUTOASSIGN (TF_TEAM_COUNT + 1 )
+#define TF_TEAM_VISUALS_COUNT (TF_TEAM_COUNT + 1)
+
+enum { k_nMvMPlayerTeamSize = 6, k_nMvMBotTeamSize = 22 };
 
 extern const char *g_aTeamNames[TF_TEAM_COUNT];
 extern const char *g_aTeamNamesShort[TF_TEAM_COUNT];
@@ -55,6 +57,16 @@ bool IsTeamName( const char *name );
 const char *GetTeamParticleName( int iTeam, bool bDummyBoolean = false, const char **pNames = g_aTeamParticleNames );
 const char *ConstructTeamParticle( const char *pszFormat, int iTeam, bool bDummyBoolean = false, const char **pNames = g_aTeamParticleNames );
 void PrecacheTeamParticles( const char *pszFormat, bool bDummyBoolean = false, const char **pNames = g_aTeamParticleNames );
+
+inline int GetEnemyTeam( CBaseEntity *ent )
+{
+	int myTeam = ent->GetTeamNumber();
+	return ( myTeam == TF_TEAM_BLUE ? TF_TEAM_RED : ( myTeam == TF_TEAM_RED ? TF_TEAM_BLUE : TEAM_ANY ) );
+}
+inline int GetEnemyTeam( int myTeam )
+{
+	return ( myTeam == TF_TEAM_BLUE ? TF_TEAM_RED : ( myTeam == TF_TEAM_RED ? TF_TEAM_BLUE : TEAM_ANY ) );
+}
 
 #define CONTENTS_REDTEAM	CONTENTS_TEAM1
 #define CONTENTS_BLUETEAM	CONTENTS_TEAM2
@@ -134,6 +146,7 @@ enum
 
 #define TF_FIRST_NORMAL_CLASS	( TF_CLASS_UNDEFINED + 1 )
 #define TF_LAST_NORMAL_CLASS	( TF_CLASS_UNDEFINED + 9 )
+#define TF_NORMAL_CLASS_COUNT	( TF_LAST_NORMAL_CLASS + 1 ) // A bunch of code relies on TF_LAST_NORMAL_CLASS == TF_CLASS_ENGINEER, dumb
 
 #define TF_FIRST_BOSS_CLASS		( TF_LAST_NORMAL_CLASS + 1 )
 #define TF_LAST_BOSS_CLASS		( TF_CLASS_COUNT_ALL - 1 )
@@ -164,8 +177,8 @@ enum
 	TF_CLASS_RANDOM
 };
 
-extern const char *g_aPlayerClassNames[];				// localized class names
-extern const char *g_aPlayerClassNames_NonLocalized[];	// non-localized class names
+extern const char *g_aPlayerClassNames[TF_CLASS_COUNT_ALL];				// localized class names
+extern const char *g_aPlayerClassNames_NonLocalized[TF_CLASS_COUNT_ALL];	// non-localized class names
 extern const char *g_aRawPlayerClassNames[TF_CLASS_MENU_BUTTONS];
 extern const char *g_aRawPlayerClassNamesShort[TF_CLASS_MENU_BUTTONS];
 
@@ -173,6 +186,11 @@ bool IsPlayerClassName( const char *name );
 int GetClassIndexFromString( const char *name, int maxClass = TF_LAST_NORMAL_CLASS );
 char const *GetPlayerClassName( int iClassIdx );
 char const *GetPlayerClassLocalizationKey( int iClassIdx );
+
+extern const char g_szBotModels[TF_NORMAL_CLASS_COUNT][MAX_PATH];
+extern const char g_szBotBossModels[TF_NORMAL_CLASS_COUNT][MAX_PATH];
+extern const char g_szRomePromoItems_Hat[TF_NORMAL_CLASS_COUNT][MAX_PATH];
+extern const char g_szRomePromoItems_Misc[TF_NORMAL_CLASS_COUNT][MAX_PATH];
 
 extern const char *g_aDominationEmblems[];
 extern const char *g_aPlayerClassEmblems[];
@@ -187,7 +205,9 @@ enum
 	TF_FLAGTYPE_ATTACK_DEFEND,
 	TF_FLAGTYPE_TERRITORY_CONTROL,
 	TF_FLAGTYPE_INVADE,
-	TF_FLAGTYPE_KINGOFTHEHILL,
+	TF_FLAGTYPE_RESOURCE_CONTROL,
+	TF_FLAGTYPE_ROBOT_DESTRUCTION,
+	TF_FLAGTYPE_PLAYER_DESTRUCTION
 };
 
 //-----------------------------------------------------------------------------
@@ -242,7 +262,10 @@ enum
 	TF_AMMO_METAL,
 	TF_AMMO_GRENADES1,
 	TF_AMMO_GRENADES2,
-	TF_AMMO_GRENADES3, // Spells etc.
+	TF_AMMO_GRENADES3, 
+	TF_AMMO_SPECIAL1,	// Consumables by slot
+	TF_AMMO_SPECIAL2,
+	TF_AMMO_SPECIAL3,	// Spells etc.
 	TF_AMMO_COUNT
 };
 
@@ -264,6 +287,14 @@ enum
 	TF_GL_MODE_FIZZLE,
 	TF_GL_MODE_BETA_DETONATE,
 	TF_GL_MODE_CANNONBALL,
+};
+
+enum
+{
+	TF_FLARE_MODE_NORMAL,
+	TF_FLARE_MODE_DETONATE,
+	TF_FLARE_MODE_REVENGE,
+	TF_FLARE_MODE_KNOCKBACK,
 };
 
 //-----------------------------------------------------------------------------
@@ -355,6 +386,8 @@ extern const char *g_aAmmoNames[];
 #define TF_WEAPON_GRENADE_FRICTION						0.6f
 #define TF_WEAPON_GRENADE_GRAVITY						0.81f
 #define TF_WEAPON_GRENADE_INITPRIME						0.8f
+#define TF_WEAPON_GRENADE_DETONATE_TIME					2.0f
+#define TF_WEAPON_GRENADE_XBOX_DAMAGE					112
 #define TF_WEAPON_GRENADE_CONCUSSION_TIME				15.0f
 #define TF_WEAPON_GRENADE_MIRV_BOMB_COUNT				4
 #define TF_WEAPON_GRENADE_CALTROP_TIME					8.0f
@@ -518,6 +551,7 @@ typedef enum class WeaponId {
 	TF_WEAPON_FLAME_BALL,
 	TF_WEAPON_FLAREGUN_REVENGE,
 	TF_WEAPON_ROCKETLAUNCHER_FIREBALL,
+	TF_WEAPON_DEFIB,
 } WeaponId_t;
 
 enum
@@ -656,6 +690,7 @@ enum
 	TF_WEAPON_FLAME_BALL,
 	TF_WEAPON_FLAREGUN_REVENGE,
 	TF_WEAPON_ROCKETLAUNCHER_FIREBALL,
+	TF_WEAPON_DEFIB,
 
 	TF_WEAPON_COUNT
 };
@@ -773,6 +808,9 @@ extern const char *g_szProjectileNames[];
 #define TF_PLAYER_INDEX_NONE			( MAX_PLAYERS + 1 )
 
 #define TF_MAX_PRESETS 4		// Needs to match g_InventoryLoadoutPresets
+
+// Lunchboxes
+#define TF_LUNCHBOX_HEALTH_BUFF			50
 
 // Most of these conds aren't actually implemented but putting them here for compatibility.
 enum
@@ -924,7 +962,7 @@ enum
 
 extern int condition_to_attribute_translation[];
 
-int ConditionExpiresFast( int nCond );
+bool ConditionExpiresFast( int nCond );
 
 //-----------------------------------------------------------------------------
 // Mediguns.
@@ -984,14 +1022,33 @@ enum {
 	TF_FLAGEVENT_PICKUP = 1,
 	TF_FLAGEVENT_CAPTURE,
 	TF_FLAGEVENT_DEFEND,
-	TF_FLAGEVENT_DROPPED
+	TF_FLAGEVENT_DROPPED,
+	TF_FLAGEVENT_RETURNED
 };
+
+//-----------------------------------------------------------------------------
+// TF Robot Destruction Score Events
+//-----------------------------------------------------------------------------
+enum ERDScoreMethod
+{
+	SCORE_UNDEFINED = -1,
+	SCORE_REACTOR_CAPTURED,
+	SCORE_CORES_COLLECTED,
+	SCORE_REACTOR_RETURNED,
+	SCORE_REACTOR_STEAL,
+
+	NUM_SCORE_TYPES
+};
+
+const char *GetRDScoreMethodName( ERDScoreMethod iScoreMethod );
+ERDScoreMethod GetRDScoreMethodFromName( const char *pszName );
 
 //-----------------------------------------------------------------------------
 // Class data
 //-----------------------------------------------------------------------------
-#define TF_MEDIC_REGEN_TIME			1.0		// Number of seconds between each regen.
-#define TF_MEDIC_REGEN_AMOUNT		1 		// Amount of health regenerated each regen.
+#define TF_REGEN_TIME			1.0		// Number of seconds between each regen.
+#define TF_REGEN_AMOUNT			1 		// Amount of health regenerated each regen.
+#define TF_AMMO_REGEN_TIME		5.0
 
 //-----------------------------------------------------------------------------
 // Assist-damage constants
@@ -1280,6 +1337,9 @@ enum
 	TF_DMG_CUSTOM_CROC,
 	TF_DMG_CUSTOM_TAUNTATK_GASBLAST,
 	TF_DMG_CUSTOM_AXTINGUISHER_BOOSTED,
+	
+	// TF2V DMGs
+	TF_DMG_CUSTOM_RECURSIVE,
 };
 
 // Crit types
@@ -1289,6 +1349,21 @@ enum ECritType
 	kCritType_MiniCrit,
 	kCritType_Crit
 };
+
+//-----------------------------------------------------------------------------
+// Deatf Calling Cards
+//-----------------------------------------------------------------------------
+enum
+{
+	CALLING_CARD_NONE = 0,
+	CALLING_CARD_MILKMAN = 1,	// Scout PolyCount Set
+	CALLING_CARD_CROC,			// Sniper PolyCount Set
+	CALLING_CARD_TANKBUSTER,	// Solider PolyCount Set
+	CALLING_CARD_GASJOCKEY,		// Pyro PolyCount Set 
+
+	CALLING_CARD_COUNT
+};
+extern const char *g_pszDeathCallingCardModels[CALLING_CARD_COUNT];
 
 #define TF_JUMP_ROCKET	( 1 << 0 )
 #define TF_JUMP_STICKY	( 1 << 1 )
@@ -1436,7 +1511,8 @@ enum
 {
 	OF_ALLOW_REPEAT_PLACEMENT				= 0x01,
 	OF_MUST_BE_BUILT_ON_ATTACHMENT			= 0x02,
-	OF_IS_CART_OBJECT						= 0x04, //I'm not sure what the exact name is, but live tf2 uses it for the payload bomb dispenser object
+	OF_DOESNT_HAVE_A_MODEL					= 0x04,
+	OF_PLAYER_DESTRUCTION					= 0x08,
 
 	OF_BIT_COUNT	= 4
 };
@@ -1760,8 +1836,18 @@ typedef enum
 	HUD_NOTIFY_PASSTIME_NO_HOLSTER,
 	HUD_NOTIFY_PASSTIME_NO_TAUNT,
 
+	HUD_NOTIFY_TRUCE_START,
+	HUD_NOTIFY_TRUCE_END,
+
 	NUM_STOCK_NOTIFICATIONS
 } HudNotification_t;
+
+typedef enum
+{
+	SAPPING_NONE,
+	SAPPING_PLACED,
+	SAPPING_DONE
+} sap_state_t;
 
 class CTraceFilterIgnorePlayers : public CTraceFilterSimple
 {
@@ -1777,7 +1863,10 @@ public:
 	virtual bool ShouldHitEntity( IHandleEntity *pServerEntity, int contentsMask )
 	{
 		CBaseEntity *pEntity = EntityFromEntityHandle( pServerEntity );
-		return pEntity && !pEntity->IsPlayer();
+		if ( pEntity && pEntity->IsPlayer() )
+			return false;
+
+		return BaseClass::ShouldHitEntity( pServerEntity, contentsMask );
 	}
 };
 
@@ -1795,15 +1884,13 @@ public:
 	virtual bool ShouldHitEntity( IHandleEntity *pServerEntity, int contentsMask )
 	{
 		CBaseEntity *pEntity = EntityFromEntityHandle( pServerEntity );
-
-		if ( pEntity->IsPlayer() && pEntity->GetTeamNumber() == m_iIgnoreTeam )
-		{
+		if ( pEntity && ( pEntity->IsPlayer() || pEntity->IsCombatItem() ) && pEntity->GetTeamNumber() == m_iIgnoreTeam )
 			return false;
-		}
 
-		return true;
+		return BaseClass::ShouldHitEntity( pServerEntity, contentsMask );
 	}
 
+private:
 	int m_iIgnoreTeam;
 };
 
@@ -1814,23 +1901,34 @@ public:
 	DECLARE_CLASS( CTraceFilterIgnoreTeammatesAndTeamObjects, CTraceFilterSimple );
 
 	CTraceFilterIgnoreTeammatesAndTeamObjects( const IHandleEntity *passentity, int collisionGroup, int teamNumber )
-		: CTraceFilterSimple( passentity, collisionGroup )
+		: CTraceFilterSimple( passentity, collisionGroup ), m_iIgnoreTeam( teamNumber )
 	{
-		m_iTeamNumber = teamNumber;
 	}
 
-	virtual bool ShouldHitEntity( IHandleEntity *pServerEntity, int contentsMask )
-	{
-		CBaseEntity *pEntity = EntityFromEntityHandle( pServerEntity );
-
-		if ( pEntity && pEntity->GetTeamNumber() == m_iTeamNumber )
-			return false;
-
-		return BaseClass::ShouldHitEntity( pServerEntity, contentsMask );
-	}
+	virtual bool ShouldHitEntity( IHandleEntity *pServerEntity, int contentsMask ) OVERRIDE;
 
 private:
-	int m_iTeamNumber;
+	int m_iIgnoreTeam;
+};
+
+class CTraceFilterIgnoreFriendlyCombatItems : public CTraceFilterSimple
+{
+	DECLARE_CLASS_GAMEROOT( CTraceFilterIgnoreFriendlyCombatItems, CTraceFilterSimple );
+public:
+	CTraceFilterIgnoreFriendlyCombatItems( IHandleEntity const *ignore, int collissionGroup, int teamNumber )
+		: CTraceFilterSimple( ignore, collissionGroup )
+	{
+		m_iIgnoreTeam = teamNumber;
+		m_bSkipBaseTrace = false;
+	}
+
+	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask ) OVERRIDE;
+
+	void AlwaysHitItems( void ) { m_bSkipBaseTrace = true; }
+
+private:
+	int m_iIgnoreTeam;
+	bool m_bSkipBaseTrace;
 };
 
 // Unused
@@ -1848,16 +1946,64 @@ private:
 
 typedef enum
 {
-	SAPPING_NONE,
-	SAPPING_PLACED,
-	SAPPING_DONE
-} sap_state_t;
+	UIGROUP_UPGRADE_ITEM = 0,
+	UIGROUP_UPGRADE_PLAYER,
+	UIGROUP_UPGRADE_POWERUP
+} MvMUpgradeUIGroups_t;
 
-inline int GetEnemyTeam( CBaseEntity *ent )
+typedef enum
 {
-	int myTeam = ent->GetTeamNumber();
-	return ( myTeam == TF_TEAM_BLUE ? TF_TEAM_RED : ( myTeam == TF_TEAM_RED ? TF_TEAM_BLUE : TEAM_ANY ) );
-}
+	MVM_UPGRADE_QUALITY_LOW = 1,
+	MVM_UPGRADE_QUALITY_NORMAL,
+	MVM_UPGRADE_QAULITY_HIGH
+} MvMUpgradeQualities_t;
+
+typedef enum
+{
+	POWERUP_BOTTLE_NONE,
+	POWERUP_BOTTLE_CRITBOOST,
+	POWERUP_BOTTLE_UBERCHARGE,
+	POWERUP_BOTTLE_RECALL,
+	POWERUP_BOTTLE_REFILL_AMMO,
+	POWERUP_BOTTLE_BUILDINGS_INSTANT_UPGRADE,
+	POWERUP_BOTTLE_TOTAL
+} PowerupBottleType_t;
+
+typedef enum
+{
+	MVM_ANNOUNCEMENT_WAVE_COMPLETE,
+	MVM_ANNOUNCEMENT_WAVE_FAILED
+} MvMAnnouncement_t;
+
+typedef enum 
+{
+	MVM_EVENT_POPFILE_NONE = 0,
+	MVM_EVENT_POPFILE_HALLOWEEN,
+
+	MVM_EVENT_POPFILE_MAX_TYPES,
+} MvMEventPopfile_t;
+
+typedef enum
+{
+	// 1 .. 5?
+	CURRENCY_PACK_SMALL = 6,
+	CURRENCY_PACK_MEDIUM,
+	CURRENCY_PACK_LARGE,
+	CURRENCY_PACK_CUSTOM,
+	CURRENCY_WAVE_COLLECTION_BONUS,
+} CurrencyRewards_t;
+
+#define MVM_BUYBACK_COST_PER_SEC		5
+
+#define MVM_CLASS_TYPES_PER_WAVE_MAX	24
+
+#define MVM_CLASS_FLAG_NONE				0
+#define MVM_CLASS_FLAG_NORMAL			(1<<0)
+#define MVM_CLASS_FLAG_SUPPORT			(1<<1)
+#define MVM_CLASS_FLAG_MISSION			(1<<2)
+#define MVM_CLASS_FLAG_MINIBOSS			(1<<3)
+#define MVM_CLASS_FLAG_ALWAYSCRIT		(1<<4)
+#define MVM_CLASS_FLAG_SUPPORT_LIMITED	(1<<5)
 
 bool IsSpaceToSpawnHere( const Vector &vecPos );
 

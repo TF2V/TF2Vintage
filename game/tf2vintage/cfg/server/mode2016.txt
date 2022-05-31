@@ -1,0 +1,2 @@
+exec server/qol2016.txt
+mapcyclefile maps/mapcycle_2016.txt

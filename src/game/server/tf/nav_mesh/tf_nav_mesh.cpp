@@ -11,17 +11,22 @@
 #include "tf_shareddefs.h"
 #include "tf_gamerules.h"
 #include "tf_obj.h"
+#include "func_capture_zone.h"
 
 #include "NextBotUtil.h"
 
 ConVar tf_show_in_combat_areas( "tf_show_in_combat_areas", "0", FCVAR_CHEAT, "", true, 0.0f, true, 1.0f );
 ConVar tf_show_mesh_decoration( "tf_show_mesh_decoration", "0", FCVAR_CHEAT, "Highlight special areas", true, 0.0f, true, 1.0f );
+ConVar tf_show_mesh_decoration_manual( "tf_show_mesh_decoration_manual", "0", FCVAR_CHEAT, "Highlight special areas marked by hand", true, 0.0f, true, 1.0f );
 ConVar tf_show_enemy_invasion_areas( "tf_show_enemy_invasion_areas", "0", FCVAR_CHEAT, "Highlight areas where the enemy team enters the visible environment of the local player", true, 0.0f, true, 1.0f );
 ConVar tf_show_blocked_areas( "tf_show_blocked_areas", "0", FCVAR_CHEAT, "Highlight areas that are considered blocked for TF-specific reasons", true, 0.0f, true, 1.0f );
 ConVar tf_show_sentry_danger( "tf_show_sentry_danger", "0", FCVAR_CHEAT, "Show sentry danger areas. 1:Use m_sentryAreas. 2:Check all nav areas.", true, 0.0f, true, 2.0f );
 ConVar tf_show_incursion_flow( "tf_show_incursion_flow", "0", FCVAR_CHEAT, "", true, 0.0f, true, 1.0f );
 ConVar tf_show_incursion_flow_range( "tf_show_incursion_flow_range", "150", FCVAR_CHEAT, "" );
 ConVar tf_show_incursion_flow_gradient( "tf_show_incursion_flow_gradient", "0", FCVAR_CHEAT, "1 = red, 2 = blue", true, 0.0f, true, 2.0f );
+ConVar tf_show_bomb_drop_areas( "tf_show_bomb_drop_areas", "0", FCVAR_CHEAT, "", true, 0.0f, true, 1.0f );
+ConVar tf_show_control_points( "tf_show_control_points", "0", FCVAR_CHEAT, "", true, 0.0f, true, 1.0f );
+ConVar tf_show_actor_potential_visibility( "tf_show_actor_potential_visibility", "0", FCVAR_CHEAT, "", true, 0.0f, true, 1.0f );
 
 ConVar tf_bot_min_setup_gate_defend_range( "tf_bot_min_setup_gate_defend_range", "750", FCVAR_CHEAT, "How close from the setup gate(s) defending bots can take up positions. Areas closer than this will be in cover to ambush." );
 ConVar tf_bot_max_setup_gate_defend_range( "tf_bot_max_setup_gate_defend_range", "2000", FCVAR_CHEAT, "How far from the setup gate(s) defending bots can take up positions" );
@@ -30,7 +35,7 @@ ConVar tf_select_ambush_areas_radius( "tf_select_ambush_areas_radius", "750", FC
 ConVar tf_select_ambush_areas_close_range( "tf_select_ambush_areas_close_range", "300", FCVAR_CHEAT );
 ConVar tf_select_ambush_areas_max_enemy_exposure_area( "tf_select_ambush_areas_max_enemy_exposure_area", "500000", FCVAR_CHEAT );
 
-#define TF_ATTRIBUTE_RESET    (BLOCKED|RED_SPAWN_ROOM|BLUE_SPAWN_ROOM|SPAWN_ROOM_EXIT|AMMO|HEALTH|CONTROL_POINT|BLUE_SENTRY|RED_SENTRY)
+#define TF_PERSISTENT_ATTRIBUTES    (TF_NAV_BLUE_SETUP_GATE|TF_NAV_RED_SETUP_GATE|TF_NAV_BLOCKED_AFTER_POINT_CAPTURE|TF_NAV_BLOCKED_UNTIL_POINT_CAPTURE|TF_NAV_BLUE_ONE_WAY_DOOR|TF_NAV_RED_ONE_WAY_DOOR|TF_NAV_WITH_SECOND_POINT|TF_NAV_WITH_THIRD_POINT|TF_NAV_WITH_FOURTH_POINT|TF_NAV_WITH_FIFTH_POINT|TF_NAV_SNIPER_SPOT|TF_NAV_SENTRY_SPOT|TF_NAV_NO_SPAWNING|TF_NAV_RESCUE_CLOSET|TF_NAV_DOOR_NEVER_BLOCKS|TF_NAV_DOOR_ALWAYS_BLOCKS|TF_NAV_UNBLOCKABLE)
 
 
 void TestAndBlockOverlappingAreas( CBaseEntity *pBlocker )
@@ -43,17 +48,16 @@ void TestAndBlockOverlappingAreas( CBaseEntity *pBlocker )
 	CUtlVector<CNavArea *> potentiallyBlockedAreas;
 	TheNavMesh->CollectAreasOverlappingExtent( blockerExtent, &potentiallyBlockedAreas );
 
-	for (int i=0; i<potentiallyBlockedAreas.Count(); ++i)
+	FOR_EACH_VEC( potentiallyBlockedAreas, i )
 	{
 		CNavArea *area = potentiallyBlockedAreas[i];
 
-		Vector nwCorner = area->GetCorner( NORTH_WEST );
-		Vector neCorner = area->GetCorner( NORTH_EAST );
-		Vector swCorner = area->GetCorner( SOUTH_WEST );
-		Vector seCorner = area->GetCorner( SOUTH_EAST );
-		const Vector vecMins( 0, 0, StepHeight );
+		Vector const nwCorner = area->GetCorner( NORTH_WEST );
+		Vector const neCorner = area->GetCorner( NORTH_EAST );
+		Vector const swCorner = area->GetCorner( SOUTH_WEST );
+		Vector const seCorner = area->GetCorner( SOUTH_EAST );
 
-		Vector vecStart, vecEnd, vecMaxs, vecTest;
+		Vector vecMaxs(0, 0, HalfHumanHeight), vecMins(0, 0, StepHeight), vecTest;
 		if ( fabs( nwCorner.z - neCorner.z ) >= 1.0f )
 		{
 			if ( fabs( seCorner.z - swCorner.z ) >= 1.0f )
@@ -66,34 +70,21 @@ void TestAndBlockOverlappingAreas( CBaseEntity *pBlocker )
 			{
 				vecTest = neCorner;
 				vecMaxs.x = 0.0f;
-				vecMaxs.y = seCorner.y - neCorner.y;
+				vecMaxs.y = area->GetSizeY();
 			}
 		}
 		else
 		{
 			vecTest = swCorner;
-			vecMaxs.x = seCorner.x - nwCorner.x;
+			vecMaxs.x = area->GetSizeX();
 			vecMaxs.y = 0.0f;
 		}
 
-		vecStart = nwCorner;
-		if ( nwCorner.z >= vecTest.z )
-		{
-			vecEnd = vecTest;
-		}
-		else
-		{
-			vecEnd = nwCorner;
-			vecStart = vecTest;
-		}
-
-		vecMaxs.z = HalfHumanHeight;
-
-		Ray_t ray;
-		ray.Init( vecStart, vecEnd, vecMins, vecMaxs );
+		Vector const vecStart = (nwCorner.z >= vecTest.z) ? nwCorner : vecTest;
+		Vector const vecEnd = (nwCorner.z >= vecTest.z) ? vecTest : nwCorner;
 
 		trace_t tr;
-		enginetrace->TraceRay( ray, MASK_PLAYERSOLID, &filter, &tr );
+		UTIL_TraceHull( vecStart, vecEnd, vecMins, vecMaxs, MASK_PLAYERSOLID, &filter, &tr );
 
 		if ( tr.DidHit() )
 		{
@@ -106,55 +97,6 @@ void TestAndBlockOverlappingAreas( CBaseEntity *pBlocker )
 }
 
 
-class ComputeIncursionDistance : public ISearchSurroundingAreasFunctor
-{
-public:
-	ComputeIncursionDistance( int teamNum=TEAM_ANY )
-		: m_iTeam( teamNum ) {}
-
-	virtual bool operator() ( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar )
-	{
-		return true;
-	}
-
-	virtual bool ShouldSearch( CNavArea *adjArea, CNavArea *currentArea, float travelDistanceSoFar ) override
-	{
-		CTFNavArea *adjTFArea = static_cast<CTFNavArea *>( adjArea );
-		if ( !adjTFArea->HasTFAttributes( RED_SETUP_GATE|BLUE_SETUP_GATE|SPAWN_ROOM_EXIT ) && adjArea->IsBlocked( m_iTeam ) )
-			return false;
-
-		return currentArea->ComputeAdjacentConnectionHeightChange( adjArea ) <= 45.0f;
-	}
-
-	virtual void IterateAdjacentAreas( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar ) override
-	{
-		// search adjacent outgoing connections
-		for ( int dir=0; dir<NUM_DIRECTIONS; ++dir )
-		{
-			int count = area->GetAdjacentCount( (NavDirType)dir );
-			for ( int i=0; i<count; ++i )
-			{
-				const NavConnect &con = ( *area->GetAdjacentAreas( (NavDirType)dir ) )[i];
-				CTFNavArea *adjArea = static_cast<CTFNavArea *>( con.area );
-
-				if ( ShouldSearch( adjArea, area, travelDistanceSoFar ) )
-				{
-					float flIncursionDist = static_cast<CTFNavArea *>( area )->GetIncursionDistance( m_iTeam ) + con.length;
-					if ( adjArea->GetIncursionDistance( m_iTeam ) < 0.0f || adjArea->GetIncursionDistance( m_iTeam ) > flIncursionDist )
-					{
-						adjArea->SetIncursionDistance( m_iTeam, flIncursionDist );
-						IncludeInSearch( adjArea, area );
-					}
-				}
-			}
-		}
-	}
-
-private:
-	int m_iTeam;
-};
-
-
 class CollectAndLabelSpawnRooms
 {
 public:
@@ -165,23 +107,30 @@ public:
 		m_team = teamNum;
 	};
 
-	inline bool operator()( CNavArea *area )
+	inline bool operator()( CNavArea *a )
 	{
-		if ( dynamic_cast<CTFNavArea *>( area ) == nullptr )
-			return false;
+		CTFNavArea *area = (CTFNavArea *)a;
+		if ( m_respawn == nullptr )
+			return true;
 
-		Vector nwCorner = area->GetCorner( NORTH_WEST ) + Vector( 0, 0, StepHeight );
-		Vector neCorner = area->GetCorner( NORTH_EAST ) + Vector( 0, 0, StepHeight );
-		Vector swCorner = area->GetCorner( SOUTH_WEST ) + Vector( 0, 0, StepHeight );
-		Vector seCorner = area->GetCorner( SOUTH_EAST ) + Vector( 0, 0, StepHeight );
+		const int nIndex = m_vector->Find( area );
+		if ( nIndex != m_vector->InvalidIndex() )
+			return true;
 
-		if ( m_respawn->PointIsWithin( nwCorner ) ||
+		Vector const center = area->GetCenter() + Vector( 0, 0, StepHeight );
+		Vector const nwCorner = area->GetCorner( NORTH_WEST ) + Vector( 0, 0, StepHeight );
+		Vector const neCorner = area->GetCorner( NORTH_EAST ) + Vector( 0, 0, StepHeight );
+		Vector const swCorner = area->GetCorner( SOUTH_WEST ) + Vector( 0, 0, StepHeight );
+		Vector const seCorner = area->GetCorner( SOUTH_EAST ) + Vector( 0, 0, StepHeight );
+
+		if ( m_respawn->PointIsWithin( center ) ||
+			 m_respawn->PointIsWithin( nwCorner ) ||
 			 m_respawn->PointIsWithin( neCorner ) ||
 			 m_respawn->PointIsWithin( swCorner ) ||
 			 m_respawn->PointIsWithin( seCorner ) )
 		{
-			( (CTFNavArea *)area )->AddTFAttributes( m_team == TF_TEAM_RED ? RED_SPAWN_ROOM : BLUE_SPAWN_ROOM );
-			m_vector->AddToTail( (CTFNavArea *)area );
+			area->AddTFAttributes( m_team == TF_TEAM_RED ? TF_NAV_RED_SPAWN_ROOM : TF_NAV_BLUE_SPAWN_ROOM );
+			m_vector->AddToTail( area );
 		}
 
 		return true;
@@ -203,7 +152,7 @@ public:
 		m_flIncursionDistance = fIncursion + area->GetIncursionDistance( iTeam );
 	}
 
-	bool operator()( CNavArea *a )
+	inline bool operator()( CNavArea *a )
 	{
 		CTFNavArea *area = static_cast<CTFNavArea *>( a );
 		if ( area->GetParent() && area->GetParent()->IsContiguous( area ) )
@@ -246,6 +195,40 @@ private:
 	int m_iTeam;
 	float m_flIncursionDistance;
 	CUtlVector<CTFNavArea *> *m_vector;
+};
+
+
+class DrawIncursionFlow
+{
+public:
+	inline bool operator()( CNavArea *a )
+	{
+		CTFNavArea *area = static_cast<CTFNavArea *>( a );
+		int nTeam = tf_show_incursion_flow.GetInt() + 1;
+
+		for ( int dir = 0; dir < NUM_DIRECTIONS; dir++ )
+		{
+			for ( int i=0; i < area->GetAdjacentCount( (NavDirType)dir ); ++i )
+			{
+				CTFNavArea *adjArea = static_cast<CTFNavArea *>( area->GetAdjacentArea( (NavDirType)dir, i ) );
+				if ( area->ComputeAdjacentConnectionHeightChange( adjArea ) > 45.f )
+					continue;
+
+				if ( adjArea->GetIncursionDistance( nTeam ) > area->GetIncursionDistance( nTeam ) )
+				{
+					float flTimeMod = fmodf( adjArea->GetIncursionDistance( nTeam ) - ( gpGlobals->curtime * 0.3333f * 2500.f ), 2500.f ) * 2 / 2500.f;
+					if ( flTimeMod > 1.0f )
+						flTimeMod -= 2.0f;
+
+					int r = (nTeam == TF_TEAM_RED) ? 255 * flTimeMod : 0;
+					int b = (nTeam == TF_TEAM_BLUE) ? 255 * flTimeMod : 0;
+					NDebugOverlay::HorzArrow( area->GetCenter(), adjArea->GetCenter(), 5.0f, r, 0, b, 255, true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+				}
+			}
+		}
+
+		return true;
+	}
 };
 
 
@@ -411,8 +394,7 @@ void CTFNavMesh::CollectBuiltObjects( CUtlVector<CBaseObject *> *objects, int te
 {
 	objects->RemoveAll();
 
-
-	for ( int i=0; i<IBaseObjectAutoList::AutoList().Count(); ++i )
+	FOR_EACH_VEC( IBaseObjectAutoList::AutoList(), i )
 	{
 		CBaseObject *obj = static_cast<CBaseObject *>( IBaseObjectAutoList::AutoList()[i] );
 		if ( obj && ( teamNum == TEAM_ANY || obj->GetTeamNumber() == teamNum ) )
@@ -423,57 +405,42 @@ void CTFNavMesh::CollectBuiltObjects( CUtlVector<CBaseObject *> *objects, int te
 // this function makes 0 sense
 void CTFNavMesh::CollectSpawnRoomThresholdAreas( CUtlVector<CTFNavArea*> *areas, int teamNum ) const
 {
-	const CUtlVector<CTFNavArea *> *spawnExits = nullptr;
-	if ( teamNum == TF_TEAM_RED )
+	const CUtlVector<CTFNavArea *> &spawnExits = GetSpawnRoomExitsForTeam( teamNum );
+	FOR_EACH_VEC( spawnExits, i )
 	{
-		spawnExits = &m_spawnExitsTeam1;
-	}
-	else
-	{
-		if ( teamNum != TF_TEAM_BLUE )
-			return;
-
-		spawnExits = &m_spawnExitsTeam2;
-	}
-
-	if ( spawnExits )
-	{
-		for ( int i=0; i<spawnExits->Count(); ++i )
-		{
-			CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
+		CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
 			
-			CTFNavArea *exitArea = NULL;
-			float flMaxAreaSize = 0.0f;
+		CTFNavArea *exitArea = NULL;
+		float flMaxAreaSize = 0.0f;
 
-			for( int dir=0; dir<NUM_DIRECTIONS; ++dir )
+		for( int dir=0; dir<NUM_DIRECTIONS; ++dir )
+		{
+			for ( int j=0; j<area->GetAdjacentCount( (NavDirType)dir ); ++j )
 			{
-				for ( int j=0; j<area->GetAdjacentCount( (NavDirType)dir ); ++j )
-				{
-					CTFNavArea *adjArea = static_cast<CTFNavArea *>( area->GetAdjacentArea( (NavDirType)dir, j ) );
+				CTFNavArea *adjArea = static_cast<CTFNavArea *>( area->GetAdjacentArea( (NavDirType)dir, j ) );
 
-					if ( !adjArea->HasTFAttributes( RED_SPAWN_ROOM|BLUE_SPAWN_ROOM|SPAWN_ROOM_EXIT ) )
+				if ( !adjArea->HasTFAttributes( TF_NAV_RED_SPAWN_ROOM|TF_NAV_BLUE_SPAWN_ROOM|TF_NAV_SPAWN_ROOM_EXIT ) )
+				{
+					float size = adjArea->GetSizeX() * adjArea->GetSizeY();
+					if ( size > flMaxAreaSize )
 					{
-						float size = adjArea->GetSizeX() * adjArea->GetSizeY();
-						if ( size > flMaxAreaSize )
-						{
-							exitArea = adjArea;
-							flMaxAreaSize = size;
-						}
+						exitArea = adjArea;
+						flMaxAreaSize = size;
 					}
 				}
 			}
+		}
 
-			if ( exitArea )
-			{
-				areas->AddToTail( exitArea );
-			}
+		if ( exitArea )
+		{
+			areas->AddToTail( exitArea );
 		}
 	}
 }
 
 bool CTFNavMesh::IsSentryGunHere( CTFNavArea *area ) const
 {
-	for ( int i=0; i<IBaseObjectAutoList::AutoList().Count(); ++i )
+	FOR_EACH_VEC( IBaseObjectAutoList::AutoList(), i )
 	{
 		CBaseObject *obj = static_cast<CBaseObject *>( IBaseObjectAutoList::AutoList()[i] );
 		if ( obj == nullptr || obj->GetType() != OBJ_SENTRYGUN )
@@ -497,16 +464,22 @@ void CTFNavMesh::OnBlockedAreasChanged()
 
 void CTFNavMesh::CollectAndMarkSpawnRoomExits( CTFNavArea *area, CUtlVector<CTFNavArea *> *areas )
 {
+	const int nIndex = areas->Find( area );
+	if ( nIndex != areas->InvalidIndex() )
+		return;
+
 	for ( int dir=0; dir < NUM_DIRECTIONS; dir++ )
 	{
 		for ( int i=0; i<area->GetAdjacentCount( (NavDirType)dir ); ++i )
 		{
 			CTFNavArea *other = static_cast<CTFNavArea *>( area->GetAdjacentArea( (NavDirType)dir, i ) );
-			if ( other->HasTFAttributes( RED_SPAWN_ROOM|BLUE_SPAWN_ROOM ) )
-				continue;
+			if ( !other->HasTFAttributes( TF_NAV_RED_SPAWN_ROOM|TF_NAV_BLUE_SPAWN_ROOM ) )
+			{
+				area->AddTFAttributes( TF_NAV_SPAWN_ROOM_EXIT );
+				areas->AddToTail( area );
 
-			area->AddTFAttributes( SPAWN_ROOM_EXIT );
-			areas->AddToTail( area );
+				return;
+			}
 		}
 	}
 }
@@ -523,7 +496,7 @@ void CTFNavMesh::CollectControlPointAreas()
 		CTeamControlPointMaster *pMaster = g_hControlPointMasters[0].Get();
 		if ( pMaster )
 		{
-			for ( int i=0; i < ITriggerAreaCaptureAutoList::AutoList().Count(); ++i )
+			FOR_EACH_VEC( ITriggerAreaCaptureAutoList::AutoList(), i )
 			{
 				CTriggerAreaCapture *pCaptureArea = static_cast<CTriggerAreaCapture *>( ITriggerAreaCaptureAutoList::AutoList()[i] );
 
@@ -542,7 +515,7 @@ void CTFNavMesh::CollectControlPointAreas()
 
 					float flMinDist = FLT_MAX;
 					Vector vOrigin = pCaptureArea->WorldSpaceCenter();
-					for ( int j=0; j < m_CPAreas[iIndex].Count(); ++j )
+					FOR_EACH_VEC( m_CPAreas[iIndex], j )
 					{
 						Vector vCenter = m_CPAreas[iIndex][j]->GetCenter();
 						float flDistance = ( vCenter - vOrigin ).AsVector2D().LengthSqr();
@@ -558,9 +531,23 @@ void CTFNavMesh::CollectControlPointAreas()
 	}
 }
 
+void CTFNavMesh::CollectAreasWithinBombTravelRange( CUtlVector<CTFNavArea *> *areas, float minTravel, float maxTravel ) const
+{
+	FOR_EACH_VEC( TheNavAreas, i )
+	{
+		CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
+
+		float travelDistance = area->GetBombTargetDistance();
+		if ( travelDistance >= minTravel && travelDistance <= maxTravel )
+		{
+			areas->AddToTail( area );
+		}
+	}
+}
+
 void CTFNavMesh::ComputeBlockedAreas()
 {
-	for ( int i=0; i<TheNavAreas.Count(); ++i )
+	FOR_EACH_VEC( TheNavAreas, i )
 	{
 		CNavArea *area = TheNavAreas[i];
 		area->UnblockArea();
@@ -611,14 +598,14 @@ void CTFNavMesh::ComputeBlockedAreas()
 			CTFNavArea *area = potentiallyBlockedAreas[i];
 
 			bool bDoorBlocks = false;
-			if ( area->HasTFAttributes( DOOR_ALWAYS_BLOCKS ) )
+			if ( area->HasTFAttributes( TF_NAV_DOOR_ALWAYS_BLOCKS ) )
 				bDoorBlocks = bDoorClosed;
 			else
 				bDoorBlocks = ( !bFiltered && bDoorClosed ) || iNavTeam > TEAM_UNASSIGNED;
 
 			if ( bDoorBlocks )
 			{
-				if ( !area->HasTFAttributes( DOOR_NEVER_BLOCKS ) )
+				if ( !area->HasTFAttributes( TF_NAV_DOOR_NEVER_BLOCKS ) )
 					area->MarkAsBlocked( iNavTeam, pDoor );
 			}
 			else
@@ -636,8 +623,8 @@ void CTFNavMesh::ComputeIncursionDistances()
 	for ( int i=0; i<TheNavAreas.Count(); ++i )
 	{
 		CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
-		area->SetIncursionDistance( TF_TEAM_RED, -1.0f );
-		area->SetIncursionDistance( TF_TEAM_BLUE, -1.0f );
+		for ( int i=0; i < TF_TEAM_COUNT; ++i )
+			area->SetIncursionDistance( i, -1.0f );
 	}
 
 	bool bFoundRedSpawn = false;
@@ -715,16 +702,64 @@ void CTFNavMesh::ComputeIncursionDistances()
 
 void CTFNavMesh::ComputeIncursionDistances( CTFNavArea *startArea, int teamNum )
 {
+	VPROF_SCOPE_BEGIN( __FUNCTION__ );
 	Assert( teamNum >= 0 && teamNum <= 3 );
-	VPROF_BUDGET( __FUNCTION__, "NextBot" );
 	
 	if ( startArea )
 	{
 		startArea->SetIncursionDistance( teamNum, 0.0f );
 
-		ComputeIncursionDistance functor( teamNum );
-		SearchSurroundingAreas( startArea, functor );
+		CNavArea::ClearSearchLists();
+
+		startArea->AddToOpenList();
+		startArea->SetParent( NULL );
+		startArea->Mark();
+
+		CUtlVectorFixedGrowable<const NavConnect *, 64u> adjCons;
+		while ( !CNavArea::IsOpenListEmpty() )
+		{
+			CTFNavArea *area = static_cast<CTFNavArea *>( CNavArea::PopOpenList() );
+
+			adjCons.RemoveAll();
+
+			if ( !TFGameRules()->IsMannVsMachineMode() && !area->HasTFAttributes( TF_NAV_RED_SETUP_GATE|TF_NAV_BLUE_SETUP_GATE|TF_NAV_SPAWN_ROOM_EXIT ) && area->IsBlocked( teamNum ) )
+				continue;
+
+			for ( int dir = 0; dir < NUM_DIRECTIONS; ++dir )
+			{
+				for ( int i=0; i < area->GetAdjacentCount( (NavDirType)dir ); ++i )
+				{
+					const NavConnect *connection = &( *area->GetAdjacentAreas( (NavDirType)dir ) )[i];
+					adjCons.AddToTail( connection );
+				}
+			}
+
+			if ( adjCons.IsEmpty() )
+				continue;
+
+			FOR_EACH_VEC( adjCons, i )
+			{
+				const NavConnect *connect = adjCons[i];
+				CTFNavArea *adjArea = static_cast<CTFNavArea *>( connect->area );
+
+				if ( area->ComputeAdjacentConnectionHeightChange( adjArea ) > 45.f )
+					continue;
+
+				float flIncursionDist = area->GetIncursionDistance( teamNum ) + connect->length;
+				if ( adjArea->GetIncursionDistance( teamNum ) < 0.0f || flIncursionDist < adjArea->GetIncursionDistance( teamNum ) )
+				{
+					adjArea->SetIncursionDistance( teamNum, flIncursionDist );
+					adjArea->Mark();
+					adjArea->SetParent( area );
+
+					if ( !adjArea->IsOpen() )
+						adjArea->AddToOpenListTail();
+				}
+			}
+		}
 	}
+
+	VPROF_SCOPE_END();
 }
 
 void CTFNavMesh::ComputeInvasionAreas()
@@ -747,40 +782,44 @@ void CTFNavMesh::DecorateMesh()
 	m_spawnExitsTeam1.RemoveAll();
 	m_spawnExitsTeam2.RemoveAll();
 
-	for ( int i=0; i<IFuncRespawnRoomAutoList::AutoList().Count(); ++i )
+	FOR_EACH_VEC( IFuncRespawnRoomAutoList::AutoList(), i )
 	{
-		CFuncRespawnRoom *respawnRoom = static_cast<CFuncRespawnRoom *>( IFuncRespawnRoomAutoList::AutoList()[i] );
-		if ( respawnRoom->GetActive() && !respawnRoom->m_bDisabled )
+		CFuncRespawnRoom *pRespawnRoom = static_cast<CFuncRespawnRoom *>( IFuncRespawnRoomAutoList::AutoList()[i] );
+		if ( pRespawnRoom->GetActive() && !pRespawnRoom->m_bDisabled )
 		{
-			for ( int j=0; j<ITFTeamSpawnAutoList::AutoList().Count(); ++j )
+			FOR_EACH_VEC( ITFTeamSpawnAutoList::AutoList(), j )
 			{
-				CTFTeamSpawn *teamSpawn = static_cast<CTFTeamSpawn *>( ITFTeamSpawnAutoList::AutoList()[j] );
-				if ( teamSpawn->IsTriggered( NULL ) && !teamSpawn->IsDisabled() && respawnRoom->PointIsWithin( teamSpawn->GetAbsOrigin() ) )
-				{
-					Extent ext;
-					ext.Init( respawnRoom );
+				CTFTeamSpawn *pTeamSpawn = static_cast<CTFTeamSpawn *>( ITFTeamSpawnAutoList::AutoList()[j] );
+				// Has anyone spawned here yet?
+				if ( !pTeamSpawn->IsTriggered( NULL ) || pTeamSpawn->IsDisabled() )
+					continue;
+				// Is it even located in a spawn room? !BUG! this breaks on Arena
+				if ( !pRespawnRoom->PointIsWithin( pTeamSpawn->GetAbsOrigin() ) )
+					continue;
+				
+				Extent ext;
+				ext.Init( pRespawnRoom );
 
-					if ( teamSpawn->GetTeamNumber() == TF_TEAM_RED )
-					{
-						CollectAndLabelSpawnRooms func( respawnRoom, TF_TEAM_RED, &m_spawnAreasTeam1 );
-						ForAllAreasOverlappingExtent( func, ext );
-					}
-					else
-					{
-						CollectAndLabelSpawnRooms func( respawnRoom, TF_TEAM_BLUE, &m_spawnAreasTeam2 );
-						ForAllAreasOverlappingExtent( func, ext );
-					}
+				if ( pTeamSpawn->GetTeamNumber() == TF_TEAM_RED )
+				{
+					CollectAndLabelSpawnRooms func( pRespawnRoom, TF_TEAM_RED, &m_spawnAreasTeam1 );
+					ForAllAreasOverlappingExtent( func, ext );
+				}
+				else
+				{
+					CollectAndLabelSpawnRooms func( pRespawnRoom, TF_TEAM_BLUE, &m_spawnAreasTeam2 );
+					ForAllAreasOverlappingExtent( func, ext );
 				}
 			}
 		}
 	}
 
-	for ( int i=0; i<m_spawnAreasTeam1.Count(); ++i )
+	FOR_EACH_VEC( m_spawnAreasTeam1, i )
 	{
 		CollectAndMarkSpawnRoomExits( m_spawnAreasTeam1[i], &m_spawnExitsTeam1 );
 	}
 
-	for ( int i=0; i<m_spawnAreasTeam2.Count(); ++i )
+	FOR_EACH_VEC( m_spawnAreasTeam2, i )
 	{
 		CollectAndMarkSpawnRoomExits( m_spawnAreasTeam2[i], &m_spawnExitsTeam2 );
 	}
@@ -791,9 +830,9 @@ void CTFNavMesh::DecorateMesh()
 		if ( area )
 		{
 			if ( FClassnameIs( pEnt, "item_ammopack*" ) )
-				area->AddTFAttributes( AMMO );
+				area->AddTFAttributes( TF_NAV_AMMO );
 			else if ( FClassnameIs( pEnt, "item_healthkit*" ) )
-				area->AddTFAttributes( HEALTH );
+				area->AddTFAttributes( TF_NAV_HEALTH );
 		}
 	}
 
@@ -801,25 +840,177 @@ void CTFNavMesh::DecorateMesh()
 	{
 		for ( int j=0; j<m_CPAreas[i].Count(); ++j )
 		{
-			m_CPAreas[i][j]->AddTFAttributes( CONTROL_POINT );
+			m_CPAreas[i][j]->AddTFAttributes( TF_NAV_CONTROL_POINT );
 		}
 	}
 }
 
-// Irrelevant MvM computations
-/*void CTFNavMesh::ComputeBombTargetDistance()
+void CTFNavMesh::ComputeBombTargetDistance()
 {
-	// Back traces from a capture zone entity to each area to figure out
-	// the distance between it and the area as long as the area is reachable
-}*/
+	if ( !TFGameRules()->IsMannVsMachineMode() )
+		return;
+	VPROF_BUDGET( __FUNCTION__, "NextBot" );
 
-/*void CTFNavMesh::ComputeLegalBombDropAreas()
+	CCaptureZone *zone = NULL;
+	FOR_EACH_VEC( ICaptureZoneAutoList::AutoList(), i )
+	{
+		zone = static_cast<CCaptureZone *>( ICaptureZoneAutoList::AutoList()[i] );
+		if ( zone->GetTeamNumber() == TF_TEAM_MVM_BOTS )
+		{
+			break;
+		}
+	}
+
+	if ( zone )
+	{
+		CTFNavArea *startArea = (CTFNavArea *)TheNavMesh->GetNearestNavArea( zone->WorldSpaceCenter(), false, 500.0f, true );
+		if ( startArea )
+		{
+			FOR_EACH_VEC( TheNavAreas, it )
+			{
+				CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[it] );
+				area->SetBombTargetDistance( -1.0f );
+			}
+
+			startArea->SetBombTargetDistance( 0.0f );
+
+			CNavArea::ClearSearchLists();
+
+			startArea->AddToOpenList();
+			startArea->SetParent( NULL );
+			startArea->Mark();
+
+			CUtlVectorFixedGrowable<const NavConnect *, 64u> adjCons;
+			while ( !CNavArea::IsOpenListEmpty() )
+			{
+				CTFNavArea *area = static_cast<CTFNavArea *>( CNavArea::PopOpenList() );
+
+				adjCons.RemoveAll();
+
+				for ( int dir = 0; dir < NUM_DIRECTIONS; ++dir )
+				{
+					for ( int i=0; i < area->GetAdjacentCount( (NavDirType)dir ); ++i )
+					{
+						const NavConnect *connection = &( *area->GetAdjacentAreas( (NavDirType)dir ) )[i];
+						adjCons.AddToTail( connection );
+					}
+				}
+
+				if ( adjCons.IsEmpty() )
+					continue;
+
+				FOR_EACH_VEC( adjCons, i )
+				{
+					const NavConnect *connect = adjCons[i];
+					CTFNavArea *adjArea = static_cast<CTFNavArea *>( connect->area );
+
+					if ( area->ComputeAdjacentConnectionHeightChange( adjArea ) > 45.f )
+						continue;
+
+					float flDistanceToHatch = area->GetBombTargetDistance() + connect->length;
+					if ( adjArea->GetBombTargetDistance() < 0.0f || flDistanceToHatch < adjArea->GetBombTargetDistance() )
+					{
+						adjArea->SetBombTargetDistance( flDistanceToHatch );
+						adjArea->Mark();
+						adjArea->SetParent( area );
+
+						if ( !adjArea->IsOpen() )
+							adjArea->AddToOpenListTail();
+					}
+					else
+					{
+						float flShortcutToHatch = adjArea->GetBombTargetDistance() + connect->length;
+						if ( flShortcutToHatch < area->GetBombTargetDistance() )
+						{
+							area->SetBombTargetDistance( flShortcutToHatch );
+							area->Mark();
+							area->SetParent( adjArea );
+
+							if ( !area->IsOpen() )
+								area->AddToOpenListTail();
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			Warning( "No nav area for bomb delivery zone." );
+		}
+	}
+	else
+	{
+		Warning( "Can't find bomb delivery zone." );
+	}
+}
+
+void CTFNavMesh::ComputeLegalBombDropAreas()
 {
-	// Flood fills from an area it found in TheNavAreas with BLUE_SPAWN_ROOM flag
-	// with BOMB_DROP flag if not BLUE_SPAWN_ROOM|RED_SPAWN_ROOM
+	if ( !TFGameRules()->IsMannVsMachineMode() )
+		return;
+	VPROF_BUDGET( __FUNCTION__, "NextBot" );
 
-	// These areas determine if the bomb resets if it's dropped from a robot
-}*/
+	CTFNavArea *startArea = NULL;
+	FOR_EACH_VEC( TheNavAreas, i )
+	{
+		CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
+		area->RemoveTFAttributes( TF_NAV_BOMB_DROP );
+
+		if ( area->HasTFAttributes( TF_NAV_BLUE_SPAWN_ROOM ) )
+			startArea = area;
+	}
+
+	if ( startArea )
+	{
+		CNavArea::ClearSearchLists();
+
+		startArea->AddToOpenList();
+		startArea->SetParent( NULL );
+		startArea->Mark();
+
+		CUtlVectorFixedGrowable<const NavConnect *, 64u> adjCons;
+		while ( !CNavArea::IsOpenListEmpty() )
+		{
+			CTFNavArea *area = static_cast<CTFNavArea *>( CNavArea::PopOpenList() );
+
+			adjCons.RemoveAll();
+
+			for ( int dir = 0; dir < NUM_DIRECTIONS; ++dir )
+			{
+				for ( int i=0; i < area->GetAdjacentCount( (NavDirType)dir ); ++i )
+				{
+					const NavConnect *connection = &( *area->GetAdjacentAreas( (NavDirType)dir ) )[i];
+					adjCons.AddToTail( connection );
+				}
+			}
+
+			if ( adjCons.IsEmpty() )
+				continue;
+
+			FOR_EACH_VEC( adjCons, i )
+			{
+				const NavConnect *connect = adjCons[i];
+				CTFNavArea *adjArea = static_cast<CTFNavArea *>( connect->area );
+
+				if ( area->ComputeAdjacentConnectionHeightChange( adjArea ) > StepHeight )
+					continue;
+
+				if ( !adjArea->HasTFAttributes( TF_NAV_BLUE_SPAWN_ROOM|TF_NAV_RED_SPAWN_ROOM ) )
+					adjArea->AddTFAttributes( TF_NAV_BOMB_DROP );
+				
+				adjArea->Mark();
+				adjArea->SetParent( area );
+
+				if ( !adjArea->IsOpen() )
+					adjArea->AddToOpenListTail();
+			}
+		}
+	}
+	else
+	{
+		Warning( "Can't find blue spawn room nav areas. No legal bomb drop areas are marked" );
+	}
+}
 
 void CTFNavMesh::OnObjectChanged()
 {
@@ -839,10 +1030,10 @@ void CTFNavMesh::OnObjectChanged()
 
 	if ( !sentries.IsEmpty() )
 	{
-		for ( int i=0; i < TheNavAreas.Count(); ++i )
+		FOR_EACH_VEC( TheNavAreas, i )
 		{
 			CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
-			for ( int j=0; j < sentries.Count(); ++j )
+			FOR_EACH_VEC( sentries, j )
 			{
 				CBaseObject *obj = sentries[j];
 				Vector sentryPos = obj->GetAbsOrigin();
@@ -851,12 +1042,13 @@ void CTFNavMesh::OnObjectChanged()
 				Vector areaPos( 0.0f );
 				area->GetClosestPointOnArea( sentryPos, &areaPos );
 
-				if ( areaPos.DistToSqr( sentryPos ) < Square( SENTRYGUN_BASE_RANGE ) )
+				if ( areaPos.DistToSqr( sentryPos ) < Square( SENTRYGUN_BASE_RANGE ) &&
+					 area->IsPartiallyVisible( obj->GetAbsOrigin() + Vector(0, 0, 30.f), obj ) )
 				{
-					if ( !area->HasAttributes( BLUE_SENTRY|RED_SENTRY ) )
+					if ( !area->HasAttributes( TF_NAV_BLUE_SENTRY|TF_NAV_RED_SENTRY ) )
 						m_sentryAreas.AddToTail( area );
 
-					area->AddTFAttributes( team == TF_TEAM_RED ? RED_SENTRY : BLUE_SENTRY );
+					area->AddTFAttributes( team == TF_TEAM_RED ? TF_NAV_RED_SENTRY : TF_NAV_BLUE_SENTRY );
 				}
 			}
 		}
@@ -875,8 +1067,8 @@ void CTFNavMesh::RecomputeInternalData()
 	ComputeBlockedAreas();
 	ComputeIncursionDistances();
 	ComputeInvasionAreas();
-	//ComputeLegalBombDropAreas();
-	//ComputeBombTargetDistance();
+	ComputeLegalBombDropAreas();
+	ComputeBombTargetDistance();
 
 	for ( int i=0; i<TheNavAreas.Count(); ++i )
 	{
@@ -884,33 +1076,33 @@ void CTFNavMesh::RecomputeInternalData()
 
 		if ( m_pointState <= CP_STATE_RESET )
 		{
-			if ( area->HasTFAttributes( BLOCKED_UNTIL_POINT_CAPTURE ) )
-				area->AddTFAttributes( BLOCKED );
+			if ( area->HasTFAttributes( TF_NAV_BLOCKED_UNTIL_POINT_CAPTURE ) )
+				area->AddTFAttributes( TF_NAV_BLOCKED );
 		}
 
 		if ( m_pointState == CP_STATE_OWNERSHIP_CHANGED )
 		{
-			if ( area->HasTFAttributes( BLOCKED_UNTIL_POINT_CAPTURE ) )
+			if ( area->HasTFAttributes( TF_NAV_BLOCKED_UNTIL_POINT_CAPTURE ) )
 			{
-				if ( area->HasTFAttributes( WITH_SECOND_POINT ) && m_pointChangedIdx > 0 )
-					area->RemoveTFAttributes( BLOCKED );
-				else if ( area->HasTFAttributes( WITH_THIRD_POINT ) && m_pointChangedIdx > 1 )
-					area->RemoveTFAttributes( BLOCKED );
-				else if ( area->HasTFAttributes( WITH_FOURTH_POINT ) && m_pointChangedIdx > 2 )
-					area->RemoveTFAttributes( BLOCKED );
-				else if ( area->HasTFAttributes( WITH_FIFTH_POINT ) && m_pointChangedIdx > 3 )
-					area->RemoveTFAttributes( BLOCKED );
+				if ( area->HasTFAttributes( TF_NAV_WITH_SECOND_POINT ) && m_pointChangedIdx > 0 )
+					area->RemoveTFAttributes( TF_NAV_BLOCKED );
+				else if ( area->HasTFAttributes( TF_NAV_WITH_THIRD_POINT ) && m_pointChangedIdx > 1 )
+					area->RemoveTFAttributes( TF_NAV_BLOCKED );
+				else if ( area->HasTFAttributes( TF_NAV_WITH_FOURTH_POINT ) && m_pointChangedIdx > 2 )
+					area->RemoveTFAttributes( TF_NAV_BLOCKED );
+				else if ( area->HasTFAttributes( TF_NAV_WITH_FIFTH_POINT ) && m_pointChangedIdx > 3 )
+					area->RemoveTFAttributes( TF_NAV_BLOCKED );
 			}
-			else if ( area->HasTFAttributes( BLOCKED_AFTER_POINT_CAPTURE ) )
+			else if ( area->HasTFAttributes( TF_NAV_BLOCKED_AFTER_POINT_CAPTURE ) )
 			{
-				if ( area->HasTFAttributes( WITH_SECOND_POINT ) && m_pointChangedIdx > 0 )
-					area->AddTFAttributes( BLOCKED );
-				else if ( area->HasTFAttributes( WITH_THIRD_POINT ) && m_pointChangedIdx > 1 )
-					area->AddTFAttributes( BLOCKED );
-				else if ( area->HasTFAttributes( WITH_FOURTH_POINT ) && m_pointChangedIdx > 2 )
-					area->AddTFAttributes( BLOCKED );
-				else if ( area->HasTFAttributes( WITH_FIFTH_POINT ) && m_pointChangedIdx > 3 )
-					area->AddTFAttributes( BLOCKED );
+				if ( area->HasTFAttributes( TF_NAV_WITH_SECOND_POINT ) && m_pointChangedIdx > 0 )
+					area->AddTFAttributes( TF_NAV_BLOCKED );
+				else if ( area->HasTFAttributes( TF_NAV_WITH_THIRD_POINT ) && m_pointChangedIdx > 1 )
+					area->AddTFAttributes( TF_NAV_BLOCKED );
+				else if ( area->HasTFAttributes( TF_NAV_WITH_FOURTH_POINT ) && m_pointChangedIdx > 2 )
+					area->AddTFAttributes( TF_NAV_BLOCKED );
+				else if ( area->HasTFAttributes( TF_NAV_WITH_FIFTH_POINT ) && m_pointChangedIdx > 3 )
+					area->AddTFAttributes( TF_NAV_BLOCKED );
 			}
 		}
 	}
@@ -923,7 +1115,7 @@ void CTFNavMesh::RemoveAllMeshDecoration()
 	for ( int i=0; i < TheNavAreas.Count(); ++i )
 	{
 		CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
-		area->RemoveTFAttributes( TF_ATTRIBUTE_RESET );
+		area->RemoveTFAttributes( ~TF_PERSISTENT_ATTRIBUTES );
 	}
 
 	m_sentryAreas.RemoveAll();
@@ -933,7 +1125,7 @@ void CTFNavMesh::RemoveAllMeshDecoration()
 void CTFNavMesh::ResetMeshAttributes( bool fullReset )
 {
 	for ( int i=0; i<m_sentryAreas.Count(); ++i )
-		m_sentryAreas[i]->RemoveTFAttributes( BLUE_SENTRY|RED_SENTRY );
+		m_sentryAreas[i]->RemoveTFAttributes( TF_NAV_BLUE_SENTRY|TF_NAV_RED_SENTRY );
 
 	m_sentryAreas.RemoveAll();
 
@@ -947,178 +1139,268 @@ void CTFNavMesh::ResetMeshAttributes( bool fullReset )
 
 void CTFNavMesh::UpdateDebugDisplay() const
 {
-	if ( !engine->IsDedicatedServer() )
+	if ( engine->IsDedicatedServer() )
+		return;
+	
+	CBasePlayer *host = UTIL_GetListenServerHost();
+	if ( !host || !host->IsConnected() )
+		return;
+
+	if ( tf_show_enemy_invasion_areas.GetBool() )
 	{
-		CBasePlayer *host = UTIL_GetListenServerHost();
-		if ( host && host->IsConnected() )
+		CTFNavArea *area = static_cast<CTFNavArea *>( host->GetLastKnownArea() );
+		if ( area )
 		{
-			for ( int i=0; i<TheNavAreas.Count(); ++i )
+			const CUtlVector<CTFNavArea *> &invasionAreas = area->GetInvasionAreasForTeam( host->GetTeamNumber() );
+			FOR_EACH_VEC( invasionAreas, i )
 			{
-				CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
-				Vector center = area->GetCenter();
-
-				if ( tf_show_in_combat_areas.GetBool() && area->IsInCombat() )
-				{
-					float flIntensity = area->GetCombatIntensity();
-					area->DrawFilled( flIntensity * 255, 0, 0, 255 );
-				}
-
-				if ( tf_show_blocked_areas.GetBool() )
-				{
-					CUtlString string;
-					if ( area->IsBlocked( TF_TEAM_RED ) && area->IsBlocked( TF_TEAM_BLUE ) )
-						string = "Blocked for All";
-					else if ( area->IsBlocked( TF_TEAM_RED ) )
-						string = "Blocked for Red";
-					else if ( area->IsBlocked( TF_TEAM_BLUE ) )
-						string = "Blocked for Blue";
-
-					if ( area == GetSelectedArea() && !string.IsEmpty() )
-						NDebugOverlay::Text( center, string, true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-				}
-
-				if ( tf_show_mesh_decoration.GetBool() )
-				{
-					if ( area == GetSelectedArea() )
-					{
-						if ( area->HasTFAttributes( RESCUE_CLOSET ) )
-						{
-							NDebugOverlay::Text( center, "Resupply Locker", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( NO_SPAWNING ) )
-						{
-							NDebugOverlay::Text( center, "No Spawning", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( BLUE_SPAWN_ROOM ) )
-						{
-							if ( !area->HasTFAttributes( SPAWN_ROOM_EXIT ) )
-							{
-								NDebugOverlay::Text( center, "Blue Spawn Room", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-								continue;
-							}
-
-							NDebugOverlay::Text( center, "Blue Spawn Exit", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( RED_SPAWN_ROOM ) )
-						{
-							if ( !area->HasTFAttributes( SPAWN_ROOM_EXIT ) )
-							{
-								NDebugOverlay::Text( center, "Red Spawn Room", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-								continue;
-							}
-
-							NDebugOverlay::Text( center, "Red Spawn Exit", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( HEALTH ) || area->HasTFAttributes( AMMO ) )
-						{
-							if ( !area->HasTFAttributes( AMMO ) )
-							{
-								NDebugOverlay::Text( center, "Health", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-								continue;
-							}
-
-							if ( !area->HasTFAttributes( HEALTH ) )
-							{
-								NDebugOverlay::Text( center, "Ammo", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-								continue;
-							}
-
-							NDebugOverlay::Text( center, "Health & Ammo", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( CONTROL_POINT ) )
-						{
-							NDebugOverlay::Text( center, "Control Point", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( DOOR_NEVER_BLOCKS ) )
-						{
-							NDebugOverlay::Text( center, "Door Never Blocks", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( DOOR_ALWAYS_BLOCKS ) )
-						{
-							NDebugOverlay::Text( center, "Door Always Blocks", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( UNBLOCKABLE ) )
-						{
-							NDebugOverlay::Text( center, "Unblockable", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( SNIPER_SPOT ) )
-						{
-							NDebugOverlay::Text( center, "Sniper Spot", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( SENTRY_SPOT ) )
-						{
-							NDebugOverlay::Text( center, "Sentry Spot", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( BLOCKED_UNTIL_POINT_CAPTURE ) )
-						{
-							CUtlString string( "Blocked Until Second Point Captured" );
-							if ( !area->HasAttributes( WITH_SECOND_POINT ) )
-								string = "Blocked Until Third Point Captured";
-							else if ( !area->HasAttributes( WITH_THIRD_POINT ) )
-								string = "Blocked Until Fourth Point Captured";
-							else if ( !area->HasAttributes( WITH_FOURTH_POINT ) )
-								string = "Blocked Until Fifth Point Captured";
-							else if ( !area->HasAttributes( WITH_FIFTH_POINT ) )
-								string = "Blocked Until First Point Captured";
-
-							NDebugOverlay::Text( center, string, true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-
-						if ( area->HasTFAttributes( BLOCKED_AFTER_POINT_CAPTURE ) )
-						{
-							CUtlString string( "Blocked After Second Point Captured" );
-							if ( !area->HasAttributes( WITH_SECOND_POINT ) )
-								string = "Blocked After Third Point Captured";
-							else if ( !area->HasAttributes( WITH_THIRD_POINT ) )
-								string = "Blocked After Fourth Point Captured";
-							else if ( !area->HasAttributes( WITH_FOURTH_POINT ) )
-								string = "Blocked After Fifth Point Captured";
-							else if ( !area->HasAttributes( WITH_FIFTH_POINT ) )
-								string = "Blocked After First Point Captured";
-
-							NDebugOverlay::Text( center, string, true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
-							continue;
-						}
-					}
-				}
-
-				// TODO
+				CTFNavArea *invArea = invasionAreas[i];
+				invArea->DrawFilled( 255, 0, 0, 255 );
 			}
+		}
+	}
 
-			if ( tf_show_enemy_invasion_areas.GetBool() )
+	if ( tf_show_incursion_flow.GetInt() > 0 || tf_show_incursion_flow_gradient.GetInt() > 0 )
+	{
+		Vector vecFwd;
+		host->EyeVectors( &vecFwd );
+
+		Vector const vecStart = host->EyePosition();
+
+		trace_t tr;
+		CTraceFilterWalkableEntities filter( NULL, COLLISION_GROUP_NONE, WALK_THRU_EVERYTHING );
+		UTIL_TraceLine( vecStart, vecStart + vecFwd * 2000.f, MASK_NPCSOLID, &filter, &tr );
+
+		CTFNavArea *area = static_cast<CTFNavArea *>( GetNearestNavArea( tr.endpos, false, 500.f ) );
+		if ( area )
+		{
+			if ( tf_show_incursion_flow.GetInt() > 0 )
 			{
-				CTFNavArea *area = static_cast<CTFNavArea *>( host->GetLastKnownArea() );
-				if ( area )
+				DrawIncursionFlow func;
+				SearchSurroundingAreas( area, area->GetCenter(), func, tf_show_incursion_flow_range.GetFloat() );
+			}
+			else if ( tf_show_incursion_flow_gradient.GetInt() > 0 )
+			{
+				int nTeam = tf_show_incursion_flow.GetInt() + 1;
+				int r = (nTeam == TF_TEAM_RED) ? 255 : 0;
+				int b = (nTeam == TF_TEAM_BLUE) ? 255 : 0;
+
+				area->DrawFilled( r, 0, b, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+
+				CUtlVector<CTFNavArea *> areas;
+				area->CollectNextIncursionAreas( nTeam, &areas );
+				FOR_EACH_VEC( areas, i )
 				{
-					const CUtlVector<CTFNavArea *> &invasionAreas = area->GetInvasionAreasForTeam( host->GetTeamNumber() );
-					for ( int i=0; i<invasionAreas.Count(); ++i )
+					areas[i]->DrawFilled( Min( r + 100, 255 ), 100, Min( b + 100, 255 ), 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+				}
+
+				area->CollectPriorIncursionAreas( nTeam, &areas );
+				FOR_EACH_VEC( areas, i )
+				{
+					areas[i]->DrawFilled( r / 2, 0, b / 2, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+				}
+			}
+		}
+	}
+	
+	FOR_EACH_VEC( TheNavAreas, i )
+	{
+		CTFNavArea *area = static_cast<CTFNavArea *>( TheNavAreas[i] );
+		Vector center = area->GetCenter();
+
+		if ( tf_show_in_combat_areas.GetBool() && area->IsInCombat() )
+		{
+			float flIntensity = area->GetCombatIntensity();
+			area->DrawFilled( flIntensity * 255, 0, 0, 255 );
+		}
+
+		if ( tf_show_blocked_areas.GetBool() )
+		{
+			CUtlString string;
+			if ( area->IsBlocked( TF_TEAM_RED ) && area->IsBlocked( TF_TEAM_BLUE ) )
+				string = "Blocked for All";
+			else if ( area->IsBlocked( TF_TEAM_RED ) )
+				string = "Blocked for Red";
+			else if ( area->IsBlocked( TF_TEAM_BLUE ) )
+				string = "Blocked for Blue";
+
+			if ( area == GetSelectedArea() && !string.IsEmpty() )
+				NDebugOverlay::Text( center, string, true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+		}
+
+		if ( tf_show_actor_potential_visibility.GetBool() )
+		{
+			if ( area->IsPotentiallyVisibleToTeam( TF_TEAM_BLUE ) )
+			{
+				if ( area->IsPotentiallyVisibleToTeam( TF_TEAM_RED ) )
+					area->DrawFilled( 255, 0, 255, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+				else
+					area->DrawFilled( 0, 0, 255, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+			}
+			else if ( area->IsPotentiallyVisibleToTeam( TF_TEAM_RED ) )
+			{
+				area->DrawFilled( 255, 0, 0, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+			}
+		}
+
+		if ( tf_show_bomb_drop_areas.GetBool() )
+		{
+			if ( area->HasTFAttributes( TF_NAV_BOMB_DROP ) )
+				area->DrawFilled( 0, 255, 0, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+		}
+
+		if ( tf_show_control_points.GetBool() )
+		{
+			for ( int idx=0; idx < MAX_CONTROL_POINTS; ++idx )
+			{
+				FOR_EACH_VEC( m_CPAreas[idx], i )
+				{
+					m_CPAreas[idx][i]->DrawFilled( 255, 150, 0, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+				}
+
+				m_CPArea[idx]->DrawFilled( 255, 255, 0, 255, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+			}
+		}
+
+		if ( tf_show_mesh_decoration.GetBool() || tf_show_mesh_decoration_manual.GetBool() )
+		{
+			if ( area == GetSelectedArea() )
+			{
+				if ( !tf_show_mesh_decoration_manual.GetBool() )
+				{
+					if ( area->HasTFAttributes( TF_NAV_RESCUE_CLOSET ) )
 					{
-						CTFNavArea *invArea = invasionAreas[i];
-						invArea->DrawFilled( 255, 0, 0, 255 );
+						NDebugOverlay::Text( center, "Resupply Locker", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+						continue;
 					}
+
+					if ( area->HasTFAttributes( TF_NAV_BLUE_SPAWN_ROOM ) )
+					{
+						if ( !area->HasTFAttributes( TF_NAV_SPAWN_ROOM_EXIT ) )
+						{
+							NDebugOverlay::Text( center, "Blue Spawn Room", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+							continue;
+						}
+
+						NDebugOverlay::Text( center, "Blue Spawn Exit", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+						continue;
+					}
+
+					if ( area->HasTFAttributes( TF_NAV_RED_SPAWN_ROOM ) )
+					{
+						if ( !area->HasTFAttributes( TF_NAV_SPAWN_ROOM_EXIT ) )
+						{
+							NDebugOverlay::Text( center, "Red Spawn Room", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+							continue;
+						}
+
+						NDebugOverlay::Text( center, "Red Spawn Exit", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+						continue;
+					}
+
+					if ( area->HasTFAttributes( TF_NAV_HEALTH ) || area->HasTFAttributes( TF_NAV_AMMO ) )
+					{
+						if ( !area->HasTFAttributes( TF_NAV_AMMO ) )
+						{
+							NDebugOverlay::Text( center, "Health", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+							continue;
+						}
+
+						if ( !area->HasTFAttributes( TF_NAV_HEALTH ) )
+						{
+							NDebugOverlay::Text( center, "Ammo", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+							continue;
+						}
+
+						NDebugOverlay::Text( center, "Health & Ammo", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+						continue;
+					}
+
+					if ( area->HasTFAttributes( TF_NAV_CONTROL_POINT ) )
+					{
+						NDebugOverlay::Text( center, "Control Point", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+						continue;
+					}
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_NO_SPAWNING ) )
+				{
+					NDebugOverlay::Text( center, "No Spawning", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_BLUE_SETUP_GATE ) )
+				{
+					NDebugOverlay::Text( center, "Blue Setup Gate", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_RED_SETUP_GATE ) )
+				{
+					NDebugOverlay::Text( center, "Red Setup Gate", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_DOOR_NEVER_BLOCKS ) )
+				{
+					NDebugOverlay::Text( center, "Door Never Blocks", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_DOOR_ALWAYS_BLOCKS ) )
+				{
+					NDebugOverlay::Text( center, "Door Always Blocks", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_UNBLOCKABLE ) )
+				{
+					NDebugOverlay::Text( center, "Unblockable", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_SNIPER_SPOT ) )
+				{
+					NDebugOverlay::Text( center, "Sniper Spot", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_SENTRY_SPOT ) )
+				{
+					NDebugOverlay::Text( center, "Sentry Spot", true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_BLOCKED_UNTIL_POINT_CAPTURE ) )
+				{
+					CUtlString string( "Blocked Until Second Point Captured" );
+					if ( !area->HasAttributes( TF_NAV_WITH_SECOND_POINT ) )
+						string = "Blocked Until Third Point Captured";
+					else if ( !area->HasAttributes( TF_NAV_WITH_THIRD_POINT ) )
+						string = "Blocked Until Fourth Point Captured";
+					else if ( !area->HasAttributes( TF_NAV_WITH_FOURTH_POINT ) )
+						string = "Blocked Until Fifth Point Captured";
+					else if ( !area->HasAttributes( TF_NAV_WITH_FIFTH_POINT ) )
+						string = "Blocked Until First Point Captured";
+
+					NDebugOverlay::Text( center, string, true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
+				}
+
+				if ( area->HasTFAttributes( TF_NAV_BLOCKED_AFTER_POINT_CAPTURE ) )
+				{
+					CUtlString string( "Blocked After Second Point Captured" );
+					if ( !area->HasAttributes( TF_NAV_WITH_SECOND_POINT ) )
+						string = "Blocked After Third Point Captured";
+					else if ( !area->HasAttributes( TF_NAV_WITH_THIRD_POINT ) )
+						string = "Blocked After Fourth Point Captured";
+					else if ( !area->HasAttributes( TF_NAV_WITH_FOURTH_POINT ) )
+						string = "Blocked After Fifth Point Captured";
+					else if ( !area->HasAttributes( TF_NAV_WITH_FIFTH_POINT ) )
+						string = "Blocked After First Point Captured";
+
+					NDebugOverlay::Text( center, string, true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+					continue;
 				}
 			}
 		}

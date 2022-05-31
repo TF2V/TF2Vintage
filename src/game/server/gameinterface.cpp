@@ -93,6 +93,7 @@
 #include "vscript/ivscript.h"
 #include "vscript_server.h"
 #include "ScriptGameEventListener.h"
+#include "rtime.h"
 #ifdef _WIN32
 #include <direct.h> // getcwd
 #elif POSIX
@@ -124,6 +125,7 @@ extern ConVar tf_mm_servermode;
 
 #ifdef USES_ECON_ITEMS
 #include "econ_item_system.h"
+#include "tf_inventory.h"
 #endif // USES_ECON_ITEMS
 
 #ifdef CSTRIKE_DLL // BOTPORT: TODO: move these ifdefs out
@@ -231,7 +233,7 @@ INetworkStringTable *g_pStringTableInfoPanel = NULL;
 INetworkStringTable *g_pStringTableClientSideChoreoScenes = NULL;
 INetworkStringTable *g_pStringTableServerMapCycle = NULL;
 
-#ifdef TF_DLL
+#if defined( TF_DLL ) || defined( TF_VINTAGE )
 INetworkStringTable *g_pStringTableServerPopFiles = NULL;
 INetworkStringTable *g_pStringTableServerMapCycleMvM = NULL;
 #endif
@@ -576,36 +578,325 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CServerGameDLL, IServerGameDLL, INTERFACEVERSI
 // When bumping the version to this interface, check that our assumption is still valid and expose the older version in the same way
 COMPILE_TIME_ASSERT( INTERFACEVERSION_SERVERGAMEDLL_INT == 10 );
 
+static int CaseInsensitiveStringSort( char * const * sz1, char * const * sz2 )
+{
+	return V_stricmp( *sz1, *sz2 );
+}
 static void MountAdditionalContent()
 {
-	KeyValues *pMainFile = new KeyValues( "gameinfo.txt" );
+#ifndef NO_STEAM
+	KeyValuesAD pMainFile( "gameinfo" );
+	bool bSuccess = false;
 #ifndef _WINDOWS
 	// case sensitivity
-	pMainFile->LoadFromFile( filesystem, "GameInfo.txt", "MOD" );
-	if ( !pMainFile )
+	bSuccess = pMainFile->LoadFromFile( g_pFullFileSystem, "GameInfo.txt", "MOD" );
+	if ( !bSuccess )
 #endif
-		pMainFile->LoadFromFile( filesystem, "gameinfo.txt", "MOD" );
+		bSuccess = pMainFile->LoadFromFile( g_pFullFileSystem, "gameinfo.txt", "MOD" );
 
-	if ( pMainFile )
+	if ( !bSuccess )
 	{
-		KeyValues* pFileSystemInfo = pMainFile->FindKey( "FileSystem" );
-		if ( pFileSystemInfo )
+		Error( "Unable to load GameInfo.txt, does it exist?" );
+		return;
+	}
+
+	KeyValues* pFileSystemInfo = pMainFile->FindKey( "FileSystem" );
+	if ( !pFileSystemInfo )
+	{
+		Error( "Error parsing GameInfo.txt, KV is malformed (Missing FileSystem key)" );
+		return;
+	}
+
+	KeyValues* pAdditionaContentId = pFileSystemInfo->FindKey( "AdditionalContentServerID" );
+	KeyValues* pAdditionaContentIdClient = pFileSystemInfo->FindKey( "AdditionalContentID" );
+	if ( !pAdditionaContentId && !pAdditionaContentIdClient )
+	{
+		return;
+	}
+	
+	KeyValues* pAdditionaContentRoot = pFileSystemInfo->FindKey( "AdditionalContentRoot" );
+	if ( !pAdditionaContentRoot )
+	{
+		Warning( "Unable to mount extra content, root folder was not provided \n" );
+		return;
+	}
+
+	if ( !steamapicontext->SteamApps() )
+	{
+		Warning( "Unable to mount extra content, unkown error\n" );
+		return;
+	}
+		
+	int appid = NULL;
+	for ( int i = 0; i < 2; i++ )
+	{
+		appid = NULL; // Set this NULL again so we can check other values.
+		
+		if ( i == 0 )	// Check the server ID first...
+			appid = abs( pAdditionaContentId->GetInt() );
+		else			// ...then the client ID second.
+			appid = abs( pAdditionaContentIdClient->GetInt() );
+			
+		if ( appid )
 		{
-			for ( KeyValues *pKey = pFileSystemInfo->GetFirstSubKey(); pKey; pKey = pKey->GetNextKey() )
+			
+			if ( !steamapicontext->SteamApps()->BIsAppInstalled( appid ) )
 			{
-				if ( Q_stricmp( pKey->GetName(), "AdditionalContentId" ) == 0 )
+				Warning( "Unable to mount extra content with AppId: %i\nApp not installed.\n", appid );
+				break;
+			}
+
+			char szAppDirectory[ MAX_PATH ];
+			steamapicontext->SteamApps()->GetAppInstallDir( appid, szAppDirectory, sizeof( szAppDirectory ) );
+
+			V_AppendSlash( szAppDirectory, sizeof( szAppDirectory ) );
+			V_strcat_safe( szAppDirectory, pAdditionaContentRoot->GetString() );
+
+			g_pFullFileSystem->AddSearchPath( szAppDirectory, "MOD" );
+			g_pFullFileSystem->AddSearchPath( szAppDirectory, "GAME" );
+
+			KeyValues *pAdditionalContent = pFileSystemInfo->FindKey( "AdditionalContentPaths" );
+			if ( pAdditionalContent )
+			{
+				char szAbsPathName[ MAX_PATH ];
+				V_ExtractFilePath( szAppDirectory, szAbsPathName, sizeof( szAbsPathName ) );
+
+				FOR_EACH_VALUE( pAdditionalContent, pSubKey )
 				{
-					int appid = abs( pKey->GetInt() );
-					if ( appid )
+					const char *pszLocation = pSubKey->GetString();
+					const char *pszBaseDir = szAbsPathName;
+
+					const char CONTENTROOT_TOKEN[] = "|content_root|";
+					if ( Q_stristr( pszLocation, CONTENTROOT_TOKEN ) == pszLocation )
 					{
-						if ( filesystem->MountSteamContent( -appid ) != FILESYSTEM_MOUNT_OK )
-							Warning( "Unable to mount extra content with appId: %i\n", appid );
+						pszLocation += strlen( CONTENTROOT_TOKEN );
+						pszBaseDir = szAppDirectory;
+					}
+
+					V_MakeAbsolutePath( szAbsPathName, sizeof( szAbsPathName ), pszLocation, pszBaseDir );
+
+					V_FixSlashes( szAbsPathName );
+					V_RemoveDotSlashes( szAbsPathName );
+					V_StripTrailingSlash( szAbsPathName );
+
+					CUtlStringList fullFilePaths;
+					if ( V_stristr( pszLocation, "?" ) == NULL && V_stristr( pszLocation, "*" ) == NULL )
+					{
+						fullFilePaths.CopyAndAddToTail( szAbsPathName );
+					}
+					else
+					{
+						FileFindHandle_t hFind;
+						char const *pszFileFound = g_pFullFileSystem->FindFirst( szAbsPathName, &hFind );
+						while ( pszFileFound )
+						{
+							if ( pszFileFound[0] != '.' )
+							{
+								if ( g_pFullFileSystem->FindIsDirectory( hFind ) || V_stristr( pszFileFound, "vpk" ) )
+								{
+									char szAbsPath[MAX_PATH];
+									V_ExtractFilePath( szAbsPathName, szAbsPath, sizeof( szAbsPath ) );
+									V_AppendSlash( szAbsPath, sizeof( szAbsPath ) );
+									V_strcat_safe( szAbsPath, pszFileFound, COPY_ALL_CHARACTERS );
+
+									fullFilePaths.CopyAndAddToTail( szAbsPath );
+								}
+							}
+
+							pszFileFound = g_pFullFileSystem->FindNext( hFind );
+						}
+						g_pFullFileSystem->FindClose( hFind );
+
+						fullFilePaths.Sort( CaseInsensitiveStringSort );
+
+						FOR_EACH_VEC_BACK( fullFilePaths, i )
+						{
+							char ext[10];
+							V_ExtractFileExtension( fullFilePaths[i], ext, sizeof( ext ) );
+
+							if ( Q_stricmp( ext, "vpk" ) == 0 )
+							{
+								char *szDirVPK = Q_stristr( fullFilePaths[i], "_dir.vpk" );
+								if ( szDirVPK == NULL )
+								{
+									delete fullFilePaths[i];
+									fullFilePaths.Remove(i);
+								}
+								else
+								{
+									*szDirVPK = '\0';
+									V_strcat( szDirVPK, ".vpk", MAX_PATH );
+								}
+							}
+						}
+					}
+
+					// Parse Path ID list
+					CUtlStringList pathIDs;
+					V_SplitString( pSubKey->GetName(), "+", pathIDs );
+					FOR_EACH_VEC( pathIDs, i )
+					{
+						Q_StripPrecedingAndTrailingWhitespace( pathIDs[i] );
+					}
+
+					FOR_EACH_VEC( fullFilePaths, i )
+					{
+						FOR_EACH_VEC( pathIDs, j )
+						{
+							g_pFullFileSystem->AddSearchPath( fullFilePaths[i], pathIDs[j], PATH_ADD_TO_HEAD );
+						}
 					}
 				}
 			}
 		}
 	}
-	pMainFile->deleteThis();
+#endif
+}
+
+
+// This one is a general file load and is intended so that gameinfo.txt does not need to be updated between mods.
+static void MountModBoilerplateContent()
+{
+	KeyValuesAD pMainFile("gameinfo");
+	bool bSuccess = false;
+#ifndef _WINDOWS
+	// case sensitivity
+	bSuccess = pMainFile->LoadFromFile(g_pFullFileSystem, "GameInfo.txt", "MOD");
+	if (!bSuccess)
+#endif
+		bSuccess = pMainFile->LoadFromFile(g_pFullFileSystem, "gameinfo.txt", "MOD");
+
+	if (!bSuccess)
+	{
+		Error("Unable to load GameInfo.txt, does it exist?");
+		return;
+	}
+
+	KeyValues* pFileSystemInfo = pMainFile->FindKey("FileSystem");
+	if (!pFileSystemInfo)
+	{
+		Error("Error parsing GameInfo.txt, KV is malformed (Missing FileSystem key)");
+		return;
+	}
+
+	KeyValues* pAdditionaContentId = pFileSystemInfo->FindKey("AdditionalContentId");
+	if (!pAdditionaContentId)
+	{
+		return;
+	}
+
+	char szAppDirectory[MAX_PATH];
+	strcpy(szAppDirectory, CommandLine()->ParmValue("-basedir", ""));
+
+	V_AppendSlash(szAppDirectory, sizeof(szAppDirectory));
+
+	g_pFullFileSystem->AddSearchPath(szAppDirectory, "MOD");
+	g_pFullFileSystem->AddSearchPath(szAppDirectory, "GAME");
+
+	char platform[MAX_PATH];
+	Q_strncpy( platform, szAppDirectory, MAX_PATH );
+	Q_StripTrailingSlash( platform );
+	Q_strncat( platform, "/../platform", MAX_PATH, MAX_PATH );
+	g_pFullFileSystem->AddSearchPath( platform, "PLATFORM" );
+
+	KeyValues* pAdditionalContent = pFileSystemInfo->FindKey("SourcemodEssentialPaths");
+	if (pAdditionalContent)
+	{
+		char szAbsPathName[MAX_PATH];
+		V_ExtractFilePath(szAppDirectory, szAbsPathName, sizeof(szAbsPathName));
+
+		FOR_EACH_VALUE(pAdditionalContent, pSubKey)
+		{
+			const char* pszLocation = pSubKey->GetString();
+			const char* pszBaseDir = szAbsPathName;
+
+			const char GAMEINFOPATH_TOKEN[] = "|gameinfo_path|";
+			const char BASESOURCEPATHS_TOKEN[] = "|all_source_engine_paths|";
+			if (Q_stristr(pszLocation, GAMEINFOPATH_TOKEN) == pszLocation)
+			{
+				pszLocation += strlen(GAMEINFOPATH_TOKEN);
+				pszBaseDir = szAppDirectory;
+			}
+			else if (Q_stristr(pszLocation, BASESOURCEPATHS_TOKEN) == pszLocation)
+			{
+				pszLocation += strlen(BASESOURCEPATHS_TOKEN);
+			}
+
+			V_MakeAbsolutePath(szAbsPathName, sizeof(szAbsPathName), pszLocation, pszBaseDir);
+
+			V_FixSlashes(szAbsPathName);
+			V_RemoveDotSlashes(szAbsPathName);
+			V_StripTrailingSlash(szAbsPathName);
+
+			CUtlStringList fullFilePaths;
+			if (V_stristr(pszLocation, "?") == NULL && V_stristr(pszLocation, "*") == NULL)
+			{
+				fullFilePaths.CopyAndAddToTail(szAbsPathName);
+			}
+			else
+			{
+				FileFindHandle_t hFind;
+				char const* pszFileFound = g_pFullFileSystem->FindFirst(szAbsPathName, &hFind);
+				while (pszFileFound)
+				{
+					if (pszFileFound[0] != '.')
+					{
+						if (g_pFullFileSystem->FindIsDirectory(hFind) || V_stristr(pszFileFound, "vpk"))
+						{
+							char szAbsPath[MAX_PATH];
+							V_ExtractFilePath(szAbsPathName, szAbsPath, sizeof(szAbsPath));
+							V_AppendSlash(szAbsPath, sizeof(szAbsPath));
+							V_strcat_safe(szAbsPath, pszFileFound, COPY_ALL_CHARACTERS);
+
+							fullFilePaths.CopyAndAddToTail(szAbsPath);
+						}
+					}
+
+					pszFileFound = g_pFullFileSystem->FindNext(hFind);
+				}
+				g_pFullFileSystem->FindClose(hFind);
+
+				fullFilePaths.Sort(CaseInsensitiveStringSort);
+
+				FOR_EACH_VEC_BACK(fullFilePaths, i)
+				{
+					char ext[10];
+					V_ExtractFileExtension(fullFilePaths[i], ext, sizeof(ext));
+
+					if (Q_stricmp(ext, "vpk") == 0)
+					{
+						char* szDirVPK = Q_stristr(fullFilePaths[i], "_dir.vpk");
+						if (szDirVPK == NULL)
+						{
+							delete fullFilePaths[i];
+							fullFilePaths.Remove(i);
+						}
+						else
+						{
+							*szDirVPK = '\0';
+							V_strcat(szDirVPK, ".vpk", MAX_PATH);
+						}
+					}
+				}
+			}
+
+			// Parse Path ID list
+			CUtlStringList pathIDs;
+			V_SplitString(pSubKey->GetName(), "+", pathIDs);
+			FOR_EACH_VEC(pathIDs, i)
+			{
+				Q_StripPrecedingAndTrailingWhitespace(pathIDs[i]);
+			}
+
+			FOR_EACH_VEC(fullFilePaths, i)
+			{
+				FOR_EACH_VEC(pathIDs, j)
+				{
+					g_pFullFileSystem->AddSearchPath(fullFilePaths[i], pathIDs[j]);
+				}
+			}
+		}
+	}
 }
 
 bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory, 
@@ -667,7 +958,8 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( IsX360() && (matchmaking = (IMatchmaking *)appSystemFactory( VENGINE_MATCHMAKING_VERSION, NULL )) == NULL )
 		return false;
 
-	if ( !CommandLine()->CheckParm( "-noscripting" ) )
+	//if ( !CommandLine()->CheckParm( "-noscripting" ) )
+	if ( CommandLine()->CheckParm( "-vscript" ) )
 	{
 	#if defined( TF_VINTAGE )
 		char szCwd[1024];
@@ -699,7 +991,8 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		return false;
 
 	MountAdditionalContent();
-
+	MountModBoilerplateContent();
+	
 	// cache the globals
 	gpGlobals = pGlobals;
 
@@ -1023,11 +1316,8 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 	VPROF("CServerGameDLL::LevelInit");
 
 #ifdef USES_ECON_ITEMS
-	GameItemSchema_t *pItemSchema = ItemSystem()->GetItemSchema();
-	if ( pItemSchema )
-	{
-		pItemSchema->BInitFromDelayedBuffer();
-	}
+	// Reload the inventory on a new map.
+	GetTFInventory()->Init();
 #endif // USES_ECON_ITEMS
 
 	ResetWindspeed();
@@ -1365,6 +1655,8 @@ void CServerGameDLL::PreClientUpdate( bool simulating )
 	}
 	*/
 
+	CRTime::UpdateRealTime();
+
 //#ifdef _DEBUG  - allow this in release for now
 	DrawAllDebugOverlays();
 //#endif
@@ -1500,7 +1792,7 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 	g_pStringTableClientSideChoreoScenes = networkstringtable->CreateStringTable( "Scenes", MAX_CHOREO_SCENES_STRINGS );
 	g_pStringTableServerMapCycle = networkstringtable->CreateStringTable( "ServerMapCycle", 128 );
 
-#ifdef TF_DLL
+#if defined( TF_DLL ) || defined( TF_VINTAGE )
 	g_pStringTableServerPopFiles = networkstringtable->CreateStringTable( "ServerPopFiles", 128 );
 	g_pStringTableServerMapCycleMvM = networkstringtable->CreateStringTable( "ServerMapCycleMvM", 128 );
 #endif
@@ -1508,7 +1800,7 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 	bool bPopFilesValid = true;
 	(void)bPopFilesValid; // Avoid unreferenced variable warning
 
-#ifdef TF_DLL
+#if defined( TF_DLL ) || defined( TF_VINTAGE )
 	bPopFilesValid = ( g_pStringTableServerPopFiles != NULL );
 #endif
 

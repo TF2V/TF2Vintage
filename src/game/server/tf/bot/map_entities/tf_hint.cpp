@@ -93,10 +93,10 @@ void CTFBotHint::UpdateNavDecoration()
 	switch ( m_hint )
 	{
 		case 0:
-			bits = SNIPER_SPOT;
+			bits = TF_NAV_SNIPER_SPOT;
 			break;
 		case 1:
-			bits = SENTRY_SPOT;
+			bits = TF_NAV_SENTRY_SPOT;
 			break;
 		default:
 			break;

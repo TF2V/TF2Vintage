@@ -1042,6 +1042,25 @@ bool ConVar::GetMax( float& maxVal ) const
 	return m_pParent->m_bHasMax;
 }
 
+
+//-----------------------------------------------------------------------------
+// Purpose: Set a convar's bound
+//-----------------------------------------------------------------------------
+void ConVar::SetMin(float min)
+{
+	m_pParent->m_bHasMin = true;
+	m_pParent->m_fMinVal = min;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Set a convar's bound
+//-----------------------------------------------------------------------------
+void ConVar::SetMax(float max)
+{
+	m_pParent->m_bHasMax = true;
+	m_pParent->m_fMaxVal = max;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : const char

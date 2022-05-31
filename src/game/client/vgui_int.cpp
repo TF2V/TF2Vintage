@@ -33,6 +33,8 @@
 #endif
 
 #if defined( TF_VINTAGE_CLIENT )
+//Tony; so we can load localization at initialize
+#include <vgui/ILocalize.h>
 #include "tf_mainmenu.h"
 #include "tf_mainmenu_interface.h"
 #endif
@@ -196,6 +198,12 @@ bool VGui_Startup( CreateInterfaceFn appSystemFactory )
 	{
 		return false;
 	}
+
+	//Tony; add localization for the specific SDK.
+#if defined( TF_VINTAGE_CLIENT )
+	g_pVGuiLocalize->AddFile( "resource/tf_%language%.txt", "GAME" );
+#endif
+
 	return true;
 }
 

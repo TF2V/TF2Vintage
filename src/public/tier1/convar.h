@@ -369,6 +369,8 @@ public:
 	bool						GetMax( float& maxVal ) const;
 	const char					*GetDefault( void ) const;
 	void						SetDefault( const char *pszDefault );
+	void						SetMin(float min);
+	void						SetMax(float max);
 
 private:
 	// Called by CCvar when the value of a var is changing.

@@ -1,3 +1,9 @@
+//========= Copyright © Valve LLC, All rights reserved. =======================
+//
+// Purpose:		
+//
+// $NoKeywords: $
+//=============================================================================
 #include "cbase.h"
 #include "tf_bot.h"
 #include "tf_bot_squad.h"
@@ -8,14 +14,20 @@
 #include "map_entities/tf_hint.h"
 #include "medic/tf_bot_medic_heal.h"
 #include "spy/tf_bot_spy_infiltrate.h"
+#include "spy/tf_bot_spy_leave_spawn_room.h"
 #include "sniper/tf_bot_sniper_lurk.h"
 #include "engineer/tf_bot_engineer_build.h"
+#include "engineer/mvm_engineer/tf_bot_mvm_engineer_idle.h"
 #include "scenario/capture_the_flag/tf_bot_fetch_flag.h"
 #include "scenario/capture_the_flag/tf_bot_deliver_flag.h"
 #include "scenario/capture_point/tf_bot_capture_point.h"
 #include "scenario/capture_point/tf_bot_defend_point.h"
 #include "scenario/payload/tf_bot_payload_push.h"
 #include "scenario/payload/tf_bot_payload_guard.h"
+#include "missions/tf_bot_mission_destroy_sentries.h"
+#include "missions/tf_bot_mission_reprogrammed.h"
+#include "missions/tf_bot_mission_suicide_bomber.h"
+#include "squad/tf_bot_escort_squad_leader.h"
 #include "tf_gamerules.h"
 #include "entity_capture_flag.h"
 
@@ -51,7 +63,7 @@ ActionResult<CTFBot> CTFBotScenarioMonitor::Update( CTFBot *me, float dt )
 		return BaseClass::SuspendFor( new CTFBotDeliverFlag, "I've picked up the flag! Running it in..." );
 	}
 
-	if ( m_fetchFlagDelay.IsElapsed() && me->IsAllowedToPickUpFlag() )
+	if ( !me->IsOnAnyMission() && m_fetchFlagDelay.IsElapsed() && me->IsAllowedToPickUpFlag() )
 	{
 		CCaptureFlag *pFlag = me->GetFlagToFetch();
 		if ( pFlag == nullptr )
@@ -87,6 +99,17 @@ ActionResult<CTFBot> CTFBotScenarioMonitor::Update( CTFBot *me, float dt )
 
 Action<CTFBot> *CTFBotScenarioMonitor::InitialContainedAction( CTFBot *actor )
 {
+	if ( actor->GetSquad() )
+	{
+		if ( actor->GetSquad()->GetLeader() == actor )
+			return DesiredScenarioAndClassAction( actor );
+
+		if ( actor->IsPlayerClass( TF_CLASS_MEDIC ) )
+			return new CTFBotMedicHeal;
+
+		return new CTFBotEscortSquadLeader( DesiredScenarioAndClassAction( actor ) );
+	}
+
 	return DesiredScenarioAndClassAction( actor );
 }
 
@@ -95,6 +118,46 @@ Action<CTFBot> *CTFBotScenarioMonitor::DesiredScenarioAndClassAction( CTFBot *ac
 {
 	if ( TheNavAreas.IsEmpty() )
 		return nullptr;
+
+	if ( actor->HasMission( CTFBot::MissionType::DESTROY_SENTRIES ) )
+		return new CTFBotMissionSuicideBomber;
+
+	if ( actor->HasMission( CTFBot::MissionType::SNIPER ) )
+		return new CTFBotSniperLurk;
+
+	if( actor->HasMission(CTFBot::MissionType::REPROGRAMMED) )
+		return new CTFBotMissionReprogrammed;
+
+	if ( TFGameRules()->IsMannVsMachineMode() )
+	{
+		if ( actor->IsPlayerClass( TF_CLASS_SPY ) )
+			return new CTFBotSpyLeaveSpawnRoom;
+
+		if ( actor->IsPlayerClass( TF_CLASS_MEDIC ) )
+		{
+			bool bIsBeingHealedByAMedic = false;
+			for ( int i=actor->m_Shared.GetNumHealers(); --i >= 0; )
+			{
+				CBaseEntity *pHealer = actor->m_Shared.GetHealerByIndex( i );
+				if ( pHealer && pHealer->IsPlayer() )
+				{
+					bIsBeingHealedByAMedic = true;
+					break;
+				}
+			}
+
+			if ( !bIsBeingHealedByAMedic )
+				return new CTFBotMedicHeal;
+		}
+
+		if ( actor->IsPlayerClass( TF_CLASS_ENGINEER ) )
+			return new CTFBotMvMEngineerIdle;
+
+		if ( actor->HasAttribute( CTFBot::AttributeType::AGGRESSIVE ) )
+			return new CTFBotPushToCapturePoint( new CTFBotFetchFlag( false ) );
+
+		return new CTFBotFetchFlag( false );
+	}
 
 	if ( actor->IsPlayerClass( TF_CLASS_SPY ) )
 		return new CTFBotSpyInfiltrate;
@@ -144,5 +207,5 @@ Action<CTFBot> *CTFBotScenarioMonitor::DesiredScenarioAndClassAction( CTFBot *ac
 		return new CTFBotCapturePoint;
 	}
 
-	return new CTFBotSeekAndDestroy( -1.0f );
+	return new CTFBotSeekAndDestroy;
 }

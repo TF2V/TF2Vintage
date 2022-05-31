@@ -40,6 +40,8 @@
 #define DISPENSE_CONTEXT		"DispenseContext"
 
 ConVar tf2v_explosive_dispensers("tf2v_explosive_dispensers","0", FCVAR_NOTIFY, "Exploding dispensers do nearby damage." );
+ConVar tf2v_use_dispenser_touch("tf2v_use_dispenser_touch","0", FCVAR_NOTIFY, "Players touching a dispenser receive double ammo." );
+
 
 //-----------------------------------------------------------------------------
 // Purpose: SendProxy that converts the Healing list UtlVector to entindices
@@ -148,6 +150,8 @@ CObjectDispenser::CObjectDispenser()
 	UseClientSideAnimation();
 
 	m_hTouchingEntities.Purge();
+	m_bPlayRefillSound = true;
+	m_bPlayAmmoPickupSound = true;
 
 	SetType( OBJ_DISPENSER );
 }
@@ -304,6 +308,11 @@ void CObjectDispenser::OnGoActive( void )
 
 	BaseClass::OnGoActive();
 
+	PlayActiveSound();
+}
+
+void CObjectDispenser::PlayActiveSound()
+{
 	EmitSound( "Building_Dispenser.Idle" );
 }
 
@@ -533,43 +542,74 @@ void CObjectDispenser::FinishUpgrading( void )
 	BaseClass::FinishUpgrading();
 }
 
+int CObjectDispenser::DispenseMetal( CTFPlayer *pPlayer )
+{
+	// Cart dispenser has infinite metal.
+	int iMetalToGive = DISPENSER_DROP_METAL + 10 * ( GetUpgradeLevel() - 1 );
+
+	if ( ( GetObjectFlags() & OF_DOESNT_HAVE_A_MODEL ) == 0 )
+		iMetalToGive = Min( m_iAmmoMetal.Get(), iMetalToGive );
+
+	int iMetal = pPlayer->GiveAmmo( iMetalToGive, TF_AMMO_METAL, !m_bPlayAmmoPickupSound, TF_AMMO_SOURCE_DISPENSER );
+
+	if ( ( GetObjectFlags() & OF_DOESNT_HAVE_A_MODEL ) == 0 )
+		m_iAmmoMetal -= iMetal;
+
+	return iMetal;
+}
+
 bool CObjectDispenser::DispenseAmmo( CTFPlayer *pPlayer )
 {
 	int iTotalPickedUp = 0;
 	float flAmmoRate = GetAmmoRate();
+	
+	// Double the ammo if the person is directly touching the dispenser.
+	if (tf2v_use_dispenser_touch.GetBool())
+	{
+		// for each player in touching list
+		for (int i = m_hTouchingEntities.Count() - 1; i >= 0; i--)
+		{
+			// See if this is our player
+			EHANDLE hEnt = m_hTouchingEntities[i];
 
-	if ( CAttributeManager::AttribHookValue<int>( 0, "no_primary_ammo_from_dispensers", pPlayer->GetActiveWeapon() ) == 0 )
+			CBaseEntity* pOther = hEnt.Get();
+			CTFPlayer* pToucher;
+			pToucher = ToTFPlayer(pOther);
+			if (pToucher && pPlayer == pToucher)
+			{
+				flAmmoRate *= 2;
+				break;
+			}
+		}
+	}
+
+	int nNoPrimaryAmmoFromDispensers = 0;
+	CALL_ATTRIB_HOOK_INT_ON_OTHER( pPlayer->GetActiveWeapon(), nNoPrimaryAmmoFromDispensers, no_primary_ammo_from_dispensers );
+
+	if ( nNoPrimaryAmmoFromDispensers == 0 )
 	{
 		// primary
-		int iPrimary = pPlayer->GiveAmmo( floor( pPlayer->GetMaxAmmo( TF_AMMO_PRIMARY ) * flAmmoRate ), TF_AMMO_PRIMARY, false, TF_AMMO_SOURCE_DISPENSER );
+		int iPrimary = pPlayer->GiveAmmo( floor( pPlayer->GetMaxAmmo( TF_AMMO_PRIMARY ) * flAmmoRate ), TF_AMMO_PRIMARY, !m_bPlayAmmoPickupSound, TF_AMMO_SOURCE_DISPENSER );
 		iTotalPickedUp += iPrimary;
 	}
 
 	// secondary
-	int iSecondary = pPlayer->GiveAmmo( floor( pPlayer->GetMaxAmmo( TF_AMMO_SECONDARY ) * flAmmoRate ), TF_AMMO_SECONDARY, false, TF_AMMO_SOURCE_DISPENSER );
+	int iSecondary = pPlayer->GiveAmmo( floor( pPlayer->GetMaxAmmo( TF_AMMO_SECONDARY ) * flAmmoRate ), TF_AMMO_SECONDARY, !m_bPlayAmmoPickupSound, TF_AMMO_SOURCE_DISPENSER );
 	iTotalPickedUp += iSecondary;
 
-	// Cart dispenser has infinite metal.
-	int iMetalToGive = DISPENSER_DROP_METAL + 10 * ( GetUpgradeLevel() - 1 );
-
-	if ( ( GetObjectFlags() & OF_IS_CART_OBJECT ) == 0 )
-		iMetalToGive = Min( m_iAmmoMetal.Get(), iMetalToGive );
-
-	if ( CAttributeManager::AttribHookValue<int>( 0, "no_metal_from_dispensers_while_active", pPlayer->GetActiveWeapon() ) == 0 )
+	// metal
+	int nNoMetalFromDispenserWhileActive = 0;
+	CALL_ATTRIB_HOOK_INT_ON_OTHER( pPlayer->GetActiveWeapon(), nNoMetalFromDispenserWhileActive, no_metal_from_dispensers_while_active );
+	if ( nNoMetalFromDispenserWhileActive == 0 )
 	{
-		int iMetal = pPlayer->GiveAmmo( iMetalToGive, TF_AMMO_METAL, false, TF_AMMO_SOURCE_DISPENSER );
-		iTotalPickedUp += iMetal;
-
-		if ( ( GetObjectFlags() & OF_IS_CART_OBJECT ) == 0 )
-			m_iAmmoMetal -= iMetal;
+		iTotalPickedUp += DispenseMetal( pPlayer );;
 	}
 
-	if ( iTotalPickedUp > 0 )
+	if ( iTotalPickedUp > 0 && m_bPlayAmmoPickupSound )
 	{
 		if (pPlayer->m_Shared.InCond( TF_COND_STEALTHED ))
 		{
-			CRecipientFilter filter;
-			filter.AddRecipient(pPlayer);
+			CSingleUserRecipientFilter filter( pPlayer );
 			EmitSound(filter, entindex(), "BaseCombatCharacter.AmmoPickup");
 		}
 		else
@@ -608,7 +648,7 @@ float CObjectDispenser::GetHealRate( void )
 
 float CObjectDispenser::GetAmmoRate( void )
 {
-	float flAmmoRate = g_flDispenserHealRates[GetUpgradeLevel() - 1];
+	float flAmmoRate = g_flDispenserAmmoRates[GetUpgradeLevel() - 1];
 
 	if ( GetOwner() )
 		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( GetOwner(), flAmmoRate, mult_dispenser_rate );
@@ -618,7 +658,7 @@ float CObjectDispenser::GetAmmoRate( void )
 
 void CObjectDispenser::RefillThink( void )
 {
-	if ( GetObjectFlags() & OF_IS_CART_OBJECT )
+	if ( GetObjectFlags() & OF_DOESNT_HAVE_A_MODEL )
 		return;
 
 	if ( IsDisabled() || IsUpgrading() || IsRedeploying() )
@@ -638,7 +678,8 @@ void CObjectDispenser::RefillThink( void )
 
 		m_iAmmoMetal = Min( m_iAmmoMetal + iToRefill, DISPENSER_MAX_METAL_AMMO );
 
-		EmitSound( "Building_Dispenser.GenerateMetal" );
+		if( m_bPlayRefillSound )
+			EmitSound( "Building_Dispenser.GenerateMetal" );
 	}
 
 	SetContextThink( &CObjectDispenser::RefillThink, gpGlobals->curtime + 6, REFILL_CONTEXT );
@@ -792,7 +833,7 @@ void CObjectDispenser::StartHealing( CBaseEntity *pOther )
 	if ( pPlayer )
 	{
 		float flHealRate = GetHealRate();
-		pPlayer->m_Shared.Heal( GetOwner(), flHealRate, true );
+		pPlayer->m_Shared.Heal( this, flHealRate, 1.0f, 1.0f, true, GetBuilder() );
 	}
 }
 
@@ -813,7 +854,7 @@ void CObjectDispenser::StopHealing( CBaseEntity *pOther )
 
 		if ( pPlayer )
 		{
-			pPlayer->m_Shared.StopHealing( GetOwner() );
+			pPlayer->m_Shared.StopHealing( this );
 		}
 	}
 }
@@ -890,7 +931,7 @@ int CObjectDispenser::DrawDebugTextOverlays( void )
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		char tempstr[512];
-		Q_snprintf( tempstr, sizeof( tempstr ),"Metal: %d", m_iAmmoMetal );
+		Q_snprintf( tempstr, sizeof( tempstr ),"Metal: %d", m_iAmmoMetal.Get() );
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -912,7 +953,7 @@ LINK_ENTITY_TO_CLASS( mapobj_cart_dispenser, CObjectCartDispenser );
 //-----------------------------------------------------------------------------
 void CObjectCartDispenser::Spawn( void )
 {
-	SetObjectFlags( OF_IS_CART_OBJECT );
+	SetObjectFlags( OF_DOESNT_HAVE_A_MODEL );
 
 	m_takedamage = DAMAGE_NO;
 

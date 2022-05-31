@@ -86,27 +86,25 @@ void CTFStickBomb::Smack()
 			// and then use that for the damage force, but they typo'd it and
 			// just reused the shoot position instead
 			
-			Vector where = owner->Weapon_ShootPosition();
+			Vector VecWpnPos = owner->Weapon_ShootPosition();
 			
-			CPVSFilter filter( where );
-			TE_TFExplosion( filter, 0.0f, where, Vector( 0.0f, 0.0f, 1.0f ),
+			CPVSFilter filter( VecWpnPos );
+			TE_TFExplosion( filter, 0.0f, VecWpnPos, Vector( 0.0f, 0.0f, 1.0f ),
 				TF_WEAPON_GRENADELAUNCHER, ENTINDEX( owner ) );
 				
 			float flDamage = 100.0f;
 			if ( tf2v_use_new_caber.GetBool() )
 				flDamage = 75.0f;
+			float flRadius = 100.0f;
 			
 			/* why is the damage force vector set to Weapon_ShootPosition()?
 			 * I dunno! */
-			CTakeDamageInfo dmginfo( owner, owner, this, where, where, flDamage,
+			CTakeDamageInfo dmgInfo( owner, owner, this, VecWpnPos, VecWpnPos, flDamage,
 				DMG_BLAST | DMG_CRITICAL | ( IsCurrentAttackACrit() ? DMG_USEDISTANCEMOD : 0 ),
-				TF_DMG_CUSTOM_STICKBOMB_EXPLOSION, &where );
+				TF_DMG_CUSTOM_STICKBOMB_EXPLOSION, &VecWpnPos );
 			
-			CTFRadiusDamageInfo radius;
-			radius.info       = &dmginfo;
-			radius.m_vecSrc   = where;
-			radius.m_flRadius = 100.0f;
-			TFGameRules()->RadiusDamage( radius );
+			CTFRadiusDamageInfo radiusInfo( &dmgInfo, VecWpnPos, flRadius, NULL, flRadius );
+			TFGameRules()->RadiusDamage( radiusInfo );
 		}
 #endif
 	}

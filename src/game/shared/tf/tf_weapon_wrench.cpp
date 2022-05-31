@@ -43,18 +43,26 @@ void CTFWrench::OnFriendlyBuildingHit( CBaseObject *pObject, CTFPlayer *pPlayer,
 {
 	// Did this object hit do any work? repair or upgrade?
 	bool bUsefulHit = pObject->InputWrenchHit( pPlayer, this, vecHitPos );
-
+	
 	CDisablePredictionFiltering disabler;
 
-	if ( bUsefulHit )
+	if ( pObject->IsDisposableBuilding() )
 	{
-		// play success sound
-		WeaponSound( SPECIAL1 );
+		CSingleUserRecipientFilter singleFilter( pPlayer );
+		EmitSound( singleFilter, pObject->entindex(), "Player.UseDeny" );
 	}
 	else
 	{
-		// play failure sound
-		WeaponSound( SPECIAL2 );
+		if ( bUsefulHit )
+		{
+			// play success sound
+			WeaponSound( SPECIAL1 );
+		}
+		else
+		{
+			// play failure sound
+			WeaponSound( SPECIAL2 );
+		}
 	}
 }
 #endif
@@ -126,24 +134,47 @@ bool CTFWrench::IsEurekaEffect( void )
 //-----------------------------------------------------------------------------
 void CTFWrench::ItemPostFrame( void )
 {
-#ifdef GAME_DLL
+
 	if (IsEurekaEffect())
 	{
 		// Eureka Effect checks if we pressed the reload key.
 		CTFPlayer *pOwner = ToTFPlayer( GetOwnerEntity() );
 		if ( pOwner->m_nButtons & IN_RELOAD )
-		EurekaTeleport();
-		
-	}
+		{
+			// If we had the Eureka HUD, this is where we would tell the client to pull up the HUD.
+			// Also a convar here to swapping between the new and old one. Old one will do, for now...
+#ifdef GAME_DLL
+		EurekaTeleport(false);
 #endif
+		}
+	}
 	BaseClass::ItemPostFrame();
 }
 
 #ifdef GAME_DLL
 //-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CTFWrench::ApplyBuildingHealthUpgrade( void )
+{
+	CTFPlayer *pPlayer = GetTFPlayerOwner();
+	if ( !pPlayer )
+		return;
+
+	for ( int i = pPlayer->GetObjectCount(); --i >= 0; )
+	{
+		CBaseObject *pObj = pPlayer->GetObject( i );
+		if ( pObj )
+		{
+			pObj->ApplyHealthUpgrade();
+		}		
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Sets up our teleporting.
 //-----------------------------------------------------------------------------
-void CTFWrench::EurekaTeleport( void )
+void CTFWrench::EurekaTeleport( bool bToTeleporter /* == false*/ )
 {
 	// Get our owner.
 	CTFPlayer *pOwner = ToTFPlayer( GetOwnerEntity() );
@@ -154,6 +185,7 @@ void CTFWrench::EurekaTeleport( void )
 	{
 		pOwner->StartEurekaTeleport();
 		pOwner->SetEurekaTeleportTime();
+		pOwner->SetEurekaToTeleporter(bToTeleporter);
 		pOwner->Taunt( TAUNT_EUREKA, MP_CONCEPT_TAUNT_EUREKA_EFFECT_TELEPORT );
 	}
 	

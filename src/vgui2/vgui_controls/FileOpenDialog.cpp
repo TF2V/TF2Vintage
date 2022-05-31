@@ -961,6 +961,7 @@ void FileOpenDialog::AddFilter( const char *filter, const char *filterName, bool
 	{
 		m_pFileTypeCombo->ActivateItem(itemID);
 	}
+	kv->deleteThis();
 }
 
 //-----------------------------------------------------------------------------

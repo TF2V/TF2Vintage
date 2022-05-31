@@ -119,8 +119,7 @@ void CTFWeaponInvis::CleanUpInvisibility( void )
 	if ( !pOwner )
 		return;
 
-	if ( pOwner->m_Shared.IsFeignDeathReady() )
-		pOwner->m_Shared.SetFeignReady( false );
+	pOwner->m_Shared.SetFeignReady( false );
 
 	if ( pOwner->m_Shared.IsStealthed() )
 		pOwner->m_Shared.FadeInvis( tf_spy_invis_unstealth_time.GetFloat() );

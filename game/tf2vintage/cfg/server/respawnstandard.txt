@@ -1,0 +1,2 @@
+mp_respawnwavetime 10
+mp_disable_respawn_times "0"

@@ -95,10 +95,10 @@ public:
 	virtual float 	GetDamageRadius( void );
 	virtual float	GetDamage(void);
 
+	bool		m_bFizzle;
+
 private:
 
-	
-	bool		m_bFizzle;
 	float		m_flMinSleepTime;
 
 	CHandle<CBaseEntity>	m_hEnemy;

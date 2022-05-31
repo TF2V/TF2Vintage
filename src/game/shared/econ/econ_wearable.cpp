@@ -26,12 +26,8 @@ IMPLEMENT_NETWORKCLASS_ALIASED( EconWearable, DT_EconWearable )
 BEGIN_NETWORK_TABLE( CEconWearable, DT_EconWearable )
 #ifdef GAME_DLL
 	SendPropString( SENDINFO( m_ParticleName ) ),
-	SendPropBool( SENDINFO( m_bExtraWearable ) ),
-	SendPropBool( SENDINFO( m_bDisguiseWearable ) ),
 #else
 	RecvPropString( RECVINFO( m_ParticleName ) ),
-	RecvPropBool( RECVINFO( m_bExtraWearable ) ),
-	RecvPropBool( RECVINFO( m_bDisguiseWearable ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -41,19 +37,14 @@ void CEconWearable::Spawn( void )
 
 	Precache();
 
-	if ( m_bExtraWearable && GetItem()->GetStaticData() )
-	{
-		SetModel( GetItem()->GetStaticData()->GetExtraWearableModel() );
-	}
-	else
+	if ( GetItem()->GetPlayerDisplayModel() )
 	{
 		SetModel( GetItem()->GetPlayerDisplayModel() );
 	}
 	
 	BaseClass::Spawn();
 
-	AddEffects( EF_BONEMERGE );
-	AddEffects( EF_BONEMERGE_FASTCULL );
+	AddEffects( EF_BONEMERGE|EF_BONEMERGE_FASTCULL );
 	SetCollisionGroup( COLLISION_GROUP_WEAPON );
 	SetBlocksLOS( false );
 }
@@ -80,23 +71,15 @@ int CEconWearable::GetSkin( void )
 	{
 		case TF_TEAM_RED:
 			return 0;
-			break;
 
 		case TF_TEAM_BLUE:
 			return 1;
-			break;
 
 		case TF_TEAM_GREEN:
 			return 2;
-			break;
 
 		case TF_TEAM_YELLOW:
 			return 3;
-			break;
-
-		default:
-			return 0;
-			break;
 	}
 
 	return m_nSkin;
@@ -143,9 +126,9 @@ int CEconWearable::GetLoadoutSlot(void)
 void CEconWearable::SetParticle(const char* name)
 {
 #ifdef GAME_DLL
-	Q_snprintf(m_ParticleName.GetForModify(), PARTICLE_MODIFY_STRING_SIZE, name);
+	Q_strncpy( m_ParticleName.GetForModify(), name, PARTICLE_MODIFY_STRING_SIZE );
 #else
-	Q_snprintf(m_ParticleName, PARTICLE_MODIFY_STRING_SIZE, name);
+	V_strcpy_safe( m_ParticleName, name );
 #endif
 }
 
@@ -190,13 +173,11 @@ void CEconWearable::Equip( CBasePlayer *pPlayer )
 		SetOwnerEntity( pPlayer );
 		ChangeTeam( pPlayer->GetTeamNumber() );
 
-		// Extra wearables don't provide attribute bonuses
-		if ( !IsExtraWearable() )
-			ReapplyProvision();
+		ReapplyProvision();
 
 	#ifdef GAME_DLL
 		UpdateModelToClass();
-		UpdatePlayerBodygroups( TURN_ON_BODYGROUPS );
+		UpdatePlayerBodygroups( TURN_ON_BODYGROUP_OVERRIDES );
 		PlayAnimForPlaybackEvent( WEARABLEANIM_EQUIP );
 	#endif
 	}
@@ -204,17 +185,12 @@ void CEconWearable::Equip( CBasePlayer *pPlayer )
 
 void CEconWearable::UnEquip( CBasePlayer *pPlayer )
 {
-	if ( pPlayer )
-	{
-	#ifdef GAME_DLL
-		UpdatePlayerBodygroups( TURN_OFF_BODYGROUPS );
-	#endif
-
-		StopFollowingEntity();
-
-		SetOwnerEntity( NULL );
-		ReapplyProvision();
-	}
+#ifdef GAME_DLL
+	UpdatePlayerBodygroups( TURN_OFF_BODYGROUP_OVERRIDES );
+#endif
+	StopFollowingEntity();
+	SetOwnerEntity( NULL );
+	ReapplyProvision();
 }
 #else
 
@@ -425,14 +401,14 @@ void CEconWearableGib::FinishModelInitialization( void )
 		solid_t solid;
 		if ( !PhysModelParseSolid( solid, this, GetModelIndex() ) )
 		{
-			DevMsg( __FUNCTION__ ": PhysModelParseSolid failed for entity %i.\n", GetModelIndex() );
+			DevMsg( "CEconWearableGib::FinishModelInitialization: PhysModelParseSolid failed for entity %i.\n", GetModelIndex() );
 			return;
 		}
 
 		m_pPhysicsObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
 		if ( m_pPhysicsObject == nullptr )
 		{
-			DevMsg( __FUNCTION__ ": VPhysicsInitNormal() failed for %s.\n", GetModelName() );
+			DevMsg( "CEconWearableGib::FinishModelInitialization: VPhysicsInitNormal() failed for %s.\n", GetModelName() );
 			return;
 		}
 	}

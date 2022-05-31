@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2005, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -105,8 +105,8 @@ void CTFSpectatorGUI::UpdateReinforcements( void )
 	C_TFPlayer *pPlayer = C_TFPlayer::GetLocalTFPlayer();
 	if ( !pPlayer || pPlayer->IsHLTV() ||
 		(pPlayer->GetTeamNumber() != TF_TEAM_RED && pPlayer->GetTeamNumber() != TF_TEAM_BLUE && pPlayer->GetTeamNumber() != TF_TEAM_GREEN && pPlayer->GetTeamNumber() != TF_TEAM_YELLOW) ||
-		( pPlayer->m_Shared.GetState() != TF_STATE_OBSERVER ) && ( pPlayer->m_Shared.GetState() != TF_STATE_DYING ) ||
-		( pPlayer->GetObserverMode() == OBS_MODE_FREEZECAM ) )
+		( ( pPlayer->m_Shared.GetState() != TF_STATE_OBSERVER ) && ( ( pPlayer->m_Shared.GetState() != TF_STATE_DYING ) ||
+		( pPlayer->GetObserverMode() == OBS_MODE_FREEZECAM ) ) ) )
 	{
 		m_pReinforcementsLabel->SetVisible( false );
 		return;
@@ -441,6 +441,15 @@ void CTFSpectatorGUI::ShowPanel(bool bShow)
 	}
 
 	BaseClass::ShowPanel( bShow );
+}
+
+Color CTFSpectatorGUI::GetBlackBarColor( void ) 
+{
+	IScheme *pScheme = scheme()->GetIScheme( GetScheme() );
+	if ( pScheme == NULL )
+		return Color( 52, 48, 45, 200 );
+
+	return pScheme->GetColor( "TFColors.SpectatorBarBrown", Color( 52, 48, 45, 255 ) );
 }
 
 const char *CTFSpectatorGUI::GetResFilename(void)

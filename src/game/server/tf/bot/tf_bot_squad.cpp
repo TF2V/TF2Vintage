@@ -72,7 +72,7 @@ CTFBotSquad::Iterator CTFBotSquad::GetFirstMember( void ) const
 		if ( bot && bot->IsAlive() )
 		{
 			return {
-				m_hMembers[i],
+				bot,
 				i,
 			};
 		}
@@ -92,7 +92,7 @@ CTFBotSquad::Iterator CTFBotSquad::GetNextMember( const Iterator& it ) const
 		if ( bot && bot->IsAlive() )
 		{
 			return {
-				m_hMembers[i],
+				bot,
 				i,
 			};
 		}
@@ -242,16 +242,13 @@ bool CTFBotSquad::ShouldSquadLeaderWaitForFormation( void ) const
 		if ( member == nullptr || !member->IsAlive() )
 			continue;
 
-		if ( member->m_flFormationError < 1.0f )
-			continue;
-
-		if ( member->m_bIsInFormation )
+		if ( member->IsPlayerClass( TF_CLASS_MEDIC ) )
 			continue;
 
 		if ( member->GetLocomotionInterface()->IsStuck() )
 			continue;
 
-		if ( !member->IsPlayerClass( TF_CLASS_MEDIC ) )
+		if ( member->m_flFormationError >= 1.0f && !member->m_bIsInFormation )
 			return true;
 	}
 

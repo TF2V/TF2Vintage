@@ -194,8 +194,8 @@ int CTFGrenadeStickybombProjectile::DrawModel( int flags )
 BEGIN_DATADESC( CTFGrenadeStickybombProjectile )
 END_DATADESC()
 
-LINK_ENTITY_TO_CLASS( tf_projectile_pipe_remote, CTFGrenadeStickybombProjectile );
-PRECACHE_REGISTER( tf_projectile_pipe_remote );
+//LINK_ENTITY_TO_CLASS( tf_projectile_pipe_remote, CTFGrenadeStickybombProjectile );
+//PRECACHE_REGISTER( tf_projectile_pipe_remote );
 
 //-----------------------------------------------------------------------------
 // Purpose:

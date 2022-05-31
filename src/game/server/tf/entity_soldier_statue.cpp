@@ -33,10 +33,11 @@ void CEntitySoldierStatue::StatueThink( void )
 	if( m_voiceLineTimer.IsElapsed() )
 	{
 		CUtlVector<CTFPlayer *> players;
-		CollectPlayers( &players, TF_TEAM_RED, true );
-		CollectPlayers( &players, TF_TEAM_BLUE, true, true );
-		for ( CTFPlayer *pPlayer : players )
+		CollectPlayers( &players, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+		CollectPlayers( &players, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
+		FOR_EACH_VEC( players, i )
 		{
+			CTFPlayer *pPlayer = players[i];
 			if ( !pPlayer->GetAbsVelocity().IsZero() )
 				continue;
 

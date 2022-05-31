@@ -1,0 +1,6 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "HUD/obj_rd_scorebar_stolen_red"
+	$translucent 1
+	$vertexcolor 1
+}

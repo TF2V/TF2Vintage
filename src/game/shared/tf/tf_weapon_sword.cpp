@@ -17,6 +17,7 @@
 #include "tf_weapon_sword.h"
 #include "decals.h"
 
+ConVar tf2v_use_new_honorbound( "tf2v_use_new_honorbound", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Deduct health on switch instead of being unable." );
 
 //=============================================================================
 //
@@ -28,15 +29,15 @@ CREATE_SIMPLE_WEAPON_TABLE( TFSword, tf_weapon_sword )
 IMPLEMENT_NETWORKCLASS_ALIASED( TFKatana, DT_TFKatana )
 BEGIN_NETWORK_TABLE( CTFKatana, DT_TFKatana )
 #ifdef CLIENT_DLL
-RecvPropBool( RECVINFO( m_bIsBloody ) ),
+	RecvPropBool( RECVINFO( m_bIsBloody ) ),
 #else
-SendPropBool( SENDINFO( m_bIsBloody ) ),
+	SendPropBool( SENDINFO( m_bIsBloody ) ),
 #endif
 END_NETWORK_TABLE()
 
 #if defined( CLIENT_DLL )
 BEGIN_PREDICTION_DATA( CTFKatana )
-DEFINE_PRED_FIELD( m_bIsBloody, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE )
+
 END_PREDICTION_DATA()
 #endif
 
@@ -141,6 +142,9 @@ void CTFSword::OnDecapitation( CTFPlayer *pVictim )
 	pOwner->TeamFortress_SetSpeed();
 
 #ifdef GAME_DLL
+	if ( pOwner->m_Shared.GetBestOverhealDecayMult() == -1.f )
+		pOwner->m_Shared.SetBestOverhealDecayMult( 0.25f );
+
 	if ( pOwner->m_Shared.GetMaxBuffedHealth() > pOwner->GetHealth() )
 		pOwner->TakeHealth( 15.0f, DMG_IGNORE_MAXHEALTH );
 
@@ -182,9 +186,56 @@ bool CTFKatana::Deploy( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CTFKatana::CanHolster( void )
+bool CTFKatana::CanHolster( void ) const
 {
-	return m_bIsBloody;
+	if( IsHonorBound() )
+	{
+		CTFPlayer *pPlayer = GetTFPlayerOwner();
+		if( pPlayer && ( pPlayer->GetActiveWeapon() != this || gpGlobals->curtime >= pPlayer->m_Shared.m_flFirstPrimaryAttack ) )
+		{
+			if ( !tf2v_use_new_honorbound.GetBool() && !m_bIsBloody )
+			{
+			#ifdef CLIENT_DLL
+				pPlayer->EmitSound( "Player.DenyWeaponSelection" );
+			#endif
+				return false;
+			}
+
+			if ( !m_bIsBloody && pPlayer->GetHealth() <= 50 )
+			{
+			#ifdef CLIENT_DLL
+				pPlayer->EmitSound( "Player.DenyWeaponSelection" );
+			#endif
+				return false;
+			}
+		}
+	}
+
+	return BaseClass::CanHolster();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CTFKatana::Holster( CBaseCombatWeapon *pSwitchingTo )
+{
+#ifndef CLIENT_DLL
+	if( IsHonorBound() && tf2v_use_new_honorbound.GetBool() )
+	{
+		CTFPlayer *pPlayer = GetTFPlayerOwner();
+		// Honorbound hurt yourself
+		if ( pPlayer && ( pPlayer->GetActiveWeapon() != this || gpGlobals->curtime >= pPlayer->m_Shared.m_flFirstPrimaryAttack ) )
+		{
+			if ( !m_bIsBloody && pPlayer->GetHealth() > 0 && pPlayer->IsAlive() )
+			{
+				CTakeDamageInfo info( pPlayer, pPlayer, vec3_origin, pPlayer->WorldSpaceCenter(), 50, GetDamageType() | DMG_PREVENT_PHYSICS_FORCE );
+				pPlayer->TakeDamage( info );
+			}
+		}
+	}
+#endif
+
+	return BaseClass::Holster( pSwitchingTo );
 }
 
 //-----------------------------------------------------------------------------
@@ -234,7 +285,7 @@ int CTFKatana::GetSkinOverride()
 			return 3;
 	}
 
-	return 3;
+	return -1;
 }
 
 void CTFKatana::OnDecapitation( CTFPlayer *pVictim )

@@ -23,6 +23,7 @@ ConVar tf_nav_combat_decay_rate( "tf_nav_combat_decay_rate", "0.022", FCVAR_CHEA
 
 ConVar tf_nav_show_incursion_distances( "tf_nav_show_incursion_distance", "0", FCVAR_CHEAT, "Display travel distances from current spawn room (1=red, 2=blue)" );
 ConVar tf_nav_show_turf_ownership( "tf_nav_show_turf_ownership", "0", FCVAR_CHEAT, "Color nav area by smallest incursion distance" );
+ConVar tf_nav_show_bomb_target_distance( "tf_nav_show_bomb_target_distance", "0", FCVAR_CHEAT, "Display travel distances to bomb target (MvM mode)" );
 ConVar tf_show_incursion_range( "tf_show_incursion_range", "0", FCVAR_CHEAT, "1 = red, 2 = blue" );
 ConVar tf_show_incursion_range_min( "tf_show_incursion_range_min", "0", FCVAR_CHEAT, "Highlight areas with incursion distances between min and max cvar values" );
 ConVar tf_show_incursion_range_max( "tf_show_incursion_range_max", "0", FCVAR_CHEAT, "Highlight areas with incursion distances between min and max cvar values" );
@@ -41,7 +42,7 @@ public:
 		m_iMarker = marker;
 	}
 
-	bool operator()( CNavArea *a )
+	inline bool operator()( CNavArea *a )
 	{
 		CTFNavArea *area = static_cast<CTFNavArea *>( a );
 		for ( int dir=0; dir<NUM_DIRECTIONS; ++dir )
@@ -49,7 +50,7 @@ public:
 			for ( int i=0; i<area->GetAdjacentAreas( (NavDirType)dir )->Count(); ++i )
 			{
 				CTFNavArea *other = static_cast<CTFNavArea *>( ( *area->GetAdjacentAreas( (NavDirType)dir ) )[i].area );
-				if ( other->m_TFSearchMarker == m_iMarker )
+				if ( other->GetSearchMarker() == m_iMarker )
 					continue;
 
 				if ( area->GetIncursionDistance( TF_TEAM_BLUE ) <= other->GetIncursionDistance( TF_TEAM_BLUE ) ||
@@ -68,7 +69,7 @@ public:
 			for ( int i=0; i<area->GetIncomingConnections( (NavDirType)dir )->Count(); ++i )
 			{
 				CTFNavArea *other = static_cast<CTFNavArea *>( ( *area->GetIncomingConnections( (NavDirType)dir ) )[i].area );
-				if ( other->m_TFSearchMarker == m_iMarker )
+				if ( other->GetSearchMarker() == m_iMarker )
 					continue;
 
 				if ( area->GetIncursionDistance( TF_TEAM_BLUE ) <= other->GetIncursionDistance( TF_TEAM_BLUE ) ||
@@ -167,19 +168,19 @@ void CTFNavArea::UpdateBlocked( bool force, int teamID )
 
 bool CTFNavArea::IsBlocked( int teamID, bool ignoreNavBlockers ) const
 {
-	if ( !( m_nAttributes & UNBLOCKABLE ) )
+	if ( !( m_nAttributes & TF_NAV_UNBLOCKABLE ) )
 	{
-		if ( !( m_nAttributes & BLOCKED ) )
+		if ( !( m_nAttributes & TF_NAV_BLOCKED ) )
 		{
 			if ( teamID != TF_TEAM_RED )
 			{
-				if ( teamID == TF_TEAM_BLUE && ( m_nAttributes & RED_ONE_WAY_DOOR ) )
+				if ( teamID == TF_TEAM_BLUE && ( m_nAttributes & TF_NAV_RED_ONE_WAY_DOOR ) )
 					return true;
 
 				return CNavArea::IsBlocked( teamID, ignoreNavBlockers );
 			}
 
-			if ( !( m_nAttributes & BLUE_ONE_WAY_DOOR ) )
+			if ( !( m_nAttributes & TF_NAV_BLUE_ONE_WAY_DOOR ) )
 				return CNavArea::IsBlocked( teamID, ignoreNavBlockers );
 		}
 
@@ -197,7 +198,13 @@ void CTFNavArea::Draw() const
 	{
 		NDebugOverlay::Text( GetCenter(),
 							 UTIL_VarArgs( "R:%3.1f   B:%3.1f", m_aIncursionDistances[TF_TEAM_RED], m_aIncursionDistances[TF_TEAM_BLUE] ),
-							 true, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+							 false, NDEBUG_PERSIST_TILL_NEXT_SERVER );
+	}
+
+	if ( tf_nav_show_bomb_target_distance.GetBool() )
+	{
+		NDebugOverlay::Text( GetCenter(), UTIL_VarArgs( "%3.1f", GetBombTargetDistance() ), 
+							 false, NDEBUG_PERSIST_TILL_NEXT_SERVER );
 	}
 
 	if ( tf_nav_show_turf_ownership.GetBool() )
@@ -245,7 +252,7 @@ void CTFNavArea::Draw() const
 	extern ConVar tf_show_blocked_areas;
 	if ( tf_show_blocked_areas.GetBool() )
 	{
-		if ( HasTFAttributes( BLOCKED ) )
+		if ( HasTFAttributes( TF_NAV_BLOCKED ) )
 			DrawFilled( 255, 0, 0, 255 );
 
 		if ( IsBlocked( TF_TEAM_RED ) && IsBlocked( TF_TEAM_BLUE ) )
@@ -258,105 +265,133 @@ void CTFNavArea::Draw() const
 
 	// moved here from CTFNavMesh::UpdateDebugDisplay
 	extern ConVar tf_show_mesh_decoration;
-	if ( tf_show_mesh_decoration.GetBool() )
+	extern ConVar tf_show_mesh_decoration_manual;
+	if ( tf_show_mesh_decoration.GetBool() || tf_show_mesh_decoration_manual.GetBool() )
 	{
-		if ( HasAttributes( NO_SPAWNING ) )
+		if ( !tf_show_mesh_decoration_manual.GetBool() )
+		{
+			if ( HasTFAttributes( TF_NAV_RESCUE_CLOSET ) )
+			{
+				DrawFilled( 0, 255, 255, 255 );
+				return;
+			}
+
+			if ( HasTFAttributes( TF_NAV_BLUE_SPAWN_ROOM ) )
+			{
+				if ( HasTFAttributes( TF_NAV_SPAWN_ROOM_EXIT ) )
+				{
+					DrawFilled( 100, 100, 255, 255 );
+					return;
+				}
+
+				DrawFilled( 0, 0, 100, 255 );
+				return;
+			}
+
+			if ( HasTFAttributes( TF_NAV_RED_SPAWN_ROOM ) )
+			{
+				if ( HasTFAttributes( TF_NAV_SPAWN_ROOM_EXIT ) )
+				{
+					DrawFilled( 255, 100, 100, 255 );
+					return;
+				}
+
+				DrawFilled( 100, 0, 0, 255 );
+				return;
+			}
+
+			if ( HasTFAttributes( TF_NAV_HEALTH ) || HasTFAttributes( TF_NAV_AMMO ) )
+			{
+				if ( !HasTFAttributes( TF_NAV_AMMO ) )
+				{
+					DrawFilled( 255, 150, 150, 255 );
+					return;
+				}
+
+				if ( !HasTFAttributes( TF_NAV_HEALTH ) )
+				{
+					DrawFilled( 100, 100, 100, 255 );
+					return;
+				}
+
+				DrawFilled( 255, 0, 255, 255 );
+				return;
+			}
+
+			if ( HasTFAttributes( TF_NAV_CONTROL_POINT ) )
+			{
+				DrawFilled( 0, 255, 0, 255 );
+				return;
+			}
+		}
+
+		if ( HasTFAttributes( TF_NAV_BLUE_ONE_WAY_DOOR ) )
+		{
+			DrawFilled( 100, 100, 255, 255 );
+			return;
+		}
+
+		if ( HasTFAttributes( TF_NAV_RED_ONE_WAY_DOOR ) )
+		{
+			DrawFilled( 255, 100, 100, 255 );
+			return;
+		}
+
+		if ( HasTFAttributes( TF_NAV_BLUE_SETUP_GATE ) )
+		{
+			DrawFilled( 0, 0, 100, 255 );
+			return;
+		}
+
+		if ( HasTFAttributes( TF_NAV_RED_SETUP_GATE ) )
+		{
+			DrawFilled( 100, 0, 0, 255 );
+			return;
+		}
+
+		if ( HasTFAttributes( TF_NAV_NO_SPAWNING ) )
 		{
 			DrawFilled( 100, 100, 0, 255 );
 			return;
 		}
 
-		if ( HasTFAttributes( RESCUE_CLOSET ) )
-		{
-			DrawFilled( 0, 255, 255, 255 );
-			return;
-		}
-
-		if ( HasTFAttributes( BLUE_SPAWN_ROOM ) )
-		{
-			if ( HasTFAttributes( SPAWN_ROOM_EXIT ) )
-			{
-				DrawFilled( 100, 100, 255, 255 );
-				return;
-			}
-
-			DrawFilled( 0, 0, 100, 255 );
-			return;
-		}
-
-		if ( HasTFAttributes( RED_SPAWN_ROOM ) )
-		{
-			if ( HasTFAttributes( SPAWN_ROOM_EXIT ) )
-			{
-				DrawFilled( 255, 100, 100, 255 );
-				return;
-			}
-
-			DrawFilled( 100, 0, 0, 255 );
-			return;
-		}
-
-		if ( HasTFAttributes( HEALTH ) || HasTFAttributes( AMMO ) )
-		{
-			if ( !HasTFAttributes( AMMO ) )
-			{
-				DrawFilled( 255, 150, 150, 255 );
-				return;
-			}
-
-			if ( !HasTFAttributes( HEALTH ) )
-			{
-				DrawFilled( 100, 100, 100, 255 );
-				return;
-			}
-
-			DrawFilled( 255, 0, 255, 255 );
-			return;
-		}
-
-		if ( HasTFAttributes( CONTROL_POINT ) )
-		{
-			DrawFilled( 0, 255, 0, 255 );
-			return;
-		}
-
-		if ( HasTFAttributes( DOOR_NEVER_BLOCKS ) )
+		if ( HasTFAttributes( TF_NAV_DOOR_NEVER_BLOCKS ) )
 		{
 			DrawFilled( 0, 100, 0, 255 );
 			return;
 		}
 
-		if ( HasTFAttributes( DOOR_ALWAYS_BLOCKS ) )
+		if ( HasTFAttributes( TF_NAV_DOOR_ALWAYS_BLOCKS ) )
 		{
 			DrawFilled( 100, 0, 100, 255 );
 			return;
 		}
 
-		if ( HasTFAttributes( UNBLOCKABLE ) )
+		if ( HasTFAttributes( TF_NAV_UNBLOCKABLE ) )
 		{
 			DrawFilled( 0, 200, 100, 255 );
 			return;
 		}
 
-		if ( HasTFAttributes( SNIPER_SPOT ) )
+		if ( HasTFAttributes( TF_NAV_SNIPER_SPOT ) )
 		{
 			DrawFilled( 255, 255, 0, 255 );
 			return;
 		}
 
-		if ( HasTFAttributes( SENTRY_SPOT ) )
+		if ( HasTFAttributes( TF_NAV_SENTRY_SPOT ) )
 		{
 			DrawFilled( 255, 100, 0, 255 );
 			return;
 		}
 
-		if ( HasTFAttributes( BLOCKED_UNTIL_POINT_CAPTURE ) )
+		if ( HasTFAttributes( TF_NAV_BLOCKED_UNTIL_POINT_CAPTURE ) )
 		{
 			DrawFilled( 0, 255, 255, 255 );
 			return;
 		}
 
-		if ( HasTFAttributes( BLOCKED_AFTER_POINT_CAPTURE ) )
+		if ( HasTFAttributes( TF_NAV_BLOCKED_AFTER_POINT_CAPTURE ) )
 		{
 			DrawFilled( 255, 255, 0, 255 );
 			return;
@@ -412,9 +447,9 @@ void CTFNavArea::ComputeInvasionAreaVectors()
 	static int searchMarker = RandomInt( 0, Square( 1024 ) );
 	searchMarker++;
 
-	auto MarkVisibleSet = [ = ]( CNavArea *a ) {
+	auto MarkVisibleSet = []( CNavArea *a ) {
 		CTFNavArea *area = static_cast<CTFNavArea *>( a );
-		area->m_TFSearchMarker = searchMarker;
+		area->SetSearchMarker( searchMarker );
 
 		return true;
 	};
@@ -450,14 +485,14 @@ void CTFNavArea::AddPotentiallyVisibleActor( CBaseCombatCharacter *actor )
 	if ( ToTFBot( actor ) )
 		return;
 
-	for ( int i=0; i<m_PVNPCs[team].Count(); ++i )
+	for ( int i=0; i<m_PVActors[team].Count(); ++i )
 	{
-		CBaseCombatCharacter *npc = m_PVNPCs[team][i];
+		CBaseCombatCharacter *npc = m_PVActors[team][i];
 		if ( actor == npc )
 			return;
 	}
 
-	m_PVNPCs[team].AddToTail( actor );
+	m_PVActors[team].AddToTail( actor );
 }
 
 float CTFNavArea::GetCombatIntensity() const

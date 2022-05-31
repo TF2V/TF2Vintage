@@ -122,17 +122,18 @@
 #endif
 #include "vscript/ivscript.h"
 #if defined( TF_CLIENT_DLL )
-#include "rtime.h"
 #include "tf_hud_disconnect_prompt.h"
 #include "../engine/audio/public/sound.h"
 #include "tf_shared_content_manager.h"
 #endif
+#include "rtime.h"
 #include "clientsteamcontext.h"
 #include "renamed_recvtable_compat.h"
 #include "mouthinfo.h"
 #include "sourcevr/isourcevirtualreality.h"
 #include "client_virtualreality.h"
 #include "mumble.h"
+#include "bannedwords.h"
 
 // NVNT includes
 #include "hud_macros.h"
@@ -141,12 +142,7 @@
 #include "haptics/haptic_msgs.h"
 
 // Discord RPC
-#include "discord_register.h"
-ConVar cl_discord_appid( "cl_discord_appid", "451227888230858752", FCVAR_DEVELOPMENTONLY | FCVAR_PROTECTED, "This is for your Client ID for Discord Applications and is unique per sourcemod." );
-
-#ifdef TF_VINTAGE_CLIENT
-#include "tf_presence.h"
-#endif
+#include "irichpresenceclient.h"
 
 extern vgui::IInputInternal *g_InputInternal;
 
@@ -276,7 +272,7 @@ INetworkStringTable *g_pStringTableInfoPanel = NULL;
 INetworkStringTable *g_pStringTableClientSideChoreoScenes = NULL;
 INetworkStringTable *g_pStringTableServerMapCycle = NULL;
 
-#ifdef TF_CLIENT_DLL
+#if defined( TF_CLIENT_DLL ) || defined( TF_VINTAGE_CLIENT )
 INetworkStringTable *g_pStringTableServerPopFiles = NULL;
 INetworkStringTable *g_pStringTableServerMapCycleMvM = NULL;
 #endif
@@ -901,74 +897,311 @@ extern IGameSystem *ViewportClientSystem();
 //-----------------------------------------------------------------------------
 ISourceVirtualReality *g_pSourceVR = NULL;
 
+static int CaseInsensitiveStringSort( char * const * sz1, char * const * sz2 )
+{
+	return V_stricmp( *sz1, *sz2 );
+}
 static void MountAdditionalContent()
 {
-	KeyValues *pMainFile = new KeyValues( "gameinfo.txt" );
+#ifndef NO_STEAM
+	KeyValuesAD pMainFile( "gameinfo" );
+	bool bSuccess = false;
 #ifndef _WINDOWS
 	// case sensitivity
-	pMainFile->LoadFromFile( filesystem, "GameInfo.txt", "MOD" );
-	if ( !pMainFile )
+	bSuccess = pMainFile->LoadFromFile( g_pFullFileSystem, "GameInfo.txt", "MOD" );
+	if ( !bSuccess )
 #endif
-		pMainFile->LoadFromFile( filesystem, "gameinfo.txt", "MOD" );
+		bSuccess = pMainFile->LoadFromFile( g_pFullFileSystem, "gameinfo.txt", "MOD" );
 
-	if ( pMainFile )
+	if ( !bSuccess )
 	{
-		KeyValues* pFileSystemInfo = pMainFile->FindKey( "FileSystem" );
-		if ( pFileSystemInfo )
+		Error( "Unable to load GameInfo.txt, does it exist?" );
+		return;
+	}
+
+	KeyValues* pFileSystemInfo = pMainFile->FindKey( "FileSystem" );
+	if ( !pFileSystemInfo )
+	{
+		Error( "Error parsing GameInfo.txt, KV is malformed (Missing FileSystem key)" );
+		return;
+	}
+
+	KeyValues* pAdditionaContentId = pFileSystemInfo->FindKey( "AdditionalContentId" );
+	if ( !pAdditionaContentId )
+	{
+		return;
+	}
+	KeyValues* pAdditionaContentRoot = pFileSystemInfo->FindKey( "AdditionalContentRoot" );
+	if ( !pAdditionaContentRoot )
+	{
+		Warning( "Unable to mount extra content, root folder was not provided \n" );
+		return;
+	}
+
+	if ( !steamapicontext->SteamApps() )
+	{
+		Warning( "Unable to mount extra content, unkown error\n" );
+		return;
+	}
+		
+	int appid = abs( pAdditionaContentId->GetInt() );
+	if ( appid )
+	{
+		if ( !steamapicontext->SteamApps()->BIsAppInstalled( appid ) )
 		{
-			for ( KeyValues *pKey = pFileSystemInfo->GetFirstSubKey(); pKey; pKey = pKey->GetNextKey() )
+			Warning( "Unable to mount extra content with AppId: %i\nApp not installed.\n", appid );
+			return;
+		}
+
+		char szAppDirectory[ MAX_PATH ];
+		steamapicontext->SteamApps()->GetAppInstallDir( appid, szAppDirectory, sizeof( szAppDirectory ) );
+
+		V_AppendSlash( szAppDirectory, sizeof( szAppDirectory ) );
+		V_strcat_safe( szAppDirectory, pAdditionaContentRoot->GetString() );
+
+		g_pFullFileSystem->AddSearchPath( szAppDirectory, "MOD" );
+		g_pFullFileSystem->AddSearchPath( szAppDirectory, "GAME" );
+
+		KeyValues *pAdditionalContent = pFileSystemInfo->FindKey( "AdditionalContentPaths" );
+		if ( pAdditionalContent )
+		{
+			char szAbsPathName[ MAX_PATH ];
+			V_ExtractFilePath( szAppDirectory, szAbsPathName, sizeof( szAbsPathName ) );
+
+			FOR_EACH_VALUE( pAdditionalContent, pSubKey )
 			{
-				if ( Q_stricmp( pKey->GetName(), "AdditionalContentId" ) == 0 )
+				const char *pszLocation = pSubKey->GetString();
+				const char *pszBaseDir = szAbsPathName;
+
+				const char CONTENTROOT_TOKEN[] = "|content_root|";
+				if ( Q_stristr( pszLocation, CONTENTROOT_TOKEN ) == pszLocation )
 				{
-				#ifndef NO_STEAM
-					int appid = abs( pKey->GetInt() );
-					if ( appid )
+					pszLocation += strlen( CONTENTROOT_TOKEN );
+					pszBaseDir = szAppDirectory;
+				}
+
+				V_MakeAbsolutePath( szAbsPathName, sizeof( szAbsPathName ), pszLocation, pszBaseDir );
+
+				V_FixSlashes( szAbsPathName );
+				V_RemoveDotSlashes( szAbsPathName );
+				V_StripTrailingSlash( szAbsPathName );
+
+				CUtlStringList fullFilePaths;
+				if ( V_stristr( pszLocation, "?" ) == NULL && V_stristr( pszLocation, "*" ) == NULL )
+				{
+					fullFilePaths.CopyAndAddToTail( szAbsPathName );
+				}
+				else
+				{
+					FileFindHandle_t hFind;
+					char const *pszFileFound = g_pFullFileSystem->FindFirst( szAbsPathName, &hFind );
+					while ( pszFileFound )
 					{
-						if ( !steamapicontext->SteamApps()->BIsAppInstalled( appid ) )
-							Warning( "Unable to mount extra content with appId: %i\n", appid );
-
-						char szAppDirectory[ MAX_PATH ];
-						steamapicontext->SteamApps()->GetAppInstallDir( appid, szAppDirectory, sizeof szAppDirectory );
-
-					#ifdef TF_VINTAGE_CLIENT
-						V_AppendSlash( szAppDirectory, sizeof szAppDirectory );
-						V_strcat_safe( szAppDirectory, "tf" );
-					#endif
-
-						g_pFullFileSystem->AddSearchPath( szAppDirectory, "MOD" );
-						g_pFullFileSystem->AddSearchPath( szAppDirectory, "GAME" );
-
-						V_AppendSlash( szAppDirectory, sizeof szAppDirectory );
-
-						FileFindHandle_t fh;
-						char const *fn = g_pFullFileSystem->FindFirst( szAppDirectory, &fh );
-						while ( fn )
+						if ( pszFileFound[0] != '.' )
 						{
-							if ( fn[0] != '.' )
+							if ( g_pFullFileSystem->FindIsDirectory( hFind ) || V_stristr( pszFileFound, "vpk" ) )
 							{
-								char ext[ 10 ];
-								V_ExtractFileExtension( fn, ext, sizeof ext );
+								char szAbsPath[MAX_PATH];
+								V_ExtractFilePath( szAbsPathName, szAbsPath, sizeof( szAbsPath ) );
+								V_AppendSlash( szAbsPath, sizeof( szAbsPath ) );
+								V_strcat_safe( szAbsPath, pszFileFound, COPY_ALL_CHARACTERS );
 
-								if ( !V_stricmp( ext, ".vpk" ) && strstr( fn, "_dir" ) )
-								{
-									char vpk[ MAX_PATH ];
-									V_StrSlice( fn, 0, V_strlen( fn ) - 8, vpk, sizeof vpk );
-									V_strcat_safe( vpk, ".vpk" );
-
-									g_pFullFileSystem->AddSearchPath( vpk, "GAME" );
-								}
+								fullFilePaths.CopyAndAddToTail( szAbsPath );
 							}
-
-							fn = g_pFullFileSystem->FindNext( fh );
 						}
-						g_pFullFileSystem->FindClose( fh );
+
+						pszFileFound = g_pFullFileSystem->FindNext( hFind );
 					}
-				#endif
+					g_pFullFileSystem->FindClose( hFind );
+
+					fullFilePaths.Sort( CaseInsensitiveStringSort );
+
+					FOR_EACH_VEC_BACK( fullFilePaths, i )
+					{
+						char ext[10];
+						V_ExtractFileExtension( fullFilePaths[i], ext, sizeof( ext ) );
+
+						if ( Q_stricmp( ext, "vpk" ) == 0 )
+						{
+							char *szDirVPK = Q_stristr( fullFilePaths[i], "_dir.vpk" );
+							if ( szDirVPK == NULL )
+							{
+								delete fullFilePaths[i];
+								fullFilePaths.Remove(i);
+							}
+							else
+							{
+								*szDirVPK = '\0';
+								V_strcat( szDirVPK, ".vpk", MAX_PATH );
+							}
+						}
+					}
+				}
+
+				// Parse Path ID list
+				CUtlStringList pathIDs;
+				V_SplitString( pSubKey->GetName(), "+", pathIDs );
+				FOR_EACH_VEC( pathIDs, i )
+				{
+					Q_StripPrecedingAndTrailingWhitespace( pathIDs[i] );
+				}
+
+				FOR_EACH_VEC( fullFilePaths, i )
+				{
+					FOR_EACH_VEC( pathIDs, j )
+					{
+						g_pFullFileSystem->AddSearchPath( fullFilePaths[i], pathIDs[j], PATH_ADD_TO_HEAD );
+					}
 				}
 			}
 		}
 	}
-	pMainFile->deleteThis();
+#endif
+}
+
+// This one is a general file load and is intended so that gameinfo.txt does not need to be updated between mods.
+static void MountModBoilerplateContent()
+{
+	KeyValuesAD pMainFile("gameinfo");
+	bool bSuccess = false;
+#ifndef _WINDOWS
+	// case sensitivity
+	bSuccess = pMainFile->LoadFromFile(g_pFullFileSystem, "GameInfo.txt", "MOD");
+	if (!bSuccess)
+#endif
+		bSuccess = pMainFile->LoadFromFile(g_pFullFileSystem, "gameinfo.txt", "MOD");
+
+	if (!bSuccess)
+	{
+		Error("Unable to load GameInfo.txt, does it exist?");
+		return;
+	}
+
+	KeyValues* pFileSystemInfo = pMainFile->FindKey("FileSystem");
+	if (!pFileSystemInfo)
+	{
+		Error("Error parsing GameInfo.txt, KV is malformed (Missing FileSystem key)");
+		return;
+	}
+
+	KeyValues* pAdditionaContentId = pFileSystemInfo->FindKey("AdditionalContentId");
+	if (!pAdditionaContentId)
+	{
+		return;
+	}
+
+	char szAppDirectory[MAX_PATH];
+	strcpy(szAppDirectory, CommandLine()->ParmValue("-basedir", ""));
+
+	V_AppendSlash(szAppDirectory, sizeof(szAppDirectory));
+
+	g_pFullFileSystem->AddSearchPath(szAppDirectory, "MOD");
+	g_pFullFileSystem->AddSearchPath(szAppDirectory, "GAME");
+
+	char platform[MAX_PATH];
+	Q_strncpy( platform, szAppDirectory, MAX_PATH );
+	Q_StripTrailingSlash( platform );
+	Q_strncat( platform, "/../platform", MAX_PATH, MAX_PATH );
+	g_pFullFileSystem->AddSearchPath( platform, "PLATFORM" );
+
+	KeyValues* pAdditionalContent = pFileSystemInfo->FindKey("SourcemodEssentialPaths");
+	if (pAdditionalContent)
+	{
+		char szAbsPathName[MAX_PATH];
+		V_ExtractFilePath(szAppDirectory, szAbsPathName, sizeof(szAbsPathName));
+
+		FOR_EACH_VALUE(pAdditionalContent, pSubKey)
+		{
+			const char* pszLocation = pSubKey->GetString();
+			const char* pszBaseDir = szAbsPathName;
+
+			const char GAMEINFOPATH_TOKEN[] = "|gameinfo_path|";
+			const char BASESOURCEPATHS_TOKEN[] = "|all_source_engine_paths|";
+			if (Q_stristr(pszLocation, GAMEINFOPATH_TOKEN) == pszLocation)
+			{
+				pszLocation += strlen(GAMEINFOPATH_TOKEN);
+				pszBaseDir = szAppDirectory;
+			}
+			else if (Q_stristr(pszLocation, BASESOURCEPATHS_TOKEN) == pszLocation)
+			{
+				pszLocation += strlen(BASESOURCEPATHS_TOKEN);
+			}
+
+			V_MakeAbsolutePath(szAbsPathName, sizeof(szAbsPathName), pszLocation, pszBaseDir);
+
+			V_FixSlashes(szAbsPathName);
+			V_RemoveDotSlashes(szAbsPathName);
+			V_StripTrailingSlash(szAbsPathName);
+
+			CUtlStringList fullFilePaths;
+			if (V_stristr(pszLocation, "?") == NULL && V_stristr(pszLocation, "*") == NULL)
+			{
+				fullFilePaths.CopyAndAddToTail(szAbsPathName);
+			}
+			else
+			{
+				FileFindHandle_t hFind;
+				char const* pszFileFound = g_pFullFileSystem->FindFirst(szAbsPathName, &hFind);
+				while (pszFileFound)
+				{
+					if (pszFileFound[0] != '.')
+					{
+						if (g_pFullFileSystem->FindIsDirectory(hFind) || V_stristr(pszFileFound, "vpk"))
+						{
+							char szAbsPath[MAX_PATH];
+							V_ExtractFilePath(szAbsPathName, szAbsPath, sizeof(szAbsPath));
+							V_AppendSlash(szAbsPath, sizeof(szAbsPath));
+							V_strcat_safe(szAbsPath, pszFileFound, COPY_ALL_CHARACTERS);
+
+							fullFilePaths.CopyAndAddToTail(szAbsPath);
+						}
+					}
+
+					pszFileFound = g_pFullFileSystem->FindNext(hFind);
+				}
+				g_pFullFileSystem->FindClose(hFind);
+
+				fullFilePaths.Sort(CaseInsensitiveStringSort);
+
+				FOR_EACH_VEC_BACK(fullFilePaths, i)
+				{
+					char ext[10];
+					V_ExtractFileExtension(fullFilePaths[i], ext, sizeof(ext));
+
+					if (Q_stricmp(ext, "vpk") == 0)
+					{
+						char* szDirVPK = Q_stristr(fullFilePaths[i], "_dir.vpk");
+						if (szDirVPK == NULL)
+						{
+							delete fullFilePaths[i];
+							fullFilePaths.Remove(i);
+						}
+						else
+						{
+							*szDirVPK = '\0';
+							V_strcat(szDirVPK, ".vpk", MAX_PATH);
+						}
+					}
+				}
+			}
+
+			// Parse Path ID list
+			CUtlStringList pathIDs;
+			V_SplitString(pSubKey->GetName(), "+", pathIDs);
+			FOR_EACH_VEC(pathIDs, i)
+			{
+				Q_StripPrecedingAndTrailingWhitespace(pathIDs[i]);
+			}
+
+			FOR_EACH_VEC(fullFilePaths, i)
+			{
+				FOR_EACH_VEC(pathIDs, j)
+				{
+					g_pFullFileSystem->AddSearchPath(fullFilePaths[i], pathIDs[j]);
+				}
+			}
+		}
+	}
 }
 
 // Purpose: Called when the DLL is first loaded.
@@ -1069,7 +1302,17 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	InitFbx();
 #endif
 
-	if ( !CommandLine()->CheckParm( "-noscripting" ) )
+	// Force cl_cloud_settings to always be 0 so it doesn't use it to reset our spray
+	ConVar *cl_cloud_settings = nullptr;
+	cl_cloud_settings = g_pCVar->FindVar( "cl_cloud_settings" );
+	if (cl_cloud_settings)
+	{
+		cl_cloud_settings->SetValue( 0 );
+		cl_cloud_settings->SetMax( 0 );
+	}
+
+	//if ( !CommandLine()->CheckParm( "-noscripting" ) )
+	if ( CommandLine()->CheckParm( "-vscript" ) )
 	{
 	#if defined( TF_VINTAGE_CLIENT )
 		char szCwd[1024];
@@ -1102,6 +1345,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	}
 
 	MountAdditionalContent();
+	MountModBoilerplateContent();
 
 	if ( CommandLine()->FindParm( "-textmode" ) )
 		g_bTextMode = true;
@@ -1152,10 +1396,10 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	IGameSystem::Add( PerfVisualBenchmark() );
 	IGameSystem::Add( MumbleSystem() );
 	
-	#if defined( TF_CLIENT_DLL )
+#if defined( TF_CLIENT_DLL )
 	IGameSystem::Add( CustomTextureToolCacheGameSystem() );
 	IGameSystem::Add( TFSharedContentManager() );
-	#endif
+#endif
 
 #if defined( TF_CLIENT_DLL )
 	if ( g_AbuseReportMgr != NULL )
@@ -1230,10 +1474,18 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	// Discord RPC
 	if (!g_bTextMode)
 	{
-		char command[256];
-		Q_snprintf( command, sizeof( command ), "%s -game \"%s\" -novid -high -steam\n", CommandLine()->GetParm( 0 ), CommandLine()->ParmValue( "-game" ) );
-		Discord_Register( cl_discord_appid.GetString(), command );
+		/*discord::Core *core{};
+		auto result = discord::Core::Create( V_atoi64( cl_discord_appid.GetString() ), DiscordCreateFlags_NoRequireDiscord, &core );
+		if ( result != discord::Result::Ok )
+			return true;
+
+		char command[512];
+		V_snprintf( command, sizeof( command ), "%s -game \"%s\" -novid -steam", CommandLine()->GetParm( 0 ), CommandLine()->ParmValue( "-game" ) );
+		core->ActivityManager().RegisterCommand( command );*/
 	}
+	
+	// Swear list.
+	g_BannedWords.InitFromFile( "bannedwords.txt" );
 
 	return true;
 }
@@ -1408,9 +1660,7 @@ void CHLClient::HudUpdate( bool bActive )
 {
 	float frametime = gpGlobals->frametime;
 
-#if defined( TF_CLIENT_DLL )
 	CRTime::UpdateRealTime();
-#endif
 
 	GetClientVoiceMgr()->Frame( frametime );
 
@@ -1748,14 +1998,6 @@ void CHLClient::LevelInitPreEntity( char const* pMapName )
 
 	IGameSystem::LevelInitPreEntityAllSystems(pMapName);
 
-#ifdef USES_ECON_ITEMS
-	GameItemSchema_t *pItemSchema = ItemSystem()->GetItemSchema();
-	if ( pItemSchema )
-	{
-		pItemSchema->BInitFromDelayedBuffer();
-	}
-#endif // USES_ECON_ITEMS
-
 	ResetWindspeed();
 
 #if !defined( NO_ENTITY_PREDICTION )
@@ -1815,7 +2057,7 @@ void CHLClient::ResetStringTablePointers()
 	g_pStringTableClientSideChoreoScenes = NULL;
 	g_pStringTableServerMapCycle = NULL;
 
-#ifdef TF_CLIENT_DLL
+#if defined( TF_CLIENT_DLL ) || defined( TF_VINTAGE_CLIENT )
 	g_pStringTableServerPopFiles = NULL;
 	g_pStringTableServerMapCycleMvM = NULL;
 #endif
@@ -2045,7 +2287,7 @@ void CHLClient::InstallStringTableCallback( const char *tableName )
 	{
 		g_pStringTableServerMapCycle = networkstringtable->FindTable( tableName );
 	}
-#ifdef TF_CLIENT_DLL
+#if defined( TF_CLIENT_DLL ) || defined( TF_VINTAGE_CLIENT )
 	else if ( !Q_strcasecmp( tableName, "ServerPopFiles" ) )
 	{
 		g_pStringTableServerPopFiles = networkstringtable->FindTable( tableName );
@@ -2590,10 +2832,18 @@ bool CHLClient::CanRecordDemo( char *errorMsg, int length ) const
 
 void CHLClient::OnDemoRecordStart( char const* pDemoBaseName )
 {
+	if ( GetClientModeNormal() )
+	{
+		GetClientModeNormal()->OnDemoRecordStart( pDemoBaseName );
+	}
 }
 
 void CHLClient::OnDemoRecordStop()
 {
+	if ( GetClientModeNormal() )
+	{
+		GetClientModeNormal()->OnDemoRecordStop();
+	}
 }
 
 void CHLClient::OnDemoPlaybackStart( char const* pDemoBaseName )

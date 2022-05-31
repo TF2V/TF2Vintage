@@ -903,6 +903,12 @@ void BuildGroup::LoadControlSettings(const char *controlResourceName, const char
 				{
 					rDat->ProcessResolutionKeys( "_minmode" );
 				}
+
+				ConVarRef cl_hud_console( "cl_hud_console", true );
+				if ( cl_hud_console.IsValid() && cl_hud_console.GetBool() )
+				{
+					rDat->ProcessResolutionKeys( "_console" );
+				}
 			}
 
 			if ( pConditions && pConditions->GetFirstSubKey() )

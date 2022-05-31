@@ -123,4 +123,52 @@ private:
 	vgui::ImagePanel		*m_pSpecCarriedImage;
 };
 
+//-----------------------------------------------------------------------------
+// Purpose:  
+//-----------------------------------------------------------------------------
+class CTFFlagCalloutPanel : public CHudElement, public vgui::EditablePanel
+{
+	DECLARE_CLASS_SIMPLE( CTFFlagCalloutPanel, vgui::EditablePanel );
+	static CUtlVector<CTFFlagCalloutPanel *> sm_FlagCalloutPanels;
+public:
+
+	CTFFlagCalloutPanel( const char *name );
+	virtual ~CTFFlagCalloutPanel();
+
+	static CTFFlagCalloutPanel *AddFlagCalloutIfNotFound( CCaptureFlag *pFlag, float f, Vector const &v );
+
+	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
+	virtual void OnTick( void );
+	virtual void Paint( void );
+	virtual void PaintBackground( void );
+	virtual void PerformLayout( void );
+
+	void GetCalloutPosition( const Vector &vecDelta, float flRadius, int *xpos, int *ypos, float *flRotation );
+	void ScaleAndPositionCallout( float flScale );
+	void SetFlag( CCaptureFlag *pFlag, float f, Vector const &v );
+	bool ShouldShowFlagIconToLocalPlayer( void ) const;
+
+private:
+	CHandle<CCaptureFlag> m_hFlag;
+
+	CTFImagePanel *m_pFlagCalloutPanel;
+	vgui::Label *m_pFlagValueLabel;
+	CTFImagePanel *m_pFlagStatusIcon;
+
+	IMaterial *m_pArrowMaterial;
+
+	float m_f1;
+	float m_flLastUpdate;
+	Vector m_v1;
+	int m_i1;
+	bool m_bInLOS;
+
+	float m_flPrevScale;
+	int m_nPanelWide;
+	int m_nPanelTall;
+	int m_nLabelWide;
+	int m_nLabelTall;
+	int m_nIconWide;
+	int m_nIconTall;
+};
 #endif	// TF_HUD_FLAGSTATUS_H

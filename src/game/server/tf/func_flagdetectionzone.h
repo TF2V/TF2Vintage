@@ -23,6 +23,8 @@ public:
 	DECLARE_CLASS( CFlagDetectionZone, CBaseTrigger );
 	DECLARE_DATADESC();
 
+	CFlagDetectionZone();
+
 	virtual void	Spawn( void );
 	virtual void	StartTouch( CBaseEntity *pOther );
 	virtual void	EndTouch( CBaseEntity *pOther );
@@ -36,6 +38,7 @@ public:
 	void	FlagPickedUp( CTFPlayer *pPlayer );
 
 	bool	IsDisabled( void ) { return m_bDisabled; };
+	bool	IsAlarmZone( void ) { return m_bShouldAlarm; }
 
 	// Input handlers
 	virtual void	InputEnable( inputdata_t &inputdata );

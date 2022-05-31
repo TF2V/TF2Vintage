@@ -1,0 +1,56 @@
+whitelist
+{
+	// Server rules used for sv_pure.
+	//
+	// Do not modify this file.
+	//
+	// See pure_server_whitelist_example.txt for more details on when this file is used and what the rules mean.
+
+	//
+	// Enforce consistency for a few critical files
+	//
+
+	particles/error.pcf						trusted_source
+	particles/rockettrail.pcf				trusted_source
+	particles/smoke_blackbillow.pcf			trusted_source
+	particles/teleport_status.pcf			trusted_source
+	particles/explosion.pcf					trusted_source
+	particles/player_recent_teleport.pcf	trusted_source
+	particles/rocketjumptrail.pcf			trusted_source
+	particles/rocketbackblast.pcf			trusted_source
+	particles/flamethrower.pcf				trusted_source
+	particles/burningplayer.pcf				trusted_source
+	particles/blood_impact.pcf				trusted_source
+	particles/blood_trail.pcf				trusted_source
+	particles/muzzle_flash.pcf				trusted_source
+	particles/teleported_fx.pcf				trusted_source
+	particles/cig_smoke.pcf					trusted_source
+	particles/crit.pcf						trusted_source
+	particles/medicgun_beam.pcf				trusted_source
+	particles/water.pcf						trusted_source
+	particles/stickybomb.pcf				trusted_source
+	particles/buildingdamage.pcf			trusted_source
+	particles/nailtrails.pcf				trusted_source
+	particles/speechbubbles.pcf				trusted_source
+	particles/bullet_tracers.pcf			trusted_source
+	particles/nemesis.pcf					trusted_source
+	particles/disguise.pcf					trusted_source
+	particles/sparks.pcf					trusted_source
+	particles/flag_particles.pcf			trusted_source
+	particles/buildingdamage.pcf			trusted_source
+	particles/shellejection.pcf				trusted_source
+	particles/impact_fx.pcf					trusted_source
+	particles/scout_nailtrails_alt.pcf		trusted_source
+	particles/taunt_fx.pcf					trusted_source
+	particles/firstperson_weapon_fx.pcf		trusted_source
+	particles/respawn.pcf					trusted_source
+	particles/deathmatch_fx.pcf				trusted_source
+	particles/bigboom.pcf					trusted_source
+	particles/cine_fx.pcf					trusted_source
+	particles/level_fx.pcf					trusted_source
+	particles/mvm.pcf						trusted_source
+	particles/scary_ghost.pcf				trusted_source
+	particles/weather_fx.pcf				trusted_source
+	particles/env_sakura01.pcf				trusted_source
+	particles/smoke_island_volcano.pcf		trusted_source
+}

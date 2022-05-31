@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -22,8 +22,8 @@ public:
 	CTFBotSquad();
 	virtual ~CTFBotSquad();
 
-	virtual INextBotEventResponder *FirstContainedResponder( void ) const override;
-	virtual INextBotEventResponder *NextContainedResponder( INextBotEventResponder *prev ) const override;
+	virtual INextBotEventResponder *FirstContainedResponder( void ) const OVERRIDE;
+	virtual INextBotEventResponder *NextContainedResponder( INextBotEventResponder *prev ) const OVERRIDE;
 
 	struct Iterator
 	{
@@ -51,6 +51,11 @@ public:
 
 	void DisbandAndDeleteSquad( void );
 
+	inline void SetFormationSize( float flSize ) { m_flFormationSize = flSize; }
+	inline float GetFormationSize( void ) const { return m_flFormationSize; }
+	inline void SetShouldPreserveSquad( bool bPreserve ) { m_bShouldPreserveSquad = bPreserve; }
+
+private:
 	CUtlVector< CHandle<CTFBot> > m_hMembers;
 	CHandle<CTFBot> m_hLeader;
 	float m_flFormationSize;

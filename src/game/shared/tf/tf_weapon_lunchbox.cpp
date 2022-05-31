@@ -268,6 +268,16 @@ bool CTFLunchBox::IsChocolateOrFishcake()
 	
 }
 	
+bool CTFLunchBox::IsSteak()
+{
+	int nSetLunchboxMode = 0;
+		CALL_ATTRIB_HOOK_INT( nSetLunchboxMode, set_weapon_mode );
+		if ( nSetLunchboxMode == 2 )
+			return true;
+	
+	return false;
+	
+}	
 //-----------------------------------------------------------------------------
 // Purpose: Update the sandvich bite effects
 //-----------------------------------------------------------------------------
@@ -329,7 +339,7 @@ void CTFLunchBox::Precache( void )
 //-----------------------------------------------------------------------------
 void CTFLunchBox::ApplyBiteEffects( bool bHurt )
 {
-	bool bIsSteak = ( CAttributeManager::AttribHookValue<int>( 0, "set_weapon_mode", this ) == 2);
+	bool bIsSteak = IsSteak();
 	
 	if ( !bHurt && !bIsSteak )
 		return;
@@ -340,13 +350,25 @@ void CTFLunchBox::ApplyBiteEffects( bool bHurt )
 	if (!pOwner)
 		return;
 	
-	float flAmt = 75.0;
 	
-	if ( tf2v_sandvich_behavior.GetInt() == 0 )
-		flAmt = 30.0; // Heals 120HP total
+	// All these values are per bite.
+	// A whole cycle lasts four bites, one per second, for a total of four bites.
+	
+	float flAmt = 75.0;	// Heals 300HP total
 	
 	if ( IsChocolateOrFishcake() )
-		flAmt *= 1/3;
+	{
+		if ( tf2v_new_chocolate_behavior.GetBool() )
+			flAmt = 25.0;	// Heals 100HP total
+		else
+			flAmt = 15.0;	// Heals 60HP total
+	}
+	else
+	{
+		if ( tf2v_sandvich_behavior.GetInt() == 0 )
+			flAmt = 30.0; // Heals 120HP total
+	}
+	
 	
 	// Adjust our healing scale if defined.
 	CALL_ATTRIB_HOOK_FLOAT( flAmt, lunchbox_healing_scale );

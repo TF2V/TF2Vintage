@@ -1940,7 +1940,7 @@ void CDynamicProp::Spawn( )
 
 	//m_debugOverlays |= OVERLAY_ABSBOX_BIT;
 
-#ifdef TF_DLL
+#if defined TF_DLL || defined TF_VINTAGE
 	const char *pszModelName = modelinfo->GetModelName( GetModel() );
 	if ( pszModelName && pszModelName[0] )
 	{

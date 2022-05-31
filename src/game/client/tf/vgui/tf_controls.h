@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2007, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2007, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -23,6 +23,9 @@
 #include "tf_imagepanel.h"
 #include <vgui_controls/ImagePanel.h>
 
+
+//-----------------------------------------------------------------------------
+bool SetXToRed( vgui::Label *pPanel );
 
 //-----------------------------------------------------------------------------
 // Purpose: 

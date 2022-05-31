@@ -23,6 +23,15 @@ IMPLEMENT_CLIENTCLASS_DT( C_TF_PlayerResource, DT_TFPlayerResource, CTFPlayerRes
 	RecvPropArray3( RECVINFO_ARRAY( m_iColors ), RecvPropVector( RECVINFO( m_iColors[0] ) ) ),
 	RecvPropArray3( RECVINFO_ARRAY( m_iKillstreak ), RecvPropInt( RECVINFO( m_iKillstreak[0] ) ) ),
 	RecvPropArray3( RECVINFO_ARRAY( m_bArenaSpectator ), RecvPropBool( RECVINFO( m_bArenaSpectator[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iChargeLevel ), RecvPropInt( RECVINFO( m_iChargeLevel[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iDamage ), RecvPropInt( RECVINFO( m_iDamage[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iDamageAssist ), RecvPropInt( RECVINFO( m_iDamageAssist[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iDamageBoss ), RecvPropInt( RECVINFO( m_iDamageBoss[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iHealing ), RecvPropInt( RECVINFO( m_iHealing[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iHealingAssist ), RecvPropInt( RECVINFO( m_iHealingAssist[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iDamageBlocked ), RecvPropInt( RECVINFO( m_iDamageBlocked[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iCurrencyCollected ), RecvPropInt( RECVINFO( m_iCurrencyCollected[0] ) ) ),
+	RecvPropArray3( RECVINFO_ARRAY( m_iBonusPoints ), RecvPropInt( RECVINFO( m_iBonusPoints[0] ) ) ),
 END_RECV_TABLE()
 
 

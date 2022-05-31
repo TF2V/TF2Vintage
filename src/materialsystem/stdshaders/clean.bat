@@ -3,8 +3,8 @@ setlocal
 
 if /i "%1" == "-game" goto CleanGameDir
 
-rem Clean out hl2
-if exist ..\..\..\game\hl2\shaders rd /s /q ..\..\..\game\hl2\shaders
+rem Clean out tf2vintage
+if exist ..\..\..\game\tf2vintage\shaders rd /s /q ..\..\..\game\tf2vintage\shaders
 goto CleanOtherStuff
 
 :CleanGameDir

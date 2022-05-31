@@ -92,7 +92,7 @@ void CHeadlessHatmanBody::Update( void )
 			actor->SetPoseParameter( m_iMoveY, 0.0f );
 	}
 
-	if ( actor->m_flGroundSpeed )
+	if ( actor->m_flGroundSpeed != 0.0f )
 		actor->SetPlaybackRate( Clamp( flSpeed / actor->m_flGroundSpeed, -4.0f, 12.0f ) );
 
 	actor->StudioFrameAdvance();

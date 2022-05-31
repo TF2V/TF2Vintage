@@ -6,12 +6,12 @@ See gameinfo.txt for more details.
 
 For example, you might have the following file structure:
 
-	tf2classic/custom/my_custom_stuff/   <<< This subfolder will be added as a search path
-	tf2classic/custom/my_custom_stuff/models/custom_model.mdl
-	tf2classic/custom/my_custom_stuff/materials/custom_material.vmt
-	tf2classic/custom/my_custom_stuff/materials/vgui/custom_ui_thing.res
-	tf2classic/custom/some_mod.vpk       <<< This VPK will be added as a search path
-	tf2classic/custom/another_mod.vpk    <<< This VPK will be added as a search path
+	tf2vintage/custom/my_custom_stuff/   <<< This subfolder will be added as a search path
+	tf2vintage/custom/my_custom_stuff/models/custom_model.mdl
+	tf2vintage/custom/my_custom_stuff/materials/custom_material.vmt
+	tf2vintage/custom/my_custom_stuff/materials/vgui/custom_ui_thing.res
+	tf2vintage/custom/some_mod.vpk       <<< This VPK will be added as a search path
+	tf2vintage/custom/another_mod.vpk    <<< This VPK will be added as a search path
 
 
 Mounting a VPK to the filesystem is more efficient than adding a subfolder,
@@ -24,10 +24,10 @@ and don't make any subfolders in this folder!
 
 Note that the following directory structure is NOT correct:
 
-	tf2classic/custom/models/my_model.mdl
+	tf2vintage/custom/models/my_model.mdl
 
-That will add the directory "tf/custom/models" as a search path, in which case the
+That will add the directory "tf2vintage/custom/models" as a search path, in which case the
 file my_model.mdl actually exists at the root of the game's virtual filesystem.
 Instead, you would use something like:
 
-	tf2classic/custom/my_custom_stuff/models/my_model.mdl
+	tf2vintage/custom/my_custom_stuff/models/my_model.mdl

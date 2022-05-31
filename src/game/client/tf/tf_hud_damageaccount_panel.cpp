@@ -126,6 +126,8 @@ ConVar hud_combattext_red( "hud_combattext_red", "255", FCVAR_ARCHIVE, "Red modi
 ConVar hud_combattext_green( "hud_combattext_green", "0", FCVAR_ARCHIVE, "Green modifier for color of damage indicators", true, 0, true, 255 );
 ConVar hud_combattext_blue( "hud_combattext_blue", "0", FCVAR_ARCHIVE, "Blue modifier for color of damage indicators", true, 0, true, 255 );
 
+extern ConVar tf2v_allow_combattext;
+extern ConVar tf2v_allow_hitsounds;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -271,25 +273,28 @@ void CDamageAccountPanel::OnDamaged( IGameEvent *event )
 
 		// Play hit sound, if appliable.
 		bool bDinged = false;
-
-		if (tf_dingalingaling_lasthit.GetBool() && iHealth == 0)
+		
+		if (tf2v_allow_hitsounds.GetBool())
 		{
-			// This guy is dead, play kill sound.
-			PlayHitSound(iDmgAmount, true);
-			bDinged = true;
-		}
+			if (tf_dingalingaling_lasthit.GetBool() && iHealth == 0)
+			{
+				// This guy is dead, play kill sound.
+				PlayHitSound(iDmgAmount, true);
+				bDinged = true;
+			}
 
-		if (tf_dingalingaling.GetBool() && !bDinged)
-		{
-			PlayHitSound(iDmgAmount, false);
-			bDinged = true;
+			if (tf_dingalingaling.GetBool() && !bDinged)
+			{
+				PlayHitSound(iDmgAmount, false);
+				bDinged = true;
+			}
 		}
 
 		// Leftover from old code?
 		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "DamagedPlayer" );
 
 		// Stop here if we chose not to show hit numbers.
-		if ( !hud_combattext.GetBool() )
+		if ( !hud_combattext.GetBool() || !tf2v_allow_combattext.GetBool() )
 			return;
 
 		// Don't show the numbers if we can't see the victim.
@@ -355,7 +360,7 @@ void CDamageAccountPanel::OnHealed( IGameEvent *event )
 	if ( !pPlayer || !pPlayer->IsAlive() )
 		return;
 
-	if ( !hud_combattext.GetBool() || !hud_combattext_healing.GetBool() )
+	if ( ( !hud_combattext.GetBool() || !tf2v_allow_combattext.GetBool() )  || !hud_combattext_healing.GetBool() )
 		return;
 
 	int iPatient = event->GetInt( "patient" );
@@ -410,7 +415,7 @@ void CDamageAccountPanel::OnBonus( IGameEvent *event )
 	if ( !pPlayer || !pPlayer->IsAlive() )
 		return;
 
-	if ( !hud_combattext.GetBool() )
+	if ( !hud_combattext.GetBool() || !tf2v_allow_combattext.GetBool() )
 		return;
 
 	short iTarget = event->GetInt( "player_entindex" );

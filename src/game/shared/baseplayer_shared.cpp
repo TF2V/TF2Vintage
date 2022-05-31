@@ -88,7 +88,7 @@
 #endif
 
 #if defined ( TF_VINTAGE ) || ( TF_VINTAGE_CLIENT )
-ConVar tf2v_flips( "tf2v_flips", "0", FCVAR_REPLICATED, "Allows players to uncap their look angles, causing flips." );
+ConVar tf2v_flips( "tf2v_flips", "0", FCVAR_CHEAT|FCVAR_REPLICATED, "Allows players to uncap their look angles, causing flips." );
 #endif
 
 #ifdef CLIENT_DLL
@@ -345,7 +345,7 @@ Vector CBasePlayer::EyePosition( )
 #ifdef CLIENT_DLL
 		if ( IsObserver() )
 		{
-			if ( GetObserverMode() == OBS_MODE_CHASE )
+			if ( GetObserverMode() == OBS_MODE_CHASE || GetObserverMode() == OBS_MODE_POI )
 			{
 				if ( IsLocalPlayer() )
 				{
@@ -1038,7 +1038,7 @@ void CBasePlayer::SelectItem( const char *pstr, int iSubType )
 	// Make sure the current weapon can be holstered
 	if ( GetActiveWeapon() )
 	{
-		if ( !GetActiveWeapon()->CanHolster() )
+		if ( !GetActiveWeapon()->CanHolster() && !pItem->ForceWeaponSwitch() )
 			return;
 
 		ResetAutoaim( );

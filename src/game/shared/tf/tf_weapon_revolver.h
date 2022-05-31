@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2005, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2005, Valve Corporation, All rights reserved. =======
 //
 //
 //=============================================================================
@@ -40,9 +40,9 @@ public:
 	virtual bool DefaultReload( int iClipSize1, int iClipSize2, int iActivity );
 
 #if defined( CLIENT_DLL )
-	virtual void	GetWeaponCrosshairScale( float &flScale ) override;
+	virtual void	GetWeaponCrosshairScale( float &flScale ) OVERRIDE;
 
-	int 			TranslateViewmodelHandActivity( int iActivity ) override;
+	int 			TranslateViewmodelHandActivity( int iActivity ) OVERRIDE;
 #endif
 
 	virtual bool	HasSapperCrits(void);
@@ -54,7 +54,7 @@ public:
 	virtual bool	Deploy(void);
 	virtual bool	Holster(CBaseCombatWeapon *pSwitchTo);
 
-	virtual const char *GetEffectLabelText(void) { return "#TF_CRITS"; }
+	virtual const char* GetEffectLabelText(void) { return "#TF_CRITS"; }
 
 
 private:

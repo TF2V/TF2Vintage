@@ -47,7 +47,7 @@ ActionResult<CTFBot> CTFBotSpyInfiltrate::Update( CTFBot *me, float dt )
 	if ( area == nullptr )
 		return Action<CTFBot>::Continue();
 
-	if ( !me->m_Shared.IsStealthed() && !area->HasTFAttributes( RED_SPAWN_ROOM|BLUE_SPAWN_ROOM|SPAWN_ROOM_EXIT ) && area->IsInCombat() && !m_bCloaked )
+	if ( !me->m_Shared.IsStealthed() && !area->HasTFAttributes( TF_NAV_RED_SPAWN_ROOM|TF_NAV_BLUE_SPAWN_ROOM|TF_NAV_SPAWN_ROOM_EXIT ) && area->IsInCombat() && !m_bCloaked )
 	{
 		m_bCloaked = true;
 		me->PressAltFireButton();
@@ -61,8 +61,8 @@ ActionResult<CTFBot> CTFBotSpyInfiltrate::Update( CTFBot *me, float dt )
 			return Action<CTFBot>::SuspendFor( new CTFBotSpySap( obj ), "Sapping an enemy object" );
 	}
 
-	if ( me->m_hTargetSentry && !me->m_hTargetSentry->HasSapper() )
-		return Action<CTFBot>::SuspendFor( new CTFBotSpySap( me->m_hTargetSentry ), "Sapping a Sentry" );
+	if ( me->GetTargetSentry() && !me->GetTargetSentry()->HasSapper() )
+		return Action<CTFBot>::SuspendFor( new CTFBotSpySap( me->GetTargetSentry() ), "Sapping a Sentry" );
 
 	if ( !m_HidingArea && m_findHidingAreaDelay.IsElapsed() )
 	{
@@ -194,7 +194,9 @@ bool CTFBotSpyInfiltrate::FindHidingSpot( CTFBot *actor )
 	FOR_EACH_VEC( exits, i )
 	{
 		CUtlVector<CNavArea *> temp;
-		CollectSurroundingAreas( &temp, exits[i], 2500.0f );
+		CollectSurroundingAreas( &temp, exits[i], 2500.0f,
+								 actor->GetLocomotionInterface()->GetStepHeight(), 
+								 actor->GetLocomotionInterface()->GetStepHeight() );
 
 		surrounding.AddVectorToTail( temp );
 	}

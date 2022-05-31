@@ -14,6 +14,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -22,6 +23,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -34,6 +39,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -42,6 +48,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -54,6 +64,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -62,6 +73,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -74,6 +89,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -82,6 +98,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 	"sniper"
@@ -98,6 +118,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -106,6 +127,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -118,6 +143,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -126,6 +152,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -138,6 +168,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -146,6 +177,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -158,6 +193,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -166,6 +202,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 	"soldier"
@@ -182,6 +222,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -190,6 +231,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -202,6 +247,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -210,6 +256,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -222,6 +272,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -230,6 +281,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -242,6 +297,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -250,9 +306,13 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
-	"demoman"
+	"Demoman"
 	{
 		"activeslot"		"0"
 		"A"
@@ -266,6 +326,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -274,6 +335,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -286,6 +351,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -294,6 +360,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -306,6 +376,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -314,6 +385,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -326,6 +401,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -334,6 +410,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 	"medic"
@@ -350,6 +430,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -358,6 +439,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -370,6 +455,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -378,6 +464,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -390,6 +480,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -398,6 +489,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -410,6 +505,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -418,6 +514,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 	"heavy"
@@ -434,6 +534,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -442,6 +543,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -454,6 +559,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -462,6 +568,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -474,6 +584,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -482,6 +593,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -494,6 +609,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -502,6 +618,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 	"pyro"
@@ -518,6 +638,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -526,6 +647,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -538,6 +663,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -546,6 +672,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -558,6 +688,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -566,6 +697,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -578,6 +713,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -586,6 +722,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 	"spy"
@@ -602,6 +742,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -610,6 +751,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -622,6 +767,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -630,6 +776,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -642,6 +792,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -650,6 +801,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -662,6 +817,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -670,6 +826,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 	"engineer"
@@ -686,6 +846,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -694,6 +855,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"B"
 		{
@@ -706,6 +871,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -714,6 +880,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"C"
 		{
@@ -726,6 +896,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -734,6 +905,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 		"D"
 		{
@@ -746,6 +921,7 @@
 			"head"		"0"
 			"misc"		"0"
 			"misc2"		"0"
+			"misc3"		"0"
 			"taunt"		"0"
 			"taunt2"		"0"
 			"taunt3"		"0"
@@ -754,6 +930,10 @@
 			"taunt6"		"0"
 			"taunt7"		"0"
 			"taunt8"		"0"
+			"paint"		"0"
+			"paint2"		"0"
+			"paint3"		"0"
+			"paint4"		"0"
 		}
 	}
 }

@@ -112,6 +112,8 @@ ConVar	spec_freeze_distance_max( "spec_freeze_distance_max", "200", FCVAR_CHEAT,
 #endif
 
 static ConVar	cl_first_person_uses_world_model ( "cl_first_person_uses_world_model", "0", FCVAR_ARCHIVE, "Causes the third person model to be drawn instead of the view model" );
+static ConVar	tf2v_use_fp_legs("tf2v_use_fp_legs", "0", FCVAR_ARCHIVE | FCVAR_DEVELOPMENTONLY | FCVAR_CHEAT, "EXPERIMENTAL: Displays the player's legs when in firstperson mode.");
+
 
 ConVar demo_fov_override( "demo_fov_override", "0", FCVAR_CLIENTDLL | FCVAR_DONTRECORD, "If nonzero, this value will be used to override FOV during demo playback." );
 
@@ -298,7 +300,6 @@ END_RECV_TABLE()
 
 #if defined ( USES_ECON_ITEMS ) || defined ( TF_VINTAGE_CLIENT )
 		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
-		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hDisguiseWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
 #endif
 
 	END_RECV_TABLE()
@@ -1947,7 +1948,7 @@ bool C_BasePlayer::ShouldDrawThisPlayer()
 	{
 		return true;
 	}
-	if ( !UseVR() && cl_first_person_uses_world_model.GetBool() )
+	if ( !UseVR() && ( cl_first_person_uses_world_model.GetBool() || tf2v_use_fp_legs.GetBool() ) )
 	{
 		return true;
 	}
@@ -1961,6 +1962,19 @@ bool C_BasePlayer::ShouldDrawThisPlayer()
 	}
 	return false;
 }
+
+//-----------------------------------------------------------------------------
+// Purpose: Accessor used for determing showing our FP legs.
+//          This should display when the player is in firstperson and not showing another model already.
+//-----------------------------------------------------------------------------
+bool C_BasePlayer::ShouldDrawFirstPersonLegs()
+{
+	if (tf2v_use_fp_legs.GetBool())
+		return ( ShouldDrawThisPlayer() && InFirstPersonView() && DrawingMainView() );
+	
+	return false;
+}
+
 
 
 
@@ -2871,26 +2885,6 @@ void C_BasePlayer::UpdateWearables( void )
 }
 #endif // USES_ECON_ITEMS
 
-#if defined ( USES_ECON_ITEMS ) || defined ( TF_VINTAGE_CLIENT )
-//-----------------------------------------------------------------------------
-// Purpose: Update the visibility of our worn items.
-//-----------------------------------------------------------------------------
-void C_BasePlayer::UpdateDisguiseWearables( void )
-{
-	for ( int i=0; i<m_hDisguiseWearables.Count(); ++i )
-	{
-		CEconWearable* pItem = m_hDisguiseWearables[i];
-		if ( pItem )
-		{
-			pItem->ValidateModelIndex();
-			pItem->UpdateVisibility();
-			pItem->CreateShadow();
-			pItem->UpdatePlayerBodygroups( true );
-		}
-	}
-}
-#endif // USES_ECON_ITEMS
-
 
 //-----------------------------------------------------------------------------
 // Purpose: In meathook mode, fix the bone transforms to hang the user's own
@@ -3007,8 +3001,39 @@ void C_BasePlayer::BuildFirstPersonMeathookTransformations( CStudioHdr *hdr, Vec
 		matrix3x4_t  &transformhelmet = GetBoneForWrite( iHelm );
 		MatrixScaleByZero( transformhelmet );
 	}
-}
+	
+	bool bLegOnlyTransform = ShouldDrawFirstPersonLegs();
+	// Leg only transformations also need additional steps.
+	if ( bLegOnlyTransform && GetModelPtr() )
+	{
+		// Hide every bone that isn't the pelvis, hip, knee, foot, or toe.
+		
+		// This is suffering.
+		int iPelvis = LookupBone( "bip_pelvis" );
+		int iHipL = LookupBone( "bip_hip_L" );
+		int iHipR = LookupBone( "bip_hip_R" );
+		int iKneeL = LookupBone( "bip_knee_L" );
+		int iKneeR = LookupBone( "bip_knee_R" );
+		int iFootL = LookupBone( "bip_foot_L" );
+		int iFootR = LookupBone( "bip_foot_R" );
+		int iToeL = LookupBone( "bip_toe_L" );
+		int iToeR = LookupBone( "bip_toe_R" );
+		
+		// Now we have to go through and check to see if this isn't a leg related bone.
+		// Check all the bones in this model.
+		for (int i = 0; i < GetModelPtr()->numbones()-1; i++)
+		{
+			// If it's a leg bone, skip over it.
+			if (i == iPelvis || i == iHipL || i == iHipR || i == iKneeL || i == iKneeR ||
+				i == iFootL || i == iFootR || i == iToeL || i == iToeR)
+				continue;
 
+				// If we know this definitely is not a leg related item, shrink it.
+				matrix3x4_t  &transformnonleg = GetBoneForWrite(i);
+				MatrixScaleByZero(transformnonleg);
+		}
+	}
+}
 
 
 void CC_DumpClientSoundscapeData( const CCommand& args )

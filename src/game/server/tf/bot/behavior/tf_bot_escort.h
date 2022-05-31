@@ -1,35 +1,40 @@
-/* reverse engineering by sigsegv
- * based on TF2 version 20151007a
- * server/tf/bot/behavior/tf_bot_escort.h
- * used in MvM: TODO
- */
+//========= Copyright © Valve LLC, All rights reserved. =======================
+//
+// Purpose:		
+//
+// $NoKeywords: $
+//=============================================================================
+#ifndef TF_BOT_ESCORT_H
+#define TF_BOT_ESCORT_H
 
+#include "NextBotBehavior.h"
 
-// sizeof: TODO (>=0x4824)
 class CTFBotEscort : public Action<CTFBot>
 {
 public:
-	CTFBotEscort(CBaseEntity *who);
+	CTFBotEscort( CBaseCombatCharacter *who );
 	virtual ~CTFBotEscort();
-	
-	virtual const char *GetName() const override;
-	
-	virtual ActionResult<CTFBot> OnStart(CTFBot *actor, Action<CTFBot> *action) override;
-	virtual ActionResult<CTFBot> Update(CTFBot *actor, float dt) override;
-	
-	virtual EventDesiredResult<CTFBot> OnMoveToSuccess(CTFBot *actor, const Path *path) override;
-	virtual EventDesiredResult<CTFBot> OnMoveToFailure(CTFBot *actor, const Path *path, MoveToFailureType fail) override;
-	virtual EventDesiredResult<CTFBot> OnStuck(CTFBot *actor) override;
-	virtual EventDesiredResult<CTFBot> OnCommandApproach(CTFBot *actor, const Vector& v1, float f1) override;
-	
-	virtual QueryResponse ShouldRetreat(const INextBot *nextbot) const override;
-	
-	CBaseEntity *GetWho() const;
-	void SetWho(CBaseEntity *who);
-	
+
+	virtual const char *GetName() const OVERRIDE;
+
+	virtual ActionResult<CTFBot> OnStart( CTFBot *me, Action<CTFBot> *priorAction ) OVERRIDE;
+	virtual ActionResult<CTFBot> Update( CTFBot *me, float dt ) OVERRIDE;
+
+	virtual EventDesiredResult<CTFBot> OnMoveToSuccess( CTFBot *me, const Path *path ) OVERRIDE;
+	virtual EventDesiredResult<CTFBot> OnMoveToFailure( CTFBot *me, const Path *path, MoveToFailureType fail ) OVERRIDE;
+	virtual EventDesiredResult<CTFBot> OnStuck( CTFBot *me ) OVERRIDE;
+	virtual EventDesiredResult<CTFBot> OnCommandApproach( CTFBot *me, const Vector &v1, float f1 ) OVERRIDE;
+
+	virtual QueryResultType ShouldRetreat( const INextBot *me ) const OVERRIDE;
+
+	CBaseCombatCharacter *GetWho() const;
+	void SetWho( CBaseCombatCharacter *who );
+
 private:
-	CBaseEntity *m_hWho;              // +0x0034
-	PathFollower m_PathFollower;      // +0x0038
+	CBaseCombatCharacter *m_hWho;
+	PathFollower m_PathFollower;
 	// 480c CountdownTimer
-	CountdownTimer m_ctRecomputePath; // +0x4818
+	CountdownTimer m_ctRecomputePath;
 };
+
+#endif

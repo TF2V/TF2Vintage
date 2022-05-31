@@ -239,8 +239,8 @@ void CHeadlessHatmanAttack::SelectVictim( CHeadlessHatman *actor )
 	if (!TFGameRules()->GetIT())
 	{
 		CUtlVector<CTFPlayer *> victims;
-		CollectPlayers( &victims, TF_TEAM_RED, true );
-		CollectPlayers( &victims, TF_TEAM_BLUE, true, true );
+		CollectPlayers( &victims, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+		CollectPlayers( &victims, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
 
 		float flDist1 = FLT_MAX;
 		float flDist2 = FLT_MAX;
@@ -315,7 +315,7 @@ bool CHeadlessHatmanAttack::IsPotentiallyChaseable( CHeadlessHatman *actor, CTFP
 		return false;
 
 	CTFNavArea *area = static_cast<CTFNavArea *>( victim->GetLastKnownArea() );
-	if (!area || area->HasTFAttributes( RED_SPAWN_ROOM|BLUE_SPAWN_ROOM ))
+	if (!area || area->HasTFAttributes( TF_NAV_RED_SPAWN_ROOM|TF_NAV_BLUE_SPAWN_ROOM ))
 		return false;
 
 	if (!victim->GetGroundEntity())

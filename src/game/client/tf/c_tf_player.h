@@ -66,6 +66,8 @@ public:
 
 	virtual Vector GetObserverCamOrigin( void );
 	virtual int DrawModel( int flags );
+	virtual bool ShouldDraw( void ) OVERRIDE;
+	virtual const Vector &GetRenderOrigin( void ) OVERRIDE;
 
 	virtual bool CreateMove( float flInputSampleTime, CUserCmd *pCmd );
 
@@ -97,6 +99,8 @@ public:
 	bool IsPlayerClass( int iClass );
 	virtual int GetMaxHealth( void ) const;
 	virtual int	GetMaxHealthForBuffing( void ) const;
+
+	float GetLastDamageTime( void ) const { return m_flLastDamageTime; }
 
 	virtual int GetRenderTeamNumber( void );
 
@@ -223,7 +227,7 @@ public:
 	void			SetItem( C_TFItem *pItem );
 	C_TFItem *GetItem( void );
 	bool			IsAllowedToPickUpFlag( void );
-	bool			HasTheFlag( void );
+	bool			HasTheFlag( int const *pFlagExceptions = NULL, int nNumExceptions = 0 );
 	float			GetCritMult( void ) { return m_Shared.GetCritMult(); }
 
 	virtual void	ItemPostFrame( void );
@@ -248,6 +252,8 @@ public:
 	virtual void		GetStepSoundVelocities( float *velwalk, float *velrun );
 	virtual void		SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalking );
 
+	void				ModifyEmitSoundParams( EmitSound_t &params ) OVERRIDE;
+
 	bool	DoClassSpecialSkill( void );
 	bool	CanGoInvisible( bool bFeigning = false );
 
@@ -262,6 +268,9 @@ public:
 	// Gunslinger
 	bool				HasGunslinger( void ) { return m_Shared.m_bGunslinger; }
 
+	C_BaseEntity	*GetGrapplingHookTarget( void ) { return m_hGrapplingHookTarget; }
+	void			SetGrapplingHookTarget( CBaseEntity *pTarget, bool bSomething = false );
+	
 public:
 	// Ragdolls.
 	virtual C_BaseAnimating *BecomeRagdollOnClient();
@@ -301,6 +310,11 @@ public:
 	void CreateBombinomiconHint( void );
 	void DestroyBombinomiconHint( void );
 	void UpdateHalloweenBombHead( void );
+
+	float m_flInspectTime;
+	bool IsInspecting() const;
+
+	int GetCurrency( void ) { return m_nCurrency; }
 
 protected:
 
@@ -378,6 +392,8 @@ private:
 
 	bool m_bUpdateObjectHudState;
 
+	bool m_bOldCustomModelVisible;
+
 public:
 
 	CTFPlayerShared m_Shared;
@@ -395,6 +411,7 @@ public:
 	CNetworkHandle( C_TFItem, m_hItem );
 
 	CNetworkHandle( C_TFWeaponBase, m_hOffHandWeapon );
+	CNetworkHandle( C_BaseEntity, m_hGrapplingHookTarget );
 
 	int				m_iOldPlayerClass;	// Used to detect player class changes
 	bool			m_bIsDisplayingNemesisIcon;
@@ -461,9 +478,14 @@ public:
 	// Overheal particle fix for spies
 	int				m_iOldOverhealTeamNum;
 
+	// MvM Currency
+	int				m_nCurrency;
+	int				m_nOldCurrency;
+
 private:
 
 	float m_flWaterImpactTime;
+	float m_flLastDamageTime;
 
 	// Gibs.
 	CUtlVector<breakmodel_t>	m_aGibs;

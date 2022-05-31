@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -14,15 +14,18 @@
 
 #include "NextBotManager.h"
 
+
+#define BOT_NAMES_FILE	"scripts/tf_bot_names.txt"
+
 class CTFBotManager : public NextBotManager
 {
 public:
 	CTFBotManager();
 	virtual ~CTFBotManager();
 
-	virtual void Update( void ) override;
-	virtual void OnMapLoaded( void ) override;
-	virtual void OnRoundRestart( void ) override;
+	virtual void Update( void ) OVERRIDE;
+	virtual void OnMapLoaded( void ) OVERRIDE;
+	virtual void OnRoundRestart( void ) OVERRIDE;
 
 	void OnLevelShutdown( void );
 
@@ -50,10 +53,5 @@ private:
 };
 
 extern CTFBotManager &TheTFBots( void );
-
-const char *DifficultyToName( int iSkillLevel );
-int NameToDifficulty( const char *pszSkillName );
-
-void CreateBotName( int iTeamNum, int iClassIdx, int iSkillLevel, char *out, int outlen );
 
 #endif

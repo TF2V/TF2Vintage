@@ -53,6 +53,7 @@ public:
 
 	virtual void	Detonate( void );
 	virtual void	VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	virtual void 	CreateStickyBoltEffect( CBaseEntity *pOther, trace_t *pTrace );
 
 	void			JarTouch( CBaseEntity *pOther );
 
@@ -126,6 +127,8 @@ public:
 	DECLARE_DATADESC();
 #endif
 
+	CTFProjectile_Cleaver();
+
 	virtual int	GetWeaponID( void ) const 			{ return TF_WEAPON_GRENADE_CLEAVER; }
 
 #ifdef GAME_DLL
@@ -138,6 +141,7 @@ public:
 
 	private:
 	float		m_flCreationTime;
+	bool 		m_bTouched;
 #endif
 };
 

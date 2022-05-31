@@ -42,6 +42,11 @@ CEconEntity::CEconEntity()
 	m_pAttributes = this;
 }
 
+CEconEntity::~CEconEntity()
+{
+	m_pAttributes = NULL;
+}
+
 #ifdef CLIENT_DLL
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -71,7 +76,7 @@ void C_EconEntity::OnDataChanged( DataUpdateType_t updateType )
 	if ( updateType == DATA_UPDATE_CREATED )
 	{
 		CEconItemView *pItem = GetItem();
-		for ( int i = 0; i < TF_TEAM_COUNT; i++ )
+		for ( int i = 0; i < TF_TEAM_VISUALS_COUNT; i++ )
 		{
 			PerTeamVisuals_t *pVisuals = pItem->GetStaticData()->GetVisuals( i );
 			if( pVisuals )
@@ -372,7 +377,7 @@ bool C_EconEntity::GetAttachment( int iAttachment, matrix3x4_t &matrix )
 //-----------------------------------------------------------------------------
 void C_EconEntity::SetMaterialOverride( int iTeam, const char *pszMaterial )
 {
-	Assert( iTeam >= 0 && iTeam < TF_TEAM_COUNT );
+	Assert( iTeam >= 0 && iTeam < TF_TEAM_VISUALS_COUNT );
 	m_aMaterials[iTeam].Init( pszMaterial, TEXTURE_GROUP_CLIENT_EFFECTS, true );
 }
 
@@ -381,7 +386,7 @@ void C_EconEntity::SetMaterialOverride( int iTeam, const char *pszMaterial )
 //-----------------------------------------------------------------------------
 void C_EconEntity::SetMaterialOverride( int iTeam, CMaterialReference &material )
 {
-	Assert( iTeam >= 0 && iTeam < TF_TEAM_COUNT );
+	Assert( iTeam >= 0 && iTeam < TF_TEAM_VISUALS_COUNT );
 	m_aMaterials[iTeam].Init( material );
 }
 
@@ -564,6 +569,7 @@ void CEconEntity::UpdatePlayerBodygroups( int bOnOff )
 //-----------------------------------------------------------------------------
 void CEconEntity::UpdateOnRemove( void )
 {
+	UpdatePlayerBodygroups( TURN_OFF_BODYGROUP_OVERRIDES );
 	SetOwnerEntity( NULL );
 	ReapplyProvision();
 	BaseClass::UpdateOnRemove();

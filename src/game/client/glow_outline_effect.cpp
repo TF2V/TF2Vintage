@@ -16,7 +16,13 @@
 
 #define FULL_FRAME_TEXTURE "_rt_FullFrameFB"
 
-#define FIXED_COPY_TEXTURE_TO_RENDER_TARGET 0
+
+#ifdef GLOWS_ENABLE
+
+// If you've fixed IMatRenderContext::CopyTextureToRenderTargetEx
+// (see CGlowObjectManager::RenderGlowModels below), then you can enable this and have
+// code that's a bit cleaner. Also, then you won't have to ship debug/debugfbtexture1.
+#define FIXED_COPY_TEXTURE_TO_RENDER_TARGET 1
 
 
 
@@ -249,8 +255,9 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 		render->GetColorModulation( vOrigColor.Base() );
 		const float flOrigBlend = render->GetBlend();
 
-		// Set override material for glow color
-		g_pStudioRender->ForcedMaterialOverride( materials->FindMaterial( "dev/glow_color", TEXTURE_GROUP_OTHER, true ) );
+		// Set override shader to the same simple shader we use to render the glow models	
+		IMaterial *pMatGlowColor = materials->FindMaterial( "dev/glow_color", TEXTURE_GROUP_OTHER, true );	
+		g_pStudioRender->ForcedMaterialOverride( pMatGlowColor );
 		pRenderContext->OverrideColorWriteEnable( true, true );
 		pRenderContext->OverrideAlphaWriteEnable( true, true );
 
@@ -281,7 +288,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 		pRenderContext->CopyTextureToRenderTargetEx( 0, pRtFullFrameFB1, nullptr );
 	#else
 		pRenderContext->SetStencilEnable( false );
-
+		
 		IMaterial *const pFullFrameFB1 = materials->FindMaterial( "debug/debugfbtexture1", TEXTURE_GROUP_RENDER_TARGET );
 		pFullFrameFB1->AddRef();
 		pRenderContext->Bind( pFullFrameFB1 );
@@ -364,3 +371,4 @@ void CGlowObjectManager::GlowObjectDefinition_t::DrawModel()
 	}
 }
 
+#endif

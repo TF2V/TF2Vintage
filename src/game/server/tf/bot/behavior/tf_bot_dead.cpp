@@ -36,13 +36,13 @@ ActionResult<CTFBot> CTFBotDead::Update( CTFBot *me, float interval )
 		return Action<CTFBot>::ChangeTo( new CTFBotMainAction, "This should not happen!" );
 	}
 
-	if ( ( me->m_nBotAttrs & CTFBot::AttributeType::REMOVEONDEATH ) == CTFBot::AttributeType::REMOVEONDEATH )
+	if ( me->HasAttribute( CTFBot::AttributeType::REMOVEONDEATH ) )
 	{
 		engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", me->GetUserID() ) );
 		return Action<CTFBot>::Continue();
 	}
 
-	if ( ( me->m_nBotAttrs & CTFBot::AttributeType::BECOMESPECTATORONDEATH ) == CTFBot::AttributeType::BECOMESPECTATORONDEATH )
+	if ( me->HasAttribute( CTFBot::AttributeType::BECOMESPECTATORONDEATH ) )
 	{
 		me->ChangeTeam( TEAM_SPECTATOR, false, true );
 		return Action<CTFBot>::Done();

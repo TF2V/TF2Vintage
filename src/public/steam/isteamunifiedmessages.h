@@ -40,6 +40,11 @@ public:
 
 #define STEAMUNIFIEDMESSAGES_INTERFACE_VERSION "STEAMUNIFIEDMESSAGES_INTERFACE_VERSION001"
 
+#ifndef VERSION_SAFE_STEAM_API_INTERFACES
+// Global interface accessor
+S_API ISteamUnifiedMessages *S_CALLTYPE SteamUnifiedMessages();
+#endif
+
 // callbacks
 #if defined( VALVE_CALLBACK_PACK_SMALL )
 #pragma pack( push, 4 )

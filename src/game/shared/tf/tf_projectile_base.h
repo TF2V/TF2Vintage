@@ -60,7 +60,7 @@ public:
 	virtual int   GetWeaponID( void ) const { return m_iWeaponID; }
 	void		  SetWeaponID( int iID ) { m_iWeaponID = iID; }
 
-	bool		  IsCritical( void )				{ return m_bCritical; }
+	bool		  IsCritical( void ) const			{ return m_bCritical; }
 	virtual void  SetCritical( bool bCritical )		{ m_bCritical = bCritical; }
 	virtual void  SetLauncher( CBaseEntity *pLauncher );
 

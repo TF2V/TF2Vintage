@@ -17,6 +17,7 @@
 #include "tf_gamestats.h"
 #include "tf_weapon_sniperrifle.h"
 #include "tf_fx.h"
+#include "props.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -66,10 +67,26 @@ ConVar tf_teleporter_fov_time( "tf_teleporter_fov_time", "0.5", FCVAR_CHEAT | FC
 
 ConVar tf2v_disguise_spy_teleport( "tf2v_disguise_spy_teleport", "1", FCVAR_NOTIFY, "Allows disguised spies to travel through enemy teleporters." );
 
+ConVar tf2v_teleport_bread( "tf2v_teleport_bread", "0", FCVAR_NOTIFY, "Adds bread that spawns when exiting a teleporter. Always happens during the L&W time period, else uses standard probability." );
+
 
 extern ConVar tf2v_use_new_wrench_mechanics;
+extern ConVar tf2v_use_new_jag;
 
 LINK_ENTITY_TO_CLASS( obj_teleporter,	CObjectTeleporter );
+
+const char *g_pszBreadModels[] = 
+{
+	"models/weapons/c_models/c_bread/c_bread_plainloaf.mdl",	// Scout
+	"models/weapons/c_models/c_bread/c_bread_cinnamon.mdl",		// Sniper (Originally listed for Demo)
+	"models/weapons/c_models/c_bread/c_bread_ration.mdl",		// Soldier
+	"models/weapons/c_models/c_bread/c_bread_crumpet.mdl",		// Demo (Originally listed for Sniper)
+	"models/weapons/c_models/c_bread/c_bread_pretzel.mdl",		// Medic
+	"models/weapons/c_models/c_bread/c_bread_russianblack.mdl",	// Heavy
+	"models/weapons/c_models/c_bread/c_bread_burnt.mdl",		// Pyro
+	"models/weapons/c_models/c_bread/c_bread_baguette.mdl",		// Spy
+	"models/weapons/c_models/c_bread/c_bread_cornbread.mdl",	// Engineer
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -323,6 +340,12 @@ void CObjectTeleporter::Precache()
 	PrecacheParticleSystem( "tpdamage_2" );
 	PrecacheParticleSystem( "tpdamage_3" );
 	PrecacheParticleSystem( "tpdamage_4" );
+	
+	// Precache breads
+	for( int i = 0; i < ARRAYSIZE( g_pszBreadModels ); i++ )
+	{
+		PrecacheModel( g_pszBreadModels[i] );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -454,16 +477,11 @@ void CObjectTeleporter::CopyUpgradeStateToMatch( CObjectTeleporter *pMatch, bool
 	CObjectTeleporter *pObjToCopyTo = bCopyFrom ? this : pMatch;
 
 	pObjToCopyTo->m_iUpgradeMetal = pObjToCopyFrom->m_iUpgradeMetal;
-	pObjToCopyTo->m_iMaxHealth = pObjToCopyFrom->m_iMaxHealth;
+	pObjToCopyTo->m_iHighestUpgradeLevel = pObjToCopyFrom->m_iHighestUpgradeLevel;
 	pObjToCopyTo->m_iUpgradeMetalRequired = pObjToCopyFrom->m_iUpgradeMetalRequired;
 	pObjToCopyTo->m_iUpgradeLevel = pObjToCopyFrom->m_iUpgradeLevel;
-
-	/**(pObjToCopyTo + 632) = *(this + 632);
-	*(pObjToCopyTo + 629) = *(this + 629);
-	*(pObjToCopyTo + 630) = *(this + 630);
-	*(pObjToCopyTo + 631) = *(this + 631);
-	*(pObjToCopyTo + 633) = *(this + 633);
-	*(pObjToCopyTo + 634) = *(this + 634);*/
+	pObjToCopyTo->m_iDefaultUpgrade = pObjToCopyFrom->m_iDefaultUpgrade;
+	pObjToCopyTo->m_flUpgradeCompleteTime = pObjToCopyFrom->m_flUpgradeCompleteTime;
 }
 
 bool CObjectTeleporter::CheckUpgradeOnHit( CTFPlayer *pPlayer )
@@ -812,6 +830,22 @@ void CObjectTeleporter::TeleporterThink( void )
 
 					color32 fadeColor = {255,255,255,100};
 					UTIL_ScreenFade( pTeleportingPlayer, fadeColor, 0.25, 0.4, FFADE_IN );
+					
+					// Love And War Holiday: Bread has a 100% chance to teleport.
+					if ( TFGameRules()->IsHolidayActive( kHoliday_BreadUpdate ) )
+					{
+						TeleportBread( pTeleportingPlayer );
+					}
+					else if ( tf2v_teleport_bread.GetBool() ) // Bread is spawned on probability when the command is on.
+					{
+						// Chance is 1/20, except for Soldier which is 1/3. "I have done nothing but teleport bread for three days."
+						float nBreadProbability = pTeleportingPlayer->GetPlayerClass()->GetClassIndex() == TF_CLASS_SOLDIER ? (2 / 3) : (19 / 20);
+						if ( RandomFloat(0.0f, 1.0f) >= nBreadProbability )
+						{
+							TeleportBread( pTeleportingPlayer );
+						}
+					}
+			
 				}
 				else
 				{
@@ -985,7 +1019,7 @@ int CObjectTeleporter::DrawDebugTextOverlays(void)
 		text_offset++;
 
 		// state
-		Q_snprintf( tempstr, sizeof( tempstr ), "State: %d", m_iState );
+		Q_snprintf( tempstr, sizeof( tempstr ), "State: %d", m_iState.Get() );
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 
@@ -1006,12 +1040,12 @@ bool CObjectTeleporter::Command_Repair( CTFPlayer *pActivator )
 {
 	bool bRepaired = false;
 	int iAmountToHeal = 0;
-	int iRepairCost = 0;
-	int iRepairRateCost = 0;
-	float flModRepairCost = 1.0f;
 	
 	float flRepairRate = 1;
 	CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pActivator, flRepairRate, mult_repair_value );
+	
+	if ( tf2v_use_new_jag.GetInt() > 0 )
+		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pActivator, flRepairRate, mult_repair_value_jag );
 
 	// There's got to be a better way a shorter way to mirror repairs and such.
 	if ( GetHealth() < GetMaxHealth() )
@@ -1019,20 +1053,14 @@ bool CObjectTeleporter::Command_Repair( CTFPlayer *pActivator )
 		iAmountToHeal = min( (int)(flRepairRate * 100), GetMaxHealth() - GetHealth() );
 
 		// repair the building
-		if ( tf2v_use_new_wrench_mechanics.GetBool() )
-		{
-			// 3HP per metal (new repair cost)
-			iRepairRateCost = 3;
-		}
-		else
-		{
-			// 5HP per metal (old repair cost)
-			iRepairRateCost = 5;
-		}
+		int iRepairRateCost = tf2v_use_new_wrench_mechanics.GetBool() ? 3 : 5;
+
+		float flModRepairCost = 1.0f;
 		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pActivator, flModRepairCost, mod_teleporter_cost );
 		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pActivator, flModRepairCost, building_cost_reduction );
 		iRepairRateCost *= ( 1 / flModRepairCost );
-		iRepairCost = ceil( (float)( iAmountToHeal ) * (1 / iRepairRateCost ) );
+
+		int iRepairCost = ceil( (float)( iAmountToHeal ) / iRepairRateCost );
 
 		TRACE_OBJECT( UTIL_VarArgs( "%0.2f CObjectDispenser::Command_Repair ( %d / %d ) - cost = %d\n", gpGlobals->curtime, 
 			GetHealth(),
@@ -1070,20 +1098,14 @@ bool CObjectTeleporter::Command_Repair( CTFPlayer *pActivator )
 			iAmountToHeal = min( (int)(flRepairRate * 100), pMatch->GetMaxHealth() - pMatch->GetHealth() );
 
 			// repair the building
-			if ( tf2v_use_new_wrench_mechanics.GetBool() )
-			{
-				// 3HP per metal (new repair cost)
-				iRepairRateCost = 3;
-			}
-			else
-			{
-				// 5HP per metal (old repair cost)
-				iRepairRateCost = 5;
-			}
+			int iRepairRateCost = tf2v_use_new_wrench_mechanics.GetBool() ? 3 : 5;
+
+			float flModRepairCost = 1.0f;
 			CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pActivator, flModRepairCost, mod_teleporter_cost );
 			CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pActivator, flModRepairCost, building_cost_reduction );
 			iRepairRateCost *= ( 1 / flModRepairCost );
-			iRepairCost = ceil( (float)( iAmountToHeal ) * (1 / iRepairRateCost ) );
+
+			int iRepairCost = ceil( (float)( iAmountToHeal ) / iRepairRateCost );
 
 			TRACE_OBJECT( UTIL_VarArgs( "%0.2f CObjectDispenser::Command_Repair ( %d / %d ) - cost = %d\n", gpGlobals->curtime, 
 				pMatch->GetHealth(),
@@ -1109,7 +1131,6 @@ bool CObjectTeleporter::Command_Repair( CTFPlayer *pActivator )
 
 	return bRepaired;
 }
-
 
 CObjectTeleporter* CObjectTeleporter::FindMatch( void )
 {
@@ -1148,4 +1169,58 @@ CObjectTeleporter* CObjectTeleporter::FindMatch( void )
 	}
 
 	return pMatch;
+}
+
+
+void CObjectTeleporter::TeleportBread( CTFPlayer *pPlayer )
+{
+	if( !pPlayer )
+		return;
+	
+	// Get our bread model.
+	const char* pszModelName = g_pszBreadModels[ RandomInt( 0, ARRAYSIZE( g_pszBreadModels ) ) ];
+	if (!pszModelName)
+	{
+		Assert(pszModelName);
+		return;
+	}
+	
+	// Grab the player's coordinates, but modify them so they come above the player.
+	Vector vecOrigin = pPlayer->GetAbsOrigin();
+	vecOrigin.z += TELEPORTER_MAXS.z + 50;
+	
+	// Spawn this like a healthkit/ammobox, except use the prop physics entity.
+	CPhysicsProp *pBread = static_cast<CPhysicsProp*>(CBaseAnimating::CreateNoSpawn("prop_physics_override", vecOrigin, pPlayer->GetAbsAngles(), pPlayer));
+	if ( pBread )
+	{
+		Vector vecRight, vecUp;
+		AngleVectors( GetAbsAngles(), NULL, &vecRight, &vecUp );
+
+		Vector vecImpulse( 0.0f, 0.0f, 0.0f );
+		vecImpulse += vecUp * random->RandomFloat( -0.25, 0.25 );
+		vecImpulse += vecRight * random->RandomFloat( -0.25, 0.25 );
+		VectorNormalize( vecImpulse );
+		vecImpulse *= random->RandomFloat( -100, 100 );
+		vecImpulse += GetAbsVelocity();
+
+		if ( pBread->VPhysicsGetObject() )
+		{
+			AngularImpulse angImpulse( RandomFloat( -100, 100 ), RandomFloat( -100, 100 ), RandomFloat( -100, 100 ) );
+			pBread->VPhysicsGetObject()->SetVelocityInstantaneous( &vecImpulse, &angImpulse );
+		}
+
+		pBread->SetAbsVelocity(vecImpulse + Vector(0.0f, 0.0f, 200.0f));
+
+		// Give the bread some health.
+		pBread->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
+		pBread->AddFlag( FL_GRENADE );
+		pBread->m_takedamage = DAMAGE_YES;
+		pBread->SetHealth( 900 );
+		pBread->KeyValue( "model", pszModelName );
+		DispatchSpawn( pBread );
+		pBread->Activate();
+		
+		// Remove this object in 10 seconds.
+		pBread->ThinkSet( &CBaseEntity::SUB_Remove, gpGlobals->curtime + 10, "DieContext" );
+	}
 }

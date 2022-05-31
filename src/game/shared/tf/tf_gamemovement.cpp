@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2004, Valve LLC, All rights reserved. ============
+//========= Copyright ï¿½ 1996-2004, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -44,7 +44,12 @@ ConVar	tf2v_bunnyjump_max_speed_factor("tf2v_bunnyjump_max_speed_factor", "1.2",
 ConVar  tf2v_autojump("tf2v_autojump", "0", FCVAR_REPLICATED, "Automatically jump while holding the jump button down");
 ConVar  tf2v_duckjump("tf2v_duckjump", "0", FCVAR_REPLICATED, "Toggles jumping while ducked");
 ConVar  tf2v_groundspeed_cap("tf2v_groundspeed_cap", "1", FCVAR_REPLICATED, "Toggles the max speed cap imposed when a player is standing on the ground");
-ConVar  tf2v_use_triple_jump_sound( "tf2v_use_triple_jump_sound", "1", FCVAR_REPLICATED, "Play the post MYM banana slip multijump sound?" );
+
+#ifdef GAME_DLL
+ConVar  tf2v_use_triple_jump_sound( "tf2v_use_triple_jump_sound", "1", FCVAR_SERVER_CAN_EXECUTE, "Play the post MYM banana slip multijump sound?" );
+#endif
+
+ConVar  tf2v_disable_updraft( "tf2v_disable_updraft", "1", FCVAR_REPLICATED, "Enables updraft effects when using a parachute on fire." );
 
 #define TF_MAX_SPEED   520
 
@@ -56,7 +61,8 @@ ConVar  tf2v_use_triple_jump_sound( "tf2v_use_triple_jump_sound", "1", FCVAR_REP
 #define TF_MAX_AIR_DUCKS 2
 
 extern ConVar tf2v_use_new_atomizer;
-extern ConVar tf2v_use_new_sodapopper;
+extern ConVar tf2v_use_new_sodapopper_hype;
+extern ConVar tf2v_use_new_sodapopper_fill;
 
 class CTFGameMovement : public CGameMovement
 {
@@ -69,7 +75,7 @@ public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false );
 	virtual void		ProcessMovement( CBasePlayer *pBasePlayer, CMoveData *pMove );
 	virtual bool		CanAccelerate();
-	virtual bool		 CheckJumpButton();
+	virtual bool		CheckJumpButton();
 	virtual bool		CheckWater( void );
 	virtual void		WaterMove( void );
 	virtual void		FullWalkMove();
@@ -370,7 +376,7 @@ void CTFGameMovement::AirDash( void )
 		{
 			// Make sure we're not in any form of airjump buff.
 			if ( ( !m_pTFPlayer->m_Shared.InCond( TF_COND_SODAPOPPER_HYPE )   // Not in any soda popper hype...
-			   || ( m_pTFPlayer->m_Shared.InCond( TF_COND_SODAPOPPER_HYPE ) && !tf2v_use_new_sodapopper.GetBool() ) ) // Or in old variant soda popper hype...
+			   || ( m_pTFPlayer->m_Shared.InCond( TF_COND_SODAPOPPER_HYPE ) && !tf2v_use_new_sodapopper_hype.GetBool() ) ) // Or in old variant soda popper hype...
 			    && !m_pTFPlayer->m_Shared.InCond( TF_COND_HALLOWEEN_SPEED_BOOST ) ) // And not in Halloween Speed Boost.
 			{
 				CTakeDamageInfo info( m_pTFPlayer, m_pTFPlayer, vec3_origin, m_pTFPlayer->WorldSpaceCenter(), 10.0f, DMG_BULLET );
@@ -459,7 +465,7 @@ bool CTFGameMovement::CheckJumpButton()
 	}
 
 	// Cannot jump while in the unduck transition.
-	if ( ( player->m_Local.m_bDucking && (  player->GetFlags() & FL_DUCKING ) ) || ( player->m_Local.m_flDuckJumpTime > 0.0f ) && !tf2v_duckjump.GetBool() )
+	if ( ( player->m_Local.m_bDucking && (  player->GetFlags() & FL_DUCKING ) ) || ( ( player->m_Local.m_flDuckJumpTime > 0.0f ) && !tf2v_duckjump.GetBool() ) )
 		return false;
 
 	// Cannot jump again until the jump button has been released.
@@ -1605,7 +1611,7 @@ void CTFGameMovement::FullWalkMove()
 		if (TFPlayer->m_Shared.IsParachuting() && ( player->GetGroundEntity() == NULL && !InWater() ) )
 		{
 			int nMaxFallSpeed;
-			if ( TFPlayer->m_Shared.InCond(TF_COND_BURNING) )
+			if ( TFPlayer->m_Shared.InCond(TF_COND_BURNING) && !tf2v_disable_updraft.GetBool() )
 			{
 				// If we're on fire, we updraft from the fire and don't descend at all.
 				nMaxFallSpeed = 0;
@@ -1640,7 +1646,7 @@ void CTFGameMovement::FullWalkMove()
 	// Make sure velocity is valid.
 	CheckVelocity();
 
-	if ( !m_pTFPlayer->m_Shared.InCond( TF_COND_SODAPOPPER_HYPE ) )
+	if ( !m_pTFPlayer->m_Shared.InCond( TF_COND_SODAPOPPER_HYPE ) && !tf2v_use_new_sodapopper_fill.GetBool() )
 	{
 		CTFWeaponBase *pWeapon = m_pTFPlayer->GetActiveTFWeapon();
 		if ( pWeapon && pWeapon->IsWeapon( TF_WEAPON_SODA_POPPER ) )
@@ -1956,15 +1962,10 @@ void CTFGameMovement::SetGroundEntity( trace_t *pm )
 			TE_TFExplosion(filter, 0.0f, where, Vector(0.0f, 0.0f, 1.0f),
 				TF_WEAPON_ROCKETLAUNCHER, ENTINDEX(m_pTFPlayer));
 
-			CTakeDamageInfo dmginfo( m_pTFPlayer, m_pTFPlayer, m_pTFPlayer, where, where, 50.0f, DMG_BLAST | DMG_USEDISTANCEMOD, TF_DMG_CUSTOM_TAUNTATK_BARBARIAN_SWING, &where );
-			
-			CTFRadiusDamageInfo radius;
-			radius.info       = &dmginfo;
-			radius.m_vecSrc   = where;
-			radius.m_flRadius = 100.0f;
-			radius.m_flSelfDamageRadius = 0.0f;
-			radius.m_pEntityIgnore = m_pTFPlayer;
-			TFGameRules()->RadiusDamage( radius );
+			CTakeDamageInfo dmgInfo( m_pTFPlayer, m_pTFPlayer, m_pTFPlayer, where, where, 50.0f, DMG_BLAST | DMG_USEDISTANCEMOD, TF_DMG_CUSTOM_TAUNTATK_BARBARIAN_SWING, &where );
+			CTFRadiusDamageInfo radiusInfo( &dmgInfo, where, 100.0f, m_pTFPlayer );
+			TFGameRules()->RadiusDamage( radiusInfo );
+
 			m_pTFPlayer->EmitSound( "Weapon_RocketPack.Land" );
 		}
 	}

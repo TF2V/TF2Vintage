@@ -142,6 +142,9 @@ void CTFProjectile_Jar::Spawn( void )
 
 	// Pumpkin Bombs
 	AddFlag( FL_GRENADE );
+	
+	// We don't need this, but it's useful for situations where it could get stuck on level geometry (dynamic ramps)
+	SetDetonateTimerLength( 15.0f );
 
 	// Don't collide with anything for a short time so that we never get stuck behind surfaces
 	SetCollisionGroup( TFCOLLISION_GROUP_NONE );
@@ -187,11 +190,7 @@ void CTFProjectile_Jar::Explode( trace_t *pTrace, int bitsDamageType )
 	float flRadius = GetDamageRadius();
 
 	CTakeDamageInfo newInfo( this, pAttacker, m_hLauncher, vec3_origin, vecOrigin, GetDamage(), GetDamageType() );
-	CTFRadiusDamageInfo radiusInfo;
-	radiusInfo.info = &newInfo;
-	radiusInfo.m_vecSrc = vecOrigin;
-	radiusInfo.m_flRadius = flRadius;
-	radiusInfo.m_flSelfDamageRadius = flRadius;
+	CTFRadiusDamageInfo radiusInfo( &newInfo, vecOrigin, flRadius, NULL, flRadius );
 
 	// If we extinguish a friendly player reduce our recharge time by 20%
 	if ( TFGameRules()->RadiusJarEffect( radiusInfo, GetEffectCondition() ) && m_iDeflected == 0 && pWeapon ) 
@@ -253,6 +252,7 @@ void CTFProjectile_Jar::JarTouch( CBaseEntity *pOther )
 	if ( pOther->IsPlayer() )
 	{
 		m_hEnemy = pOther;
+		CreateStickyBoltEffect( pOther, &pTrace );
 		Explode( &pTrace, GetDamageType() );
 	}
 	// We should bounce off of certain surfaces (resupply cabinets, spawn doors, etc.)
@@ -293,18 +293,85 @@ void CTFProjectile_Jar::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 		return;
 	}
 
-	// TODO: This needs to be redone properly
-	/*if ( pHitEntity->GetMoveType() == MOVETYPE_NONE )
+	// Blow up if we hit something static in the world.
+	if ( ( pHitEntity->entindex() == 0 ) && ( pHitEntity->GetMoveType() == MOVETYPE_NONE  ) )
 	{
-		// Blow up
+		// Blow up next think.
 		SetThink( &CTFProjectile_Jar::Detonate );
 		SetNextThink( gpGlobals->curtime );
-	}*/
+	}
 
-		// Blow up
-		SetThink( &CTFProjectile_Jar::Detonate );
-		SetNextThink( gpGlobals->curtime );
+}
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFProjectile_Jar::CreateStickyBoltEffect( CBaseEntity *pOther, trace_t *pTrace )
+{
+	// If this is a friendly, don't make the effect at all.
+	CTFPlayer *pTarget = ToTFPlayer( pOther );
+	if ( !pTarget || pTarget->GetTeamNumber() == GetTeamNumber() )
+		return;
+			
+	// Only attach breadmonsters and cleavers.
+	if ( GetProjectileType() == TF_PROJECTILE_BREADMONSTER_JARATE || GetProjectileType() == TF_PROJECTILE_BREADMONSTER_MADMILK || GetProjectileType() == TF_PROJECTILE_CLEAVER )
+	{
+		// Find what hitbox our jar landed on.
+		mstudiobbox_t *pBox = NULL;
+		CBaseAnimating* pAnimating = NULL;
+		if ( pTrace->m_pEnt && pTrace->m_pEnt->GetTeamNumber() != GetTeamNumber() )
+		{
+			// A blob of if statements, just to make sure we set this right. 
+			CStudioHdr* pStudioHdr = NULL;
+			mstudiohitboxset_t* pSet = NULL;
+			pAnimating = dynamic_cast<CBaseAnimating*>(pOther);
+			if (pAnimating)
+				pStudioHdr = pAnimating->GetModelPtr();
+			if (pStudioHdr)
+				pSet = pStudioHdr->pHitboxSet(pAnimating->GetHitboxSet());
+			if (pSet)
+				pBox = pSet->pHitbox( pTrace->hitbox );
+		}
+		// We got ourselves the hitbox and the animation info, time to attach it.
+		// This is a heavily edited version of CTFProjectile_Arrow::GetBoneAttachmentInfo
+		if ( pBox && pAnimating )
+		{
+			Vector vecBoneOrigin;
+			QAngle vecBoneAngles;
+			int iBone, iPhysicsBone;
+			iBone = pBox->bone;
+			iPhysicsBone = pAnimating->GetPhysicsBone(iBone);
+			//pAnim->GetBonePosition( bone, vecOrigin, vecAngles );
+
+			matrix3x4_t arrowToWorld, boneToWorld, invBoneToWorld, boneToWorldTransform;
+			MatrixCopy(EntityToWorldTransform(), arrowToWorld);
+			pAnimating->GetBoneTransform(iBone, boneToWorld);
+
+			MatrixInvert(boneToWorld, invBoneToWorld);
+			ConcatTransforms(invBoneToWorld, arrowToWorld, boneToWorldTransform);
+			MatrixAngles(boneToWorldTransform, vecBoneAngles);
+			MatrixGetColumn(boneToWorldTransform, 3, vecBoneOrigin);
+		
+		
+			IGameEvent *event = gameeventmanager->CreateEvent( "arrow_impact" );
+
+			if ( event )
+			{
+				event->SetInt( "attachedEntity", pTarget->entindex() );
+				event->SetInt( "shooter", ToTFPlayer( GetThrower() )->entindex() );
+				event->SetInt( "projectileType", GetProjectileType() );
+				event->SetInt( "boneIndexAttached", iBone );
+				event->SetFloat( "bonePositionX", vecBoneOrigin.x );
+				event->SetFloat( "bonePositionY", vecBoneOrigin.y );
+				event->SetFloat( "bonePositionZ", vecBoneOrigin.z );
+				event->SetFloat( "boneAnglesX", vecBoneAngles.x );
+				event->SetFloat( "boneAnglesY", vecBoneAngles.y );
+				event->SetFloat( "boneAnglesZ", vecBoneAngles.z );
+				event->SetBool( "critical", m_bCritical );
+				gameeventmanager->FireEvent( event );
+			}
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -520,6 +587,13 @@ void CTFProjectile_Cleaver::Precache( void )
 }
 #endif
 
+CTFProjectile_Cleaver::CTFProjectile_Cleaver()
+{
+#ifdef GAME_DLL
+	m_bTouched = false;
+#endif
+}
+
 #ifdef GAME_DLL
 CTFProjectile_Cleaver *CTFProjectile_Cleaver::Create( CBaseEntity *pWeapon, const Vector &vecOrigin, const QAngle &vecAngles, const Vector &vecVelocity, CBaseCombatCharacter *pOwner, CBaseEntity *pScorer, const AngularImpulse &angVelocity, const CTFWeaponInfo &weaponInfo )
 {
@@ -547,85 +621,95 @@ CTFProjectile_Cleaver *CTFProjectile_Cleaver::Create( CBaseEntity *pWeapon, cons
 
 void CTFProjectile_Cleaver::Explode(trace_t *pTrace, int bitsDamageType)
 {
-	// Invisible.
-	SetModelName( NULL_STRING );
-	AddSolidFlags( FSOLID_NOT_SOLID );
-	m_takedamage = DAMAGE_NO;
-
-	// Damage.
-	CBaseEntity *pAttacker = GetOwnerEntity();
-	IScorer *pScorerInterface = dynamic_cast<IScorer*>( pAttacker );
-	if ( pScorerInterface )
+	if (!m_bTouched)
 	{
-		pAttacker = pScorerInterface->GetScorer();
-	}
+		// Invisible.
+		SetModelName( NULL_STRING );
+		AddSolidFlags( FSOLID_NOT_SOLID );
+		m_takedamage = DAMAGE_NO;
 
-	// Play explosion sound and effect.
-	Vector vecOrigin = GetAbsOrigin();
-	CTFPlayer *pPlayer = ToTFPlayer( m_hEnemy.Get() );
+		// Damage.
+		CBaseEntity *pAttacker = GetOwnerEntity();
+		IScorer *pScorerInterface = dynamic_cast<IScorer*>( pAttacker );
+		if ( pScorerInterface )
+		{
+			pAttacker = pScorerInterface->GetScorer();
+		}
 
-	if ( pPlayer )
-	{
+		// Play explosion sound and effect.
+		Vector vecOrigin = GetAbsOrigin();
+		CTFPlayer *pPlayer = ToTFPlayer( m_hEnemy.Get() );
 
-		float flAirTime = gpGlobals->curtime - m_flCreationTime;
-				
-		bool bMiniCrit = false;
-		if ( flAirTime >= 1.0 && !tf2v_use_new_guillotine.GetBool() )
+		if ( pPlayer )
 		{
-				// We get a Minicrit if we've been flying in the air for at least a whole second.
-				bMiniCrit = true;
+
+			float flAirTime = gpGlobals->curtime - m_flCreationTime;
+					
+			bool bMiniCrit = false;
+			if ( flAirTime >= 1.0 && !tf2v_use_new_guillotine.GetBool() )
+			{
+					// We get a Minicrit if we've been flying in the air for at least a whole second.
+					bMiniCrit = true;
+			}
+			else if ( flAirTime >= 0.5 && tf2v_use_new_guillotine.GetBool() )
+			{
+				// Reduce our cooldown a little, if we flew over half a second.
+				CTFWeaponBase *pWeapon = dynamic_cast<CTFWeaponBase *>( m_hLauncher.Get() );
+				if (pWeapon)
+					pWeapon->SetEffectBarProgress( pWeapon->GetEffectBarProgress() * 0.75 ); // 4.5s / 6s = 75%.
+			}
+			
+			// We get crits if we hit someone stunned.
+			bool bCriticalHit = false;
+			if ( pPlayer->m_Shared.InCond(TF_COND_STUNNED) && !tf2v_use_new_guillotine.GetBool() )
+				bCriticalHit = true;
+			
+			// Add the crits/minicrits to our damages.
+			int iDamageType = GetDamageType();
+			if ( bCriticalHit )
+			{
+				iDamageType |= DMG_CRITICAL;
+			}
+			else if ( bMiniCrit )
+			{
+				iDamageType |= DMG_MINICRITICAL;
+			}
+			
+			// We deal with direct contact, do the regular logic.
+			CTakeDamageInfo info( this, pAttacker, m_hLauncher.Get(), GetDamage(), iDamageType, (bMiniCrit ? TF_DMG_CUSTOM_CLEAVER_CRIT : TF_DMG_CUSTOM_CLEAVER) );
+			Vector vectorReported = pAttacker ? pAttacker->GetAbsOrigin() : vec3_origin ;
+			info.SetReportedPosition( vectorReported);
+			pPlayer->TakeDamage(info);
+			
+			// Also make them bleed too!
+			CTFWeaponBase *pTFWeapon = dynamic_cast<CTFWeaponBase *>(m_hLauncher.Get());
+			if (ToTFPlayer(pAttacker) && pTFWeapon)
+				pPlayer->m_Shared.MakeBleed(ToTFPlayer(pAttacker), pTFWeapon, 5.0, TF_BLEEDING_DAMAGE);
+			
+			// Hit player, do impact sound
+			CPVSFilter filter( GetAbsOrigin() );
+			EmitSound( filter, entindex(), "Cleaver.ImpactFlesh" );
+			
 		}
-		else if ( flAirTime >= 0.5 && tf2v_use_new_guillotine.GetBool() )
+		else
 		{
-			// Reduce our cooldown a little, if we flew over half a second.
-			CTFWeaponBase *pWeapon = dynamic_cast<CTFWeaponBase *>( m_hLauncher.Get() );
-			if (pWeapon)
-				pWeapon->SetEffectBarProgress( pWeapon->GetEffectBarProgress() * 0.75 ); // 4.5s / 6s = 75%.
+			// Nothing interesting here.
+		
+			// Hit something other a player, make a CLANG.
+			CPVSFilter filter( GetAbsOrigin() );
+			EmitSound( filter, entindex(), "Cleaver.ImpactWorld" );
 		}
 		
-		// We get crits if we hit someone stunned.
-		bool bCriticalHit = false;
-		if ( pPlayer->m_Shared.InCond(TF_COND_STUNNED) && !tf2v_use_new_guillotine.GetBool() )
-			bCriticalHit = true;
-		
-		// Add the crits/minicrits to our damages.
-		int iDamageType = GetDamageType();
-		if ( bCriticalHit )
-		{
-			iDamageType |= DMG_CRITICAL;
-		}
-		else if ( bMiniCrit )
-		{
-			iDamageType |= DMG_MINICRITICAL;
-		}
-		
-		// We deal with direct contact, do the regular logic.
-		CTakeDamageInfo info( this, pAttacker, m_hLauncher.Get(), GetDamage(), iDamageType, (bMiniCrit ? TF_DMG_CUSTOM_CLEAVER_CRIT : TF_DMG_CUSTOM_CLEAVER) );
-		Vector vectorReported = pAttacker ? pAttacker->GetAbsOrigin() : vec3_origin ;
-		info.SetReportedPosition( vectorReported);
-		pPlayer->TakeDamage(info);
-		
-		// Also make them bleed too!
-		CTFWeaponBase *pTFWeapon = dynamic_cast<CTFWeaponBase *>(m_hLauncher.Get());
-		if (ToTFPlayer(pAttacker) && pTFWeapon)
-			pPlayer->m_Shared.MakeBleed(ToTFPlayer(pAttacker), pTFWeapon, 5.0, TF_BLEEDING_DAMAGE);
-		
-		// Hit player, do impact sound
-		CPVSFilter filter( vecOrigin );
-		EmitSound( filter, pPlayer->entindex(), "Cleaver.ImpactFlesh" );
-		
-	}
-	else
-	{
-		// Nothing interesting here.
+		// Remove by delay.
+		SetAbsVelocity( vec3_origin );
+		SetContextThink( &CBaseEntity::SUB_Remove, gpGlobals->curtime + 2.0f, "RemoveThink" );
+		SetTouch( NULL );
+		m_bTouched = true;
 	
-		// Hit something other a player, make a CLANG.
-		CPVSFilter filter( vecOrigin );
-		EmitSound( filter, pPlayer->entindex(), "Cleaver.ImpactWorld" );
 	}
 
 	// Remove.
-	UTIL_Remove( this );
+	//UTIL_Remove( this );
 }
 #endif
 

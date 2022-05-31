@@ -1,0 +1,6 @@
+"unlitGeneric"
+{
+	"$baseTexture" "backpack/player/items/all_class/blank_icon"
+	"$translucent" 1
+	"$vertexcolor" 1
+}

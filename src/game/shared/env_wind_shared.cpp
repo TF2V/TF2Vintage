@@ -70,6 +70,7 @@
 #include "IEffects.h"
 #include "engine/IEngineSound.h"
 #include "sharedInterface.h"
+#include "renderparm.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -161,7 +162,30 @@ void CEnvWindShared::UpdateWindSound( float flTotalWindSpeed )
 		controller.SoundChangeVolume( m_pWindSound, flVolume, flDuration );
 	}
 }
+//-----------------------------------------------------------------------------
+// Updates the swaying of trees
+//-----------------------------------------------------------------------------
+#define TREE_SWAY_UPDATE_TIME 2.0f
 
+void CEnvWindShared::UpdateTreeSway( float flTime )
+{
+#ifdef CLIENT_DLL
+	while( flTime >= m_flSwayTime )
+	{
+		// Since the wind is constantly changing, but we need smooth values, we cache them off here.
+		m_PrevSwayVector = m_CurrentSwayVector;
+		m_CurrentSwayVector = m_currentWindVector;
+		m_flSwayTime += TREE_SWAY_UPDATE_TIME;
+	}
+
+	// Update vertex shader
+	float flPercentage = ( 1 - ( ( m_flSwayTime - flTime ) / TREE_SWAY_UPDATE_TIME ) );
+	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
+	// Dividing by 2 helps the numbers the shader is expecting stay in line with other expected game values.
+	Vector vecWind = Lerp( flPercentage, m_PrevSwayVector, m_CurrentSwayVector ) / 2;
+	pRenderContext->SetVectorRenderingParameter( VECTOR_RENDERPARM_WIND_DIRECTION, vecWind );
+#endif
+}
 
 //-----------------------------------------------------------------------------
 // Updates the wind speed
@@ -179,6 +203,9 @@ float CEnvWindShared::WindThink( float flTime )
 
 	ComputeWindVariation( flTime );
 
+	// Update Tree Sway
+	UpdateTreeSway( flTime );
+	
 	while (true)
 	{
 		// First, simulate up to the next switch time...

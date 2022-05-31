@@ -30,11 +30,13 @@ BEGIN_NETWORK_TABLE( CTFKnife, DT_TFWeaponKnife )
 	RecvPropFloat( RECVINFO( m_flKnifeRegenTime ) ),
 	RecvPropBool( RECVINFO( m_bForcedSwap ) ),
 	RecvPropFloat( RECVINFO( m_flSwapBlocked ) ),
+	RecvPropBool( RECVINFO( m_bDelayedStab ) ),
 #else
 	SendPropBool( SENDINFO( m_bReadyToBackstab ) ),
 	SendPropFloat( SENDINFO( m_flKnifeRegenTime ), 0, SPROP_NOSCALE ),
 	SendPropBool( SENDINFO( m_bForcedSwap ) ),
 	SendPropFloat( SENDINFO( m_flSwapBlocked), 0, SPROP_NOSCALE ),
+	SendPropBool( SENDINFO( m_bDelayedStab ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -63,6 +65,7 @@ CTFKnife::CTFKnife()
 	m_flSwapBlocked = false;
 	m_bForcedSwap = false;
 	m_flKnifeRegenTime = 0;
+	m_bDelayedStab = tf2v_use_new_backstabs.GetInt() < 2;
 }
 
 //-----------------------------------------------------------------------------
@@ -82,7 +85,8 @@ bool CTFKnife::Deploy( void )
 //-----------------------------------------------------------------------------
 void CTFKnife::ItemPostFrame( void )
 {
-	BackstabVMThink();
+	if (!m_bDelayedStab)
+		BackstabVMThink();
 	BaseClass::ItemPostFrame();
 }
 
@@ -117,10 +121,8 @@ void CTFKnife::PrimaryAttack( void )
 
 			if ( pTarget && pTarget->GetTeamNumber() != pPlayer->GetTeamNumber() )
 			{
-				// Check to see if we can backstab.
-				bool bCanBackstab = IsBehindTarget(pTarget);
-				if ( tf2v_use_new_backstabs.GetInt() == 2 ) // Must be readied before allowed to backstab
-					bCanBackstab = ( bCanBackstab && m_bReadyToBackstab );
+				// Check to see if we can backstab. Only the early version checks behind the target.
+				bool bCanBackstab = ( tf2v_use_new_backstabs.GetInt() == 0 ) ? IsBehindTarget(pTarget) : IsBehindAndFacingTarget(pTarget) ;
 				// Deal extra damage to players when stabbing them from behind
 				if ( bCanBackstab )
 				{
@@ -147,11 +149,11 @@ void CTFKnife::PrimaryAttack( void )
 	// Swing the weapon.
 	Swing( pPlayer );
 	
-	if (tf2v_use_new_backstabs.GetInt() == 2 )
+	if (!m_bDelayedStab)
 	{
 		// And hit instantly.
 		Smack();
-		m_flSmackTime = -1.0f;
+		m_flSmackTime = 0.0f;
 	}
 
 #if !defined( CLIENT_DLL ) 
@@ -170,7 +172,7 @@ void CTFKnife::PrimaryAttack( void )
 	}
 	else
 	{
-		if( flDisguiseSpeed > 0.1f )
+		if( flDisguiseSpeed > 0.15f )
 			pPlayer->RemoveDisguise();
 
 		SetContextThink( &CTFKnife::DisguiseOnKill, gpGlobals->curtime + flDisguiseSpeed, "DisguiseOnKill" );
@@ -183,14 +185,15 @@ void CTFKnife::PrimaryAttack( void )
 		if ( !m_hBackstabVictim || m_hBackstabVictim->IsAlive() )
 			return;
 
-		int nHealthToSteal = Max( 5, iVictimHealth );
-		int nHealthToAdd = clamp(nHealthToSteal, 0, ((pPlayer->m_Shared.GetMaxBuffedHealth() * 2) - pPlayer->GetHealth()));
+		const int nHealthToSteal = Min( pPlayer->m_Shared.GetMaxBuffedHealth() * 2, iVictimHealth + pPlayer->GetHealth() );
+		const int nHealthToAdd = nHealthToSteal - pPlayer->GetHealth();
 		if ( nHealthToAdd > 0 )
 		{
 			pPlayer->TakeHealth( nHealthToAdd, DMG_IGNORE_MAXHEALTH );
 			pPlayer->m_Shared.HealthKitPickupEffects( nHealthToAdd );
-			pPlayer->m_Shared.SetNextSanguisugeDecay();
-			pPlayer->m_Shared.ChangeSanguisugeHealth(nHealthToAdd);
+
+			if( pPlayer->m_Shared.GetBestOverhealDecayMult() == -1.0f )
+				pPlayer->m_Shared.SetBestOverhealDecayMult( 0.5f );
 		}
 	}
 #endif
@@ -208,11 +211,8 @@ float CTFKnife::GetMeleeDamage( CBaseEntity *pTarget, int &iDamageType, int &iCu
 	if ( pOwner && pTarget->IsPlayer() )
 	{
 
-		bool bIsBackstab = ( m_iWeaponMode == TF_WEAPON_SECONDARY_MODE && m_hBackstabVictim.Get() == pTarget ); // Since Swing and Smack are done in the same frame now we don't need to run additional checks anymore.
-		if (tf2v_use_new_backstabs.GetInt() != 2) // Unless we use old backstabs.
-		bIsBackstab = IsBehindTarget(pTarget) || bIsBackstab; 
-
-		if (bIsBackstab)
+		if ( ( ( tf2v_use_new_backstabs.GetInt() == 0 ) ? IsBehindTarget( pTarget ) : IsBehindAndFacingTarget( pTarget ) ) ||
+			(m_iWeaponMode == TF_WEAPON_SECONDARY_MODE && m_hBackstabVictim.Get() == pTarget))
 		{
 			// this will be a backstab, do the strong anim.
 			if (!TFGameRules()->IsBossClass(pTarget))
@@ -277,10 +277,6 @@ bool CTFKnife::IsBehindAndFacingTarget( CBaseEntity *pTarget )
 //-----------------------------------------------------------------------------
 bool CTFKnife::IsBehindTarget( CBaseEntity *pTarget )
 {
-	// If using newer backstabs, use the better backstab algorithm instead.
-	if ( tf2v_use_new_backstabs.GetInt() == 2 )
-		return IsBehindAndFacingTarget(pTarget);
-	
 	Assert( pTarget );
 
 	// Get the forward view vector of the target, ignore Z
@@ -342,7 +338,11 @@ void CTFKnife::SendPlayerAnimEvent( CTFPlayer *pPlayer )
 void CTFKnife::DoViewModelAnimation( void )
 {
 	// Overriding so it doesn't do backstab animation on crit.
-	Activity act = ( m_iWeaponMode == TF_WEAPON_PRIMARY_MODE ) ? ACT_VM_HITCENTER : ACT_VM_SWINGHARD;
+	Activity act;
+	if (m_bDelayedStab)
+		act = (m_iWeaponMode == TF_WEAPON_PRIMARY_MODE) ? ACT_VM_HITCENTER : ACT_VM_SWINGHARD_SPECIAL;
+	else
+		act = (m_iWeaponMode == TF_WEAPON_PRIMARY_MODE) ? ACT_VM_HITCENTER : ACT_VM_SWINGHARD;	
 
 	SendWeaponAnim( act );
 }
@@ -408,7 +408,7 @@ void CTFKnife::BackstabVMThink( void )
 		trace_t tr;
 		if ( CanAttack() && DoSwingTrace( tr ) &&
 			tr.m_pEnt->IsPlayer() && tr.m_pEnt->GetTeamNumber() != pOwner->GetTeamNumber() &&
-			IsBehindTarget(tr.m_pEnt))
+			( ( tf2v_use_new_backstabs.GetInt() == 0 ) ? IsBehindTarget(tr.m_pEnt) : IsBehindAndFacingTarget(tr.m_pEnt) ) )
 		{
 			if ( !m_bReadyToBackstab )
 			{

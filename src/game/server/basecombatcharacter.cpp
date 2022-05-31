@@ -1323,11 +1323,10 @@ CBaseEntity *CBaseCombatCharacter::CheckTraceHullAttack( const Vector &vStart, c
 bool  CBaseCombatCharacter::Event_Gibbed( const CTakeDamageInfo &info )
 {
 	bool fade = false;
-	ConVarRef tf2v_lv( "tf2v_lv" );
 	if ( HasHumanGibs() )
 	{
 		ConVarRef violence_hgibs( "violence_hgibs" );
-		if ( violence_hgibs.IsValid() && ( ( violence_hgibs.GetInt() == 0 ) || ( tf2v_lv.GetInt() == 1 ) ) )
+		if ( violence_hgibs.IsValid() && ( violence_hgibs.GetInt() == 0 ) )
 		{
 			fade = true;
 		}
@@ -1335,7 +1334,7 @@ bool  CBaseCombatCharacter::Event_Gibbed( const CTakeDamageInfo &info )
 	else if ( HasAlienGibs() )
 	{
 		ConVarRef violence_agibs( "violence_agibs" );
-		if ( violence_agibs.IsValid() && ( ( violence_agibs.GetInt() == 0 ) || ( tf2v_lv.GetInt() == 1 ) ) )
+		if ( violence_agibs.IsValid() && ( violence_agibs.GetInt() == 0 ) )
 		{
 			fade = true;
 		}

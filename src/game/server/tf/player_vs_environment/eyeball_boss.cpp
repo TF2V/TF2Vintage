@@ -672,8 +672,8 @@ void CEyeBallBoss::Update( void )
 void CEyeBallBoss::JarateNearbyPlayer( float range )
 {
 	CUtlVector<CTFPlayer *> enemies;
-	CollectPlayers( &enemies, TF_TEAM_RED, true );
-	CollectPlayers( &enemies, TF_TEAM_BLUE, true, true );
+	CollectPlayers( &enemies, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+	CollectPlayers( &enemies, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
 
 	for ( int i=0; i<enemies.Count(); ++i )
 	{
@@ -730,7 +730,7 @@ CBaseCombatCharacter *CEyeBallBoss::FindNearestVisibleVictim( void )
 		flMinDist = FLT_MAX;
 	}
 
-	CollectPlayers( &players, iTeam, true );
+	CollectPlayers( &players, iTeam, COLLECT_ONLY_LIVING_PLAYERS );
 	for ( int i=0; i<players.Count(); ++i )
 	{
 		CTFPlayer *pPlayer = players[i];

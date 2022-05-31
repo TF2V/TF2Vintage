@@ -1,0 +1,2 @@
+exec server/qol2017.txt
+mapcyclefile maps/mapcycle_f2p.txt

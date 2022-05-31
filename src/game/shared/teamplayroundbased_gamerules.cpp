@@ -1520,6 +1520,8 @@ void CTeamplayRoundBasedRules::State_Enter_PREROUND( void )
 	}
 
 	StopWatchModeThink();
+
+	PreRound_Start();
 }
 
 //-----------------------------------------------------------------------------

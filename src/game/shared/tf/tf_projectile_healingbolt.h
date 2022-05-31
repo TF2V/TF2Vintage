@@ -37,7 +37,7 @@ public:
 
 	virtual float		GetCollideWithTeammatesDelay( void ) const { return 0.0; }
 
-	virtual float		GetDamage( void ) override;
+	virtual float		GetDamage( void ) OVERRIDE;
 #else
 	virtual void		OnDataChanged( DataUpdateType_t updateType );
 #endif

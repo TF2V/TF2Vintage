@@ -452,8 +452,15 @@ const char *CHudNotificationPanel::GetNotificationByType( int iType )
 		pszResult = "resource/UI/notifications/notify_passtime_no_taunt.res";
 		break;
 
+	case HUD_NOTIFY_TRUCE_START:
+		pszResult = "resource/UI/notifications/notify_truce_start.res";
+		break;
+
+	case HUD_NOTIFY_TRUCE_END:
+		pszResult = "resource/UI/notifications/notify_truce_end.res";
+		break;
+
 	default:
-		DevMsg("Failed to load notification res file '%s' specified in %s.");
 		break;
 	}
 

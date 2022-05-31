@@ -91,7 +91,7 @@ void CHudMenuWeaponSet::ApplySchemeSettings(IScheme *pScheme)
 	for (int i = 0; i < INVENTORY_VECTOR_NUM; i++)
 	{
 		m_pWeaponIcons[i]->LoadControlSettings("resource/UI/weaponselect_menu/HudMenuWeaponIcon.res");
-		m_pWeaponIcons[i]->SetVisible(1);
+		m_pWeaponIcons[i]->SetVisible(true);
 		m_pWeaponIcons[i]->SetWide(m_pWeaponIconBase->GetWide());
 		m_pWeaponIcons[i]->SetTall(m_pWeaponIconBase->GetTall());
 		m_pWeaponIcons[i]->SetPos(0, 0);

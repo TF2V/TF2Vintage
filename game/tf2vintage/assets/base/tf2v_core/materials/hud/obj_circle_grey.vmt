@@ -1,0 +1,5 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "HUD/obj_circle_grey"
+	$translucent 1
+}

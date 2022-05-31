@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -19,22 +19,26 @@ class CTFBotDeliverFlag : public Action<CTFBot>
 public:
 	virtual ~CTFBotDeliverFlag() {}
 
-	virtual const char *GetName() const override;
+	virtual const char *GetName() const OVERRIDE;
 
-	virtual ActionResult<CTFBot> OnStart( CTFBot *me, Action<CTFBot> *priorAction ) override;
-	virtual ActionResult<CTFBot> Update( CTFBot *me, float dt ) override;
-	virtual void OnEnd( CTFBot *me, Action<CTFBot> *newAction ) override;
+	virtual ActionResult<CTFBot> OnStart( CTFBot *me, Action<CTFBot> *priorAction ) OVERRIDE;
+	virtual ActionResult<CTFBot> Update( CTFBot *me, float dt ) OVERRIDE;
+	virtual void OnEnd( CTFBot *me, Action<CTFBot> *newAction ) OVERRIDE;
 
-	virtual QueryResultType ShouldHurry( const INextBot *me ) const override;
-	virtual QueryResultType ShouldRetreat( const INextBot *me ) const override;
+	virtual QueryResultType ShouldHurry( const INextBot *me ) const OVERRIDE;
+	virtual QueryResultType ShouldRetreat( const INextBot *me ) const OVERRIDE;
+
+	virtual EventDesiredResult< CTFBot > OnContact( CTFBot *me, CBaseEntity *other, CGameTrace *result = NULL ) OVERRIDE;
 
 private:
+	bool UpgradeOverTime( CTFBot *me );
+
 	PathFollower m_PathFollower;
 	CountdownTimer m_recomputePathTimer;
-	// 4814 float
-	// 4818 CountdownTimer
-	// 4824 int
-	// 4828 CountdownTimer
+	float m_flTotalTravelDistance;
+	CountdownTimer m_upgradeTimer;
+	int m_nUpgradeLevel;
+	CountdownTimer m_buffPulseTimer;
 };
 
 
@@ -46,11 +50,11 @@ public:
 		: m_pDoneAction( doneAction ) {}
 	virtual ~CTFBotPushToCapturePoint() {}
 
-	virtual const char *GetName() const override;
+	virtual const char *GetName() const OVERRIDE;
 
-	virtual ActionResult<CTFBot> Update( CTFBot *me, float dt ) override;
+	virtual ActionResult<CTFBot> Update( CTFBot *me, float dt ) OVERRIDE;
 
-	virtual EventDesiredResult<CTFBot> OnNavAreaChanged( CTFBot *me, CNavArea *area1, CNavArea *area2 ) override;
+	virtual EventDesiredResult<CTFBot> OnNavAreaChanged( CTFBot *me, CNavArea *area1, CNavArea *area2 ) OVERRIDE;
 
 private:
 	PathFollower m_PathFollower;

@@ -433,7 +433,6 @@ void CBaseObject::OnGoActive( void )
 		for ( int i = 0; i < min( m_iDefaultUpgrade, GetMaxUpgradeLevel() - 1 ); i++ )
 		{
 			StartUpgrading();
-			FinishUpgrading();
 		}
 
 		// Don't snap to default level again if we get picked up and re-deployed.

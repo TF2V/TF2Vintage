@@ -70,10 +70,11 @@ bool CHealthKit::MyTouch( CBasePlayer *pPlayer )
 		float flHealthToAdd = ceil( pPlayer->GetMaxHealth() * PackRatios[GetPowerupSize()] );
 		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pTFPlayer, flHealthToAdd, mult_health_frompacks );
 		int iHealthRestored = 0;
+		
 
 		// Don't heal the player who dropped this healthkit, recharge his lunchbox instead
 		// This only applies to the 2nd lunchbox behavior type.
-		if ( ( pTFPlayer != GetOwnerEntity() ) || tf2v_sandvich_behavior.GetInt() != 2 )
+		if ( ( pTFPlayer != GetOwnerEntity() ) || ( ( pTFPlayer == GetOwnerEntity() ) && tf2v_sandvich_behavior.GetInt() != 2 ) )
 		{
 			iHealthRestored = pTFPlayer->TakeHealth( flHealthToAdd, DMG_GENERIC );
 			//iHealthRestored = pPlayer->TakeHealth( iHealthToAdd, DMG_GENERIC );
@@ -81,22 +82,22 @@ bool CHealthKit::MyTouch( CBasePlayer *pPlayer )
 			if ( iHealthRestored )
 				bSuccess = true;
 
-			// Restore disguise health.
-			if ( pTFPlayer->m_Shared.InCond( TF_COND_DISGUISED ) )
-			{
-				float flFakeHealthToAdd = ceil( pTFPlayer->m_Shared.GetDisguiseClass() * PackRatios[ GetPowerupSize() ] );
-				CTFPlayer *pDisguiseTarget = ToTFPlayer(pTFPlayer->m_Shared.GetDisguiseTarget());
-				CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pDisguiseTarget, flFakeHealthToAdd, mult_health_frompacks );
-
-				if ( pTFPlayer->m_Shared.AddDisguiseHealth( flFakeHealthToAdd ) )
-					bSuccess = true;
-			}
-
 			// Remove any negative conditions whether player got healed or not.
 			if ( pTFPlayer->m_Shared.InCond( TF_COND_BURNING ) || pTFPlayer->m_Shared.InCond( TF_COND_BLEEDING ) )
 			{
 				bSuccess = true;
 			}
+		}
+		
+		// Restore disguise health.
+		if ( pTFPlayer->m_Shared.InCond( TF_COND_DISGUISED ) )
+		{
+			float flFakeHealthToAdd = ceil( pTFPlayer->m_Shared.GetDisguiseMaxHealth() * PackRatios[ GetPowerupSize() ] );
+			CTFPlayer *pDisguiseTarget = ToTFPlayer(pTFPlayer->m_Shared.GetDisguiseTarget());
+			CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pDisguiseTarget, flFakeHealthToAdd, mult_health_frompacks );
+
+			if ( pTFPlayer->m_Shared.AddDisguiseHealth( flFakeHealthToAdd ) )
+				bSuccess = true;
 		}
 
 		if ( bSuccess )

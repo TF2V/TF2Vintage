@@ -195,13 +195,35 @@ void CHudBowChargeMeter::FireGameEvent( IGameEvent *event )
 					case TF_PROJECTILE_FESTIVE_HEALING_BOLT:
 					{
 						szModel = g_pszArrowModels[4];
-						flModelScale = 1.6f;
+						flModelScale = 1.4f;
 
 						Vector vecFwd;
 						AngleVectors( vecAngles, &vecFwd );
 
 						vecPosition -= vecFwd * 12;
 
+						break;
+					}
+					case TF_PROJECTILE_BREAD_MONSTER:
+					case TF_PROJECTILE_BREADMONSTER_JARATE:
+					case TF_PROJECTILE_BREADMONSTER_MADMILK:
+					{
+						szModel = g_pszArrowModels[5];
+						// pull the syringe back slightly
+						Vector vecFwd;
+						AngleVectors( vecAngles, &vecFwd );
+						vecPosition -= ( vecFwd * 1.0f );
+						flModelScale = 2.5f;
+						if ( event->GetBool( "critical" ) )
+						{
+							flModelScale = RandomFloat( 3.0f, 5.0f );
+						}
+						break;
+					}
+					case TF_PROJECTILE_CLEAVER:
+					{
+						szModel = g_pszArrowModels[6];
+						flModelScale = 1.0f;
 						break;
 					}
 					default:
@@ -217,7 +239,12 @@ void CHudBowChargeMeter::FireGameEvent( IGameEvent *event )
 
 				pArrow->AttachEntityToBone( pPlayer, bone, vecPosition, vecAngles );
 
-				pArrow->SetDieTime( gpGlobals->curtime + 60.0f );
+				if 	( event->GetInt( "projectileType" ) == TF_PROJECTILE_BREAD_MONSTER ||
+					event->GetInt( "projectileType" ) == TF_PROJECTILE_BREADMONSTER_JARATE || 
+					event->GetInt( "projectileType" ) == TF_PROJECTILE_BREADMONSTER_MADMILK )
+					pArrow->SetDieTime( gpGlobals->curtime + 10.0f );		// Bread monsters only survive for 10 seconds.
+				else
+					pArrow->SetDieTime( gpGlobals->curtime + 60.0f );		// Everything else hangs around for 60 seconds.
 			}
 		}
 	}

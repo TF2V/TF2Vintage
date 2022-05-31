@@ -1474,7 +1474,7 @@ inline float ComputeVolume( const Vector &vecMins, const Vector &vecMaxs )
 }
 
 // Get a random vector.
-inline Vector RandomVector( float minVal, float maxVal )
+inline Vector RandomVector( vec_t minVal, vec_t maxVal )
 {
 	Vector random;
 	random.Random( minVal, maxVal );

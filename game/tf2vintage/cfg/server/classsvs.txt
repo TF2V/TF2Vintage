@@ -1,0 +1,9 @@
+tf_tournament_classlimit_scout 0
+tf_tournament_classlimit_soldier 0
+tf_tournament_classlimit_pyro 0
+tf_tournament_classlimit_demoman 0
+tf_tournament_classlimit_heavy 0 
+tf_tournament_classlimit_engineer 0 
+tf_tournament_classlimit_medic 0
+tf_tournament_classlimit_sniper -1
+tf_tournament_classlimit_spy -1

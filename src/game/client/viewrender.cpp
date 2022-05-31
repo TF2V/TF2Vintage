@@ -74,12 +74,24 @@
 #include "c_point_camera.h"
 #endif // USE_MONITORS
 
-// Projective textures
-#include "C_Env_Projected_Texture.h"
+#include "c_lights.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+static ConVar gstring_csm_color_light( "gstring_csm_color_light", "0" );
+static ConVar gstring_csm_color_ambient( "gstring_csm_color_ambient", "0" );
+
+static Vector ConvertLightmapGammaToLinear( int *iColor4 )
+{
+	Vector vecColor;
+	for ( int i = 0; i < 3; ++i )
+	{
+		vecColor[i] = powf( iColor4[i] / 255.0f, 2.2f );
+	}
+	vecColor *= iColor4[3] / 255.0f;
+	return vecColor;
+}
 
 static void testfreezeframe_f( void )
 {
@@ -220,36 +232,6 @@ CON_COMMAND( r_cheapwaterend,  "" )
 		Warning( "r_cheapwaterend: %f\n", end );
 	}
 }
-
-
-
-//-----------------------------------------------------------------------------
-// Describes a pruned set of leaves to be rendered this view. Reference counted
-// because potentially shared by a number of views
-//-----------------------------------------------------------------------------
-struct ClientWorldListInfo_t : public CRefCounted1<WorldListInfo_t>
-{
-	ClientWorldListInfo_t() 
-	{ 
-		memset( (WorldListInfo_t *)this, 0, sizeof(WorldListInfo_t) ); 
-		m_pActualLeafIndex = NULL;
-		m_bPooledAlloc = false;
-	}
-
-	// Allocate a list intended for pruning
-	static ClientWorldListInfo_t *AllocPooled( const ClientWorldListInfo_t &exemplar );
-
-	// Because we remap leaves to eliminate unused leaves, we need a remap
-	// when drawing translucent surfaces, which requires the *original* leaf index
-	// using m_pActualLeafMap[ remapped leaf index ] == actual leaf index
-	LeafIndex_t *m_pActualLeafIndex;
-
-private:
-	virtual bool OnFinalRelease();
-
-	bool m_bPooledAlloc;
-	static CObjectPool<ClientWorldListInfo_t> gm_Pool;
-};
 
 
 //-----------------------------------------------------------------------------
@@ -1327,8 +1309,18 @@ void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxV
 	if ( r_flashlightdepthtexture.GetBool() && (viewID == VIEW_MAIN) )
 	{
 		g_pClientShadowMgr->ComputeShadowDepthTextures( view );
-	}
+		CMatRenderContextPtr pRenderContext( materials );
 
+		// GSTRINGMIGRATION
+		if ( g_pCSMEnvLight != NULL && g_pCSMEnvLight->IsCascadedShadowMappingEnabled() )
+		{
+			UpdateCascadedShadow( view );
+		}
+		else
+		{
+			pRenderContext->SetIntRenderingParameter( INT_CASCADED_DEPTHTEXTURE, 0 );
+		}
+	}
 	m_BaseDrawFlags = baseDrawFlags;
 
 	SetupCurrentView( view.origin, view.angles, viewID );
@@ -1855,6 +1847,195 @@ void CViewRender::CleanupMain3DView( const CViewSetup &view )
 	render->PopView( GetFrustum() );
 }
 
+void CViewRender::UpdateCascadedShadow( const CViewSetup &view )
+{
+	static CTextureReference s_CascadedShadowDepthTexture;
+	static CTextureReference s_CascadedShadowColorTexture;
+	if ( !s_CascadedShadowDepthTexture.IsValid() )
+	{
+		s_CascadedShadowDepthTexture.Init( "_rt_CascadedShadowDepth", TEXTURE_GROUP_OTHER );
+	}
+
+	if ( !s_CascadedShadowColorTexture.IsValid() )
+	{
+		s_CascadedShadowColorTexture.Init( "_rt_CascadedShadowColor", TEXTURE_GROUP_OTHER );
+	}
+
+	ITexture *pDepthTexture = s_CascadedShadowDepthTexture;
+	CMatRenderContextPtr pRenderContext( materials );
+	pRenderContext->SetIntRenderingParameter( INT_CASCADED_DEPTHTEXTURE, int( pDepthTexture ) );
+
+	QAngle angCascadedAngles;
+	Vector vecLight, vecAmbient;
+	g_pCSMEnvLight->GetShadowMappingConstants( angCascadedAngles, vecLight, vecAmbient );
+
+	if ( gstring_csm_color_light.GetBool() )
+	{
+		int iParsed[4];
+		UTIL_StringToIntArray( iParsed, 4, gstring_csm_color_light.GetString() );
+		vecLight = ConvertLightmapGammaToLinear( iParsed );
+	}
+
+	if ( gstring_csm_color_ambient.GetBool() )
+	{
+		int iParsed[4];
+		UTIL_StringToIntArray( iParsed, 4, gstring_csm_color_ambient.GetString() );
+		vecAmbient = ConvertLightmapGammaToLinear( iParsed );
+	}
+
+	for ( int i = 0; i < 3; i++ )
+	{
+		vecAmbient[i] = MIN( vecAmbient[i], vecLight[i] );
+	}
+
+	Vector vecAmbientDelta = vecLight - vecAmbient;
+	vecAmbientDelta.NormalizeInPlace();
+	pRenderContext->SetVectorRenderingParameter( VECTOR_RENDERPARM_GSTRING_CASCADED_AMBIENT_MIN, vecAmbient );
+	pRenderContext->SetVectorRenderingParameter( VECTOR_RENDERPARM_GSTRING_CASCADED_AMBIENT_DELTA, vecAmbientDelta );
+
+	Vector vecFwd, vecRight, vecUp;
+	AngleVectors( angCascadedAngles, &vecFwd, &vecRight, &vecUp );
+
+	pRenderContext->SetVectorRenderingParameter( VECTOR_RENDERPARM_GSTRING_CASCADED_FORWARD, vecFwd );
+
+	Vector vecMainViewFwd;
+	AngleVectors( view.angles, &vecMainViewFwd );
+
+	CViewSetup cascadedShadowView;
+	cascadedShadowView.angles = angCascadedAngles;
+	cascadedShadowView.m_bOrtho = true;
+
+	cascadedShadowView.width = s_CascadedShadowDepthTexture->GetMappingWidth() / 2;
+	cascadedShadowView.height = s_CascadedShadowDepthTexture->GetMappingHeight();
+
+	cascadedShadowView.m_flAspectRatio = 1.0f;
+	cascadedShadowView.m_bDoBloomAndToneMapping = false;
+	cascadedShadowView.zFar = cascadedShadowView.zFarViewmodel = 2000.0f;
+	cascadedShadowView.zNear = cascadedShadowView.zNearViewmodel = 7.0f;
+	cascadedShadowView.fov = cascadedShadowView.fovViewmodel = 90.0f;
+
+	struct ShadowConfig_t
+	{
+		float flOrthoSize;
+		float flForwardOffset;
+		float flUVOffsetX;
+		float flViewDepthBiasHack;
+	} shadowConfigs[] = {
+		{ 64.0f, 0.0f, 0.25f, 0.0f },
+		{ 384.0f, 256.0f, 0.75f, 0.0f }
+	};
+	const int iCascadedShadowCount = ARRAYSIZE( shadowConfigs );
+
+	/*switch ( mode )
+	{
+	case CASCADEDCONFIG_NORMAL:
+	{
+		ShadowConfig_t &closeShadow = shadowConfigs[0];
+		ShadowConfig_t &farShadow = shadowConfigs[1];
+		closeShadow.flOrthoSize = 256.0f;
+		closeShadow.flForwardOffset = 102.0f;
+		farShadow.flOrthoSize = 786.0f;
+		farShadow.flForwardOffset = 384.0f;
+
+		vecMainViewFwd.z = 0.0f;
+		vecMainViewFwd.NormalizeInPlace();
+	}
+	break;
+
+	case CASCADEDCONFIG_SPACE:
+	{
+		ShadowConfig_t &closeShadow = shadowConfigs[0];
+		ShadowConfig_t &farShadow = shadowConfigs[1];
+		closeShadow.flOrthoSize = 4.0f;
+		closeShadow.flForwardOffset = 2.0f;
+		closeShadow.flUVOffsetX = 0.25f;
+		farShadow.flViewDepthBiasHack = 1.5f;
+	}
+	break;
+	}*/
+
+	g_pCSMEnvLight->CopyShadowConfigData( shadowConfigs );
+
+	vecMainViewFwd -= vecFwd * DotProduct( vecMainViewFwd, vecFwd );
+
+	static VMatrix s_CSMSwapMatrix[2];
+	static int s_iCSMSwapIndex = 0;
+
+	//C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+
+	//Vector vecCascadeOrigin( ( mode == CASCADEDCONFIG_SPACE ) ? view.origin :
+	//						 pPlayer ? pPlayer->GetRenderOrigin() : vec3_origin );
+	Vector vecCascadeOrigin = view.origin - ( vecFwd * 1536 );
+
+	// This can only be set once per frame, not per shadow view. Fuckers.
+	/*if ( mode == CASCADEDCONFIG_SPACE )
+	{
+		pRenderContext->SetShadowDepthBiasFactors( 1.0f, 0.000005f );
+	}
+	else*/
+	{
+		pRenderContext->SetShadowDepthBiasFactors( 8.0f, 0.0005f );
+	}
+
+	for ( int i = 0; i < iCascadedShadowCount; i++ )
+	{
+		const ShadowConfig_t &shadowConfig = shadowConfigs[i];
+
+		cascadedShadowView.m_OrthoTop = -shadowConfig.flOrthoSize;
+		cascadedShadowView.m_OrthoRight = shadowConfig.flOrthoSize;
+		cascadedShadowView.m_OrthoBottom = shadowConfig.flOrthoSize;
+		cascadedShadowView.m_OrthoLeft = -shadowConfig.flOrthoSize;
+
+		cascadedShadowView.x = i * cascadedShadowView.width;
+		cascadedShadowView.y = 0;
+
+		Vector vecOrigin = vecCascadeOrigin + vecMainViewFwd * shadowConfig.flForwardOffset;
+		const float flViewFrustumWidthScale = shadowConfig.flOrthoSize * 2.0f / cascadedShadowView.width;
+		const float flViewFrustumHeightScale = shadowConfig.flOrthoSize * 2.0f / cascadedShadowView.height;
+		const float flFractionX = fmod( DotProduct( vecOrigin, vecRight ), flViewFrustumWidthScale );
+		const float flFractionY = fmod( DotProduct( vecOrigin, vecUp ), flViewFrustumHeightScale );
+		vecOrigin -= flFractionX * vecRight;
+		vecOrigin -= flFractionY * vecUp;
+
+		if ( i > 0 )
+		{
+			const ShadowConfig_t &prevShadowConfig = shadowConfigs[i - 1];
+			const float flCascadedScale = prevShadowConfig.flOrthoSize / shadowConfig.flOrthoSize;
+			Vector vecOffsetShadowMapSpace = vecOrigin - cascadedShadowView.origin;
+			Vector2D vecCascadedOffset( DotProduct( -vecRight, vecOffsetShadowMapSpace ) * 0.5f,
+										DotProduct( vecUp, vecOffsetShadowMapSpace ) );
+			vecCascadedOffset *= 0.5f / shadowConfig.flOrthoSize;
+
+			vecCascadedOffset.x = vecCascadedOffset.x + 0.5f + 0.25f * ( 1.0f - flCascadedScale );
+			vecCascadedOffset.y = vecCascadedOffset.y + 0.5f - flCascadedScale * 0.5f;
+
+			vecOffsetShadowMapSpace.Init( flCascadedScale, vecCascadedOffset.x, vecCascadedOffset.y );
+			pRenderContext->SetVectorRenderingParameter( VECTOR_RENDERPARM_GSTRING_CASCADED_STEP, vecOffsetShadowMapSpace );
+		}
+
+		cascadedShadowView.origin = vecOrigin;
+
+		VMatrix worldToView, viewToProjection, worldToProjection, worldToTexture;
+		render->GetMatricesForView( cascadedShadowView, &worldToView, &viewToProjection, &worldToProjection, &worldToTexture );
+
+		if ( i == 0 )
+		{
+			VMatrix tmp;
+			MatrixBuildScale( tmp, 0.25f, -0.5f, 1.0f );
+			tmp[0][3] = shadowConfig.flUVOffsetX;
+			tmp[1][3] = 0.5f;
+
+			VMatrix &currentSwapMatrix = s_CSMSwapMatrix[s_iCSMSwapIndex];
+			MatrixMultiply( tmp, worldToProjection, currentSwapMatrix );
+			pRenderContext->SetIntRenderingParameter( INT_CASCADED_MATRIX_ADDRESS_0, reinterpret_cast<int>( &currentSwapMatrix ) );
+		}
+
+		cascadedShadowView.origin -= vecFwd * shadowConfig.flViewDepthBiasHack;
+		UpdateShadowDepthTexture( s_CascadedShadowColorTexture, s_CascadedShadowDepthTexture, cascadedShadowView );
+	}
+
+	s_iCSMSwapIndex = ( s_iCSMSwapIndex + 1 ) % 2;
+}
 
 //-----------------------------------------------------------------------------
 // Queues up an overlay rendering
@@ -1918,23 +2099,6 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 	C_BaseAnimating::AutoAllowBoneAccess boneaccess( true, true );
 	VPROF( "CViewRender::RenderView" );
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
-
-	// Don't want TF2 running less than DX 8
-	if ( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 80 )
-	{
-		// We know they were running at least 8.0 when the game started...we check the 
-		// value in ClientDLL_Init()...so they must be messing with their DirectX settings.
-		if ( ( Q_stricmp( COM_GetModDirectory(), "tf" ) == 0 ) || ( Q_stricmp( COM_GetModDirectory(), "tf_beta" ) == 0 ) )
-		{
-			static bool bFirstTime = true;
-			if ( bFirstTime )
-			{
-				bFirstTime = false;
-				Msg( "This game has a minimum requirement of DirectX 8.0 to run properly.\n" );
-			}
-			return;
-		}
-	}
 
 	CMatRenderContextPtr pRenderContext( materials );
 	ITexture *saveRenderTarget = pRenderContext->GetRenderTarget();
@@ -2142,7 +2306,7 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 		}
 
 	}
-
+	
 	if ( mat_viewportupscale.GetBool() && mat_viewportscale.GetFloat() < 1.0f ) 
 	{
 		CMatRenderContextPtr pRenderContext( materials );
@@ -5462,22 +5626,9 @@ void CBaseWorldView::SSAO_DepthPass()
 	CMatRenderContextPtr pRenderContext( materials );
 
 	pRenderContext->ClearColor4ub( 255, 255, 255, 255 );
-
-#if defined( _X360 )
-	Assert(0); // rebalance this if we ever use this on 360
-	pRenderContext->PushVertexShaderGPRAllocation( 112 ); //almost all work is done in vertex shaders for depth rendering, max out their threads
-#endif
-
 	pRenderContext.SafeRelease();
 
-	if( IsPC() )
-	{
-		render->Push3DView( (*this), VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pSSAO, GetFrustum() );
-	}
-	else if( IsX360() )
-	{
-		render->Push3DView( (*this), VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pSSAO, GetFrustum() );
-	}
+	render->Push3DView( (*this), VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pSSAO, GetFrustum() );
 
 	MDLCACHE_CRITICAL_SECTION();
 
@@ -5513,17 +5664,7 @@ void CBaseWorldView::SSAO_DepthPass()
 
 	pRenderContext.GetFrom( materials );
 
-	if( IsX360() )
-	{
-		//Resolve() the depth texture here. Before the pop so the copy will recognize that the resolutions are the same
-		pRenderContext->CopyRenderTargetToTextureEx( NULL, -1, NULL, NULL );
-	}
-
 	render->PopView( GetFrustum() );
-
-#if defined( _X360 )
-	pRenderContext->PopVertexShaderGPRAllocation();
-#endif
 
 	pRenderContext.SafeRelease();
 
@@ -6196,9 +6337,12 @@ void CReflectiveGlassView::Draw()
 	// Disable occlusion visualization in reflection
 	bool bVisOcclusion = r_visocclusion.GetInt();
 	r_visocclusion.SetValue( 0 );
-				   
+	
+	int lastView = g_CurrentViewID;
+	g_CurrentViewID = VIEW_REFLECTION;
 	BaseClass::Draw();
 
+	g_CurrentViewID = lastView;
 	r_visocclusion.SetValue( bVisOcclusion );
 
 	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );

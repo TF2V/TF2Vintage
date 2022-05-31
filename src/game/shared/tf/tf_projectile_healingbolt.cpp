@@ -18,6 +18,7 @@
 extern ConVar tf_debug_arrows;
 ConVar tf2v_healing_bolts( "tf2v_healing_bolts", "0", FCVAR_NOTIFY | FCVAR_REPLICATED, "Enables crossbow bolts to be able to heal teammates." );
 ConVar tf2v_healing_bolts_heal_factor( "tf2v_healing_bolts_heal_factor", "2", FCVAR_NOTIFY | FCVAR_REPLICATED, "Multiplication factor of healing when using a healing bolt." );
+ConVar tf2v_healing_bolts_add_uber( "tf2v_healing_bolts_add_uber", "0", FCVAR_NOTIFY, "Enables giving some uber for the amount healed." );
 #endif
 
 IMPLEMENT_NETWORKCLASS_ALIASED( TFProjectile_HealingBolt, DT_TFProjectile_HealingBolt )
@@ -79,7 +80,8 @@ void CTFProjectile_HealingBolt::ImpactTeamPlayer( CTFPlayer *pTarget )
 		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( pWeapon, flHealing, mult_health_fromhealers_penalty_active );
 	}
 	
-	if ( pTarget->TakeHealth( flHealing, DMG_GENERIC ) > 0 )
+	int iHealthGiven = pTarget->TakeHealth( flHealing, DMG_GENERIC );
+	if ( iHealthGiven > 0 )
 	{
 		PlayImpactSound( pOwner, "Weapon_Arrow.ImpactFleshCrossbowHeal" );
 
@@ -105,8 +107,24 @@ void CTFProjectile_HealingBolt::ImpactTeamPlayer( CTFPlayer *pTarget )
 			gameeventmanager->FireEvent( event );
 		}
 
+		event = gameeventmanager->CreateEvent( "crossbow_heal" );
+		if ( event )
+		{
+			event->SetInt( "healer", pOwner->GetUserID() );
+			event->SetInt( "target", pTarget->GetUserID() );
+			event->SetInt( "amount", flHealing );
+			gameeventmanager->FireEvent( event ); 
+		}
+
 		// Display health particles for a short duration
 		pTarget->m_Shared.AddCond( TF_COND_HEALTH_OVERHEALED, 1.2f );
+
+		if ( tf2v_healing_bolts_add_uber.GetBool() )
+		{
+			CWeaponMedigun *pMedigun = static_cast<CWeaponMedigun *>( pOwner->Weapon_OwnsThisID( TF_WEAPON_MEDIGUN ) );
+			if ( pMedigun )
+				pMedigun->AddCharge( ( iHealthGiven / 24.0f ) * gpGlobals->frametime );
+		}
 	}
 }
 

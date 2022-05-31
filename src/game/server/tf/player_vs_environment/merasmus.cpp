@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -82,29 +82,29 @@ float MerasmusModifyDamage( CTakeDamageInfo const& info )
 void BombHeadForTeam( int iTeam, float flDuration )
 {
 	CUtlVector<CTFPlayer *> players;
-	CollectPlayers( &players, iTeam, true );
+	CollectPlayers( &players, iTeam, COLLECT_ONLY_LIVING_PLAYERS );
 
-	for ( CTFPlayer *pPlayer : players )
+	FOR_EACH_VEC( players, i )
 	{
-		if ( pPlayer->m_Shared.InCond( TF_COND_HALLOWEEN_BOMB_HEAD ) )
+		if ( players[i]->m_Shared.InCond( TF_COND_HALLOWEEN_BOMB_HEAD ) )
 			continue;
 
-		pPlayer->m_Shared.AddCond( TF_COND_HALLOWEEN_BOMB_HEAD, flDuration );
+		players[i]->m_Shared.AddCond( TF_COND_HALLOWEEN_BOMB_HEAD, flDuration );
 	}
 }
 
 void RemoveAllBombHeadFromPlayers( void )
 {
 	CUtlVector<CTFPlayer *> players;
-	CollectPlayers( &players, TF_TEAM_RED, true );
-	CollectPlayers( &players, TF_TEAM_BLUE, true, true );
+	CollectPlayers( &players, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+	CollectPlayers( &players, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
 
-	for ( CTFPlayer *pPlayer : players )
+	FOR_EACH_VEC( players, i )
 	{
-		if ( !pPlayer->m_Shared.InCond( TF_COND_HALLOWEEN_BOMB_HEAD ) )
+		if ( !players[i]->m_Shared.InCond( TF_COND_HALLOWEEN_BOMB_HEAD ) )
 			continue;
 
-		pPlayer->m_Shared.RemoveCond( TF_COND_HALLOWEEN_BOMB_HEAD );
+		players[i]->m_Shared.RemoveCond( TF_COND_HALLOWEEN_BOMB_HEAD );
 	}
 }
 
@@ -135,18 +135,18 @@ void CollectTargets( CBaseCombatCharacter *pActor, float fRadius, int iTeam, int
 	pOut->RemoveAll();
 
 	CUtlVector<CTFPlayer *> players;
-	CollectPlayers( &players, iTeam, true );
+	CollectPlayers( &players, iTeam, COLLECT_ONLY_LIVING_PLAYERS );
 
 	CUtlVector<CTFPlayer *> validPlayers;
-	for ( CTFPlayer *pPlayer : players )
+	FOR_EACH_VEC( players, i )
 	{
-		if ( ( pPlayer->WorldSpaceCenter() - pActor->EyePosition() ).Length() >= fRadius )
+		if ( ( players[i]->WorldSpaceCenter() - pActor->EyePosition() ).Length() >= fRadius )
 			continue;
 
-		if ( !pActor->IsLineOfSightClear( pPlayer, CBaseCombatCharacter::IGNORE_NOTHING ) )
+		if ( !pActor->IsLineOfSightClear( players[i], CBaseCombatCharacter::IGNORE_NOTHING ) )
 			continue;
 
-		validPlayers.AddToTail( pPlayer );
+		validPlayers.AddToTail( players[i] );
 	}
 
 	while ( !validPlayers.IsEmpty() )
@@ -237,13 +237,13 @@ bool CMerasmus::Zap( CBaseCombatCharacter *pCaster, char const *szAttachment, fl
 
 	if ( !targets.IsEmpty() )
 	{
-		for ( CBaseEntity *pEntity : targets )
+		FOR_EACH_VEC( targets, i )
 		{
-			CTFPlayer *pPlayer = ToTFPlayer( pEntity );
+			CTFPlayer *pPlayer = ToTFPlayer( targets[i].Get() );
 			if ( pPlayer == nullptr )
 			{
-				if ( pEntity->IsBaseObject() )
-					static_cast<CBaseObject *>( pEntity )->DetonateObject();
+				if ( targets[i]->IsBaseObject() )
+					static_cast<CBaseObject *>( targets[i].Get() )->DetonateObject();
 			}
 			else
 			{
@@ -263,7 +263,7 @@ bool CMerasmus::Zap( CBaseCombatCharacter *pCaster, char const *szAttachment, fl
 
 			te_tf_particle_effects_control_point_t controlPoint ={
 				PATTACH_ABSORIGIN,
-				pEntity->WorldSpaceCenter()
+				targets[i]->WorldSpaceCenter()
 			};
 
 			CReliableBroadcastRecipientFilter filter;
@@ -627,19 +627,19 @@ void CMerasmus::OnRevealed( bool bFound )
 	// Teleport in facing the closest player
 
 	CUtlVector<CTFPlayer *> players;
-	CollectPlayers( &players, TF_TEAM_RED, true );
-	CollectPlayers( &players, TF_TEAM_BLUE, true, true );
+	CollectPlayers( &players, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+	CollectPlayers( &players, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
 
 	CTFPlayer *pClosest = NULL;
 	float flMinDistance = FLT_MAX;
 
-	for ( CTFPlayer *pPlayer : players )
+	FOR_EACH_VEC( players, i )
 	{
-		const float flDistance = GetRangeSquaredTo( pPlayer );
+		const float flDistance = GetRangeSquaredTo( players[i] );
 		if ( flMinDistance > flDistance )
 		{
 			flMinDistance = flDistance;
-			pClosest = pPlayer;
+			pClosest = players[i];
 		}
 	}
 

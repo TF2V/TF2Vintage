@@ -64,7 +64,7 @@ ActionResult<CTFBot> CTFBotAttackFlagDefenders::Update( CTFBot *me, float dt )
 				return BaseClass::Done( "I picked up the flag!" );
 			
 			CTFBot *pCarrierBot = ToTFBot( pCarrier );
-			if ( pCarrierBot == nullptr || !pCarrierBot->m_pSquad )
+			if ( pCarrierBot == nullptr || !pCarrierBot->GetSquad() )
 			{
 				if ( me->IsRangeLessThan( pCarrier, tf_bot_flag_escort_range.GetFloat() ) &&
 					 GetBotEscortCount( me->GetTeamNumber() ) < tf_bot_flag_escort_max_count.GetInt() )

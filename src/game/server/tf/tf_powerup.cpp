@@ -61,7 +61,9 @@ CTFPowerup::CTFPowerup()
 //-----------------------------------------------------------------------------
 void CTFPowerup::Spawn( void )
 {
-	BaseClass::Precache();
+	Precache();
+	SetModel( GetPowerupModel() );
+
 	BaseClass::Spawn();
 
 	BaseClass::SetOriginalSpawnOrigin( GetAbsOrigin() );
@@ -93,6 +95,16 @@ CBaseEntity* CTFPowerup::Respawn( void )
 	SetNextThink( gpGlobals->curtime + GetRespawnDelay() );
 
 	return pReturn;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFPowerup::Precache( void )
+{
+	PrecacheModel( GetPowerupModel() );
+
+	BaseClass::Precache();
 }
 
 //-----------------------------------------------------------------------------
@@ -169,7 +181,7 @@ void CTFPowerup::DropSingleInstance( const Vector &vecVelocity, CBaseCombatChara
 	SetOwnerEntity( pOwner );
 
 	// Remove after 30 seconds.
-	SetContextThink( &CBaseEntity::SUB_Remove, gpGlobals->curtime + 30.0f, "PowerupRemoveThink" );
+	SetContextThink( &CBaseEntity::SUB_Remove, gpGlobals->curtime + GetLifeTime(), "PowerupRemoveThink" );
 }
 
 //-----------------------------------------------------------------------------

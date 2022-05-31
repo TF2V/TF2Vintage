@@ -40,11 +40,20 @@ protected:
 	int		m_iDomination[MAX_PLAYERS+1];
 	int		m_iTotalScore[MAX_PLAYERS+1];
 	int		m_iMaxHealth[MAX_PLAYERS+1];
-	int		m_iPlayerClass[MAX_PLAYERS + 1];
-	int		m_iKillstreak[MAX_PLAYERS + 1];
-	Vector	m_iColors[MAX_PLAYERS + 1];
-	bool    m_bArenaSpectator[MAX_PLAYERS + 1];
-	int		m_iMaxBuffedHealth[MAX_PLAYERS + 1];
+	int		m_iMaxBuffedHealth[MAX_PLAYERS+1];
+	int		m_iPlayerClass[MAX_PLAYERS+1];
+	int		m_iKillstreak[MAX_PLAYERS+1];
+	Vector	m_iColors[MAX_PLAYERS+1];
+	bool    m_bArenaSpectator[MAX_PLAYERS+1];
+	int		m_iChargeLevel[MAX_PLAYERS+1];
+	int		m_iDamage[MAX_PLAYERS+1];
+	int		m_iDamageAssist[MAX_PLAYERS+1];
+	int		m_iDamageBoss[MAX_PLAYERS+1];
+	int		m_iHealing[MAX_PLAYERS+1];
+	int		m_iHealingAssist[MAX_PLAYERS+1];
+	int		m_iDamageBlocked[MAX_PLAYERS+1];
+	int		m_iCurrencyCollected[MAX_PLAYERS+1];
+	int		m_iBonusPoints[MAX_PLAYERS+1];
 };
 
 inline C_TF_PlayerResource *TFPlayerResource()

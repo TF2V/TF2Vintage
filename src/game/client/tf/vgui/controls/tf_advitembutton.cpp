@@ -50,10 +50,21 @@ void CTFAdvItemButton::Init()
 
 void CTFAdvItemButton::PerformLayout()
 {
-	int inset = YRES(45);
-	int wide = GetWide() - inset;
-	SetImageSize(wide, wide);
-	SetImageInset(inset / 2, -1 * wide / 5);
+	int insetX, insetY;
+	insetX = insetY = 0;
+	int tall = GetTall();
+	int wide = GetWide();
+	if ( wide > tall )
+	{
+		SetImageSize( tall, tall );
+		insetX = (wide - tall) / 2;
+	}
+	else
+	{
+		SetImageSize( wide, wide );
+		insetY = (tall - wide) / 2;
+	}
+	SetImageInset( insetX, insetY );
 	SetShouldScaleImage(true);
 
 	BaseClass::PerformLayout();
@@ -70,14 +81,22 @@ void CTFAdvItemButton::ApplySchemeSettings(vgui::IScheme *pScheme)
 void CTFAdvItemButton::Paint()
 {
 	BaseClass::Paint();
-
-	//Default to Vintage Blue.
+	
 	Color colButton;
-		colButton = Color(71, 98, 145, 255);
+	IScheme *pScheme = scheme()->GetIScheme( GetScheme() );
+	if (m_pItemDefinition && pScheme)
+	{
+		// Pull the item's quality.
+		colButton = pScheme->GetColor(g_szQualityColorStrings[m_pItemDefinition->item_quality], Color(178, 178, 178, 255));
+	}
+	else
+	{
+		// Default to Normal Grey.
+		colButton = Color(178, 178, 178, 255);
+	}
 	pButton->SetFgColor(colButton);
 	pButton->SetFontByString( "HudFontSmallestBold" );
 	pButton->SetCenterWrap( true );
-
 };
 
 //-----------------------------------------------------------------------------
@@ -116,6 +135,7 @@ void CTFAdvItemButton::SetItemDefinition(CEconItemDefinition *pItemData)
 	SetImage(szIcon);
 
 	pButton->SetText( pItemData->GenerateLocalizedFullItemName() );
+	Paint();
 }
 
 void CTFAdvItemButton::SetLoadoutSlot( int iSlot, int iPreset )

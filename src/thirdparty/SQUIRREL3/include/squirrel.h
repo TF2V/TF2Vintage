@@ -42,6 +42,10 @@ THE SOFTWARE.
 extern "C" {
 #endif
 
+#ifndef _HAS_EXCEPTIONS
+#define _HAS_EXCEPTIONS 0
+#endif
+
 #ifndef SQUIRREL_API
 #define SQUIRREL_API extern
 #endif

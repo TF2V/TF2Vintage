@@ -54,6 +54,8 @@ ConVar tf2v_speed_buff_duration( "tf2v_new_speed_buff_duration", "2.0", FCVAR_RE
 ConVar tf_weapon_criticals_melee( "tf_weapon_criticals_melee", "1", FCVAR_NOTIFY | FCVAR_REPLICATED, "Controls random crits for melee weapons.\n0 - Melee weapons do not randomly crit. \n1 - Melee weapons can randomly crit only if tf_weapon_criticals is also enabled. \n2 - Melee weapons can always randomly crit regardless of the tf_weapon_criticals setting.", true, 0, true, 2 );
 extern ConVar tf_weapon_criticals;
 extern ConVar tf2v_critchance_melee;
+extern ConVar tf2v_use_new_jag;
+extern ConVar tf2v_use_new_axtinguisher;
 
 //=============================================================================
 //
@@ -208,7 +210,13 @@ void CTFWeaponBaseMelee::Swing( CTFPlayer *pPlayer )
 	// Set next attack times.
 	float flFireDelay = m_pWeaponInfo->GetWeaponData( m_iWeaponMode ).m_flTimeFireDelay;
 	CALL_ATTRIB_HOOK_FLOAT( flFireDelay, mult_postfiredelay );
+	
+	if ( tf2v_use_new_jag.GetInt() > 0 )
+			CALL_ATTRIB_HOOK_FLOAT( flFireDelay, mult_postfiredelay_jag );
 
+	if (tf2v_use_new_axtinguisher.GetInt() == 2)
+		CALL_ATTRIB_HOOK_FLOAT( flFireDelay, mult_postfiredelay_axtinguisher_2 );
+		
 	m_flNextPrimaryAttack = gpGlobals->curtime + flFireDelay;
 
 	SetWeaponIdleTime( m_flNextPrimaryAttack + m_pWeaponInfo->GetWeaponData( m_iWeaponMode ).m_flTimeIdleEmpty );
@@ -349,10 +357,11 @@ bool CTFWeaponBaseMelee::DoSwingTraceInternal( trace_t &trace, bool bCleave, Mel
 			CTraceFilterIgnorePlayers filterPlayers( NULL, COLLISION_GROUP_NONE );
 			UTIL_TraceLine( vecSwingStart, vecSwingEnd, MASK_SOLID, &filterPlayers, &trace );
 			if ( trace.fraction >= 1.0 )
+			{
 				UTIL_TraceHull( vecSwingStart, vecSwingEnd, vecSwingMins * flBoundsMult, vecSwingMaxs * flBoundsMult, MASK_SOLID, &filterPlayers, &trace );
-
+			}
 			// Ensure valid target
-			if ( trace.m_pEnt && trace.m_pEnt->IsBaseObject() )
+			if ( trace.fraction < 1.0 && trace.m_pEnt && trace.m_pEnt->IsBaseObject() )
 			{
 				CBaseObject *pObject = static_cast<CBaseObject *>( trace.m_pEnt );
 				if ( pObject->GetTeamNumber() == pPlayer->GetTeamNumber() && pObject->HasSapper() )
@@ -485,12 +494,16 @@ void CTFWeaponBaseMelee::DoMeleeDamage( CBaseEntity *pTarget, trace_t &trace )
 
 	float flDamage = GetMeleeDamage( pTarget, iDmgType, iCustomDamage );
 	
+	// Self hits only do half damage.
+	if (pPlayer == pTarget)
+		flDamage *= 0.5f;
+	
 	CTakeDamageInfo info( pPlayer, pPlayer, this, flDamage, iDmgType, iCustomDamage );
 
-	if ( pTarget == pPlayer )
-		info.SetDamageForce( vec3_origin );
-	else
+	if (flDamage > 0)
 		CalculateMeleeDamageForce( &info, vecForward, vecSwingEnd, 1.0f / flDamage * GetForceScale() );
+	else
+		info.SetDamageForce( vec3_origin );
 
 	pTarget->DispatchTraceAttack( info, vecForward, &trace ); 
 	ApplyMultiDamage();
@@ -508,6 +521,9 @@ float CTFWeaponBaseMelee::GetMeleeDamage( CBaseEntity *pTarget, int &iDamageTyoe
 {
 	float flDamage = (float)m_pWeaponInfo->GetWeaponData( m_iWeaponMode ).m_nDamage;
 	CALL_ATTRIB_HOOK_FLOAT( flDamage, mult_dmg );
+	
+	if ( tf2v_use_new_axtinguisher.GetInt() > 1 )
+		CALL_ATTRIB_HOOK_FLOAT( flDamage, mult_dmg_axtinguisher_2_3 );
 
 	CTFPlayer *pPlayer = GetTFPlayerOwner();
 	if ( pPlayer == nullptr || !pPlayer->IsAlive() )
@@ -522,6 +538,24 @@ float CTFWeaponBaseMelee::GetMeleeDamage( CBaseEntity *pTarget, int &iDamageTyoe
 	}
 	
 	return flDamage;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+char const *CTFWeaponBaseMelee::GetShootSound( int iIndex ) const
+{
+	if ( iIndex == MELEE_HIT )
+	{
+		if ( HasItemDefinition() )
+		{
+			char const *pszSound = GetItem()->GetCustomSound( 1 );
+			if ( pszSound && pszSound[0] )
+				return pszSound;
+		}
+	}
+
+	return BaseClass::GetShootSound( iIndex );
 }
 
 void CTFWeaponBaseMelee::OnEntityHit( CBaseEntity *pEntity )
@@ -637,7 +671,7 @@ bool CTFWeaponBaseMelee::CalcIsAttackCriticalHelper( void )
 	if ( flCritChance == 0.0f )
 		return false;
 
-	return ( RandomInt( 0, WEAPON_RANDOM_RANGE-1 ) <= flCritChance * WEAPON_RANDOM_RANGE );
+	return ( RandomInt( 0, WEAPON_RANDOM_RANGE-1 ) < flCritChance * WEAPON_RANDOM_RANGE );
 }
 
 #ifndef CLIENT_DLL

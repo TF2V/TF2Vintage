@@ -38,9 +38,6 @@
 	"voice"
 ]
 
-//
-// Base Classes
-//
 
 @PointClass base(Targetname, Parentname, Angles) size(-2 -2 -2, 2 2 2) frustum(lightfov,nearz,farz,lightcolor,-1) = env_projectedtexture : 
 	"Projected texture entity."
@@ -435,7 +432,7 @@
 [
   classfilter(choices) : "Class to allow" : 1 : "Select which class you'd like to allow through the filter" =
 	[
-	1 : "Scout"
+		1 : "Scout"
     2 : "Sniper"
     3 : "Soldier"
     4 : "Demoman"
@@ -444,6 +441,8 @@
     7 : "Pyro"
     8 : "Spy"
     9 : "Engineer"
+    10 : "Civilian"
+    11 : "Mercenary"
 	]
 ]
 
@@ -1228,50 +1227,6 @@
 	[
 		0 : "No"
 		1 : "Yes"
-	]
-
-	weapon1(Choices) : "Weapon 1" : 0 =
-	[
-		0 : "-none-"
-		15 : "Scattergun ( Primary )"
-		16 : "Sniper rifle ( Primary )"
-		17 : "Minigun ( Primary )"
-		21 : "Rocket launcher ( Primary )"
-		22 : "Pipebomb launcher ( Primary )"
-		24 : "Flamethrower ( Primary )"
-		12 : "Shotgun ( Secondary )"
-		18 : "SMG ( Secondary )"
-		37 : "Pistol ( Secondary )"
-	]
-
-	weapon2(Choices) : "Weapon 2" : 0 =
-	[
-		0 : "-none-"
-		15 : "Scattergun ( Primary )"
-		16 : "Sniper rifle ( Primary )"
-		17 : "Minigun ( Primary )"
-		21 : "Rocket launcher ( Primary )"
-		22 : "Pipebomb launcher ( Primary )"
-		24 : "Flamethrower ( Primary )"
-		75 : "Double barrel shotgun ( Primary )"
-		12 : "Shotgun ( Secondary )"
-		18 : "SMG ( Secondary )"
-		37 : "Pistol ( Secondary )"
-	]
-
-	weapon3(Choices) : "Weapon 3" : 0 =
-	[
-		0 : "-none-"
-		65 : "Shotgun ( Primary )"
-		66 : "Scattergun ( Primary )"
-		67 : "Flamethrower ( Primary )"
-		70 : "Sniper rifle ( Primary )"
-		71 : "Pipebomb launcher ( Primary )"
-		75 : "Double barrel shotgun ( Primary )"
-		21 : "Rocket launcher ( Primary )"
-		17 : "Minigun ( Primary )"
-		68 : "Pistol ( Secondary )"
-		69 : "SMG ( Secondary )"
 	]
 	
 	// Inputs

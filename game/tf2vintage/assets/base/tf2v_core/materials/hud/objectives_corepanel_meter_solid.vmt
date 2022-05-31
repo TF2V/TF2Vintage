@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "HUD/objectives_corepanel_meter_solid"
+	$translucent 1
+	"$vertexcolor" 1
+
+}

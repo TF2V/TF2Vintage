@@ -1,0 +1,2 @@
+exec server/qol2007.txt
+mapcyclefile maps/mapcycle_stock.txt

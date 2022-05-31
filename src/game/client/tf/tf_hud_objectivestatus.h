@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2006, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2006, Valve Corporation, All rights reserved. ============//
 //
 // Purpose: 
 //
@@ -58,7 +58,7 @@ typedef struct
 } timer_delta_t;
 
 #define NUM_TIMER_DELTA_ITEMS 10
-
+class CTFHUDRobotDestruction;
 //-----------------------------------------------------------------------------
 // Purpose:  
 //-----------------------------------------------------------------------------
@@ -207,6 +207,7 @@ private:
 	CTFHudMultipleEscort	*m_pEscortRacePanel;
 	CHudControlPointIcons	*m_pControlPointIconsPanel;
 	CControlPointProgressBar *m_pControlPointProgressBar;
+	CTFHUDRobotDestruction *m_pRobotDestructionPanel;
 };
 
 #endif	// TF_HUD_OBJECTIVESTATUS_H

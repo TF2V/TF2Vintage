@@ -9,7 +9,7 @@
 #pragma once
 #endif
 
-#include "tf_weaponbase_rocket.h"
+#include "tf_projectile_base.h"
 #ifdef GAME_DLL
 #include "iscorer.h"
 #endif
@@ -19,69 +19,49 @@
 #define CTFProjectile_EnergyRing C_TFProjectile_EnergyRing
 #endif
 
-class CTFProjectile_EnergyRing : public CTFBaseRocket
+class CTFProjectile_EnergyRing : public CTFBaseProjectile
 {
 public:
-	DECLARE_CLASS( CTFProjectile_EnergyRing, CTFBaseRocket );
+	DECLARE_CLASS( CTFProjectile_EnergyRing, CTFBaseProjectile );
 	DECLARE_DATADESC();
 	DECLARE_NETWORKCLASS();
 
 	CTFProjectile_EnergyRing();
 	~CTFProjectile_EnergyRing();
 
-	virtual bool UsePenetratingBeam();
-
-#ifdef GAME_DLL
-
 	static CTFProjectile_EnergyRing *Create( CBaseEntity *pWeapon, const Vector &vecOrigin, const QAngle &vecAngles, CBaseEntity *pOwner = NULL, CBaseEntity *pScorer = NULL );
 	virtual void	Spawn();
 	virtual void	Precache();
 
-	// IScorer interface
-	virtual CBasePlayer *GetScorer( void );
-	virtual CBasePlayer *GetAssistant( void ) { return NULL; }
-
-	virtual int		GetWeaponID( void ) const	{ return TF_WEAPON_RAYGUN; }
-
-	void	SetScorer( CBaseEntity *pScorer );
-
-	void	SetCritical( bool bCritical ) { m_bCritical = bCritical; }
+	virtual int		GetWeaponID( void ) const	{ return UsePenetratingBeam() ? TF_WEAPON_RAYGUN : TF_WEAPON_DRG_POMSON; }
 
 	virtual bool	IsDeflectable() { return false; }
 
-	// Overrides.
-	virtual void	Explode( trace_t *pTrace, CBaseEntity *pOther );
-
-	virtual void	RocketTouch( CBaseEntity *pOther ); // ProjectileTouch
+#ifdef GAME_DLL
+	virtual void	ProjectileTouch( CBaseEntity *pOther );
 #else
-
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 	virtual void	CreateTrails( void );
 	virtual void	CreateLightEffects( void );
-
 #endif
 
-/*CTFProjectile_EnergyRing::CanHeadshot()
-CTFProjectile_EnergyRing::GetDamage()
-CTFProjectile_EnergyRing::GetDamageCustom()
-CTFProjectile_EnergyRing::GetGravity()
-CTFProjectile_EnergyRing::GetProjectileModelName()
-CTFProjectile_EnergyRing::ImpactTeamPlayer(CTFPlayer*)
-CTFProjectile_EnergyRing::PlayImpactEffects(Vector const&, bool)
-CTFProjectile_EnergyRing::ResolveFlyCollisionCustom(CGameTrace&, Vector&)*/
+	virtual const char *GetProjectileModelName( void );
+	virtual float GetGravity( void )			{ return 0.0f; }
+	virtual float GetDamage( void );
+
 private:
+	bool UsePenetratingBeam() const;
+	char const *GetTrailParticleName() const;
+	void PlayImpactEffects( Vector const& vecPos, bool bHitFlesh );
 
-	CUtlVector<CBaseEntity*> hPenetratedPlayers;
-	int m_nPenetratedCount;
-	
 #ifdef GAME_DLL
-
-	CBaseHandle m_Scorer;
-	CNetworkVar( bool,	m_bCritical );
-
+	typedef struct PenTargets_s
+	{
+		EHANDLE hEntity;
+		float flLastHitTime;
+	} PenTargets_t;
+	CUtlVector<PenTargets_t> m_aHitEnemies;
 #else
-	bool		m_bCritical;
-
 	CNewParticleEffect	*m_pRing;
 #endif
 

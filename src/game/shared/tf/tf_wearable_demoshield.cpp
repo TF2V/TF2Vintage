@@ -20,8 +20,9 @@ END_NETWORK_TABLE()
 LINK_ENTITY_TO_CLASS( tf_wearable_demoshield, CTFWearableDemoShield );
 PRECACHE_REGISTER( tf_wearable_demoshield );
 
-ConVar tf2v_demo_charge_debuff_remove("tf2v_demo_charge_debuff_remove", "0", FCVAR_NOTIFY | FCVAR_REPLICATED, "Removes debuffs when starting a shield charge.");
-
+#ifdef GAME_DLL
+ConVar tf2v_demo_charge_debuff_remove("tf2v_demo_charge_debuff_remove", "0", FCVAR_NOTIFY, "Removes debuffs when starting a shield charge.");
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 

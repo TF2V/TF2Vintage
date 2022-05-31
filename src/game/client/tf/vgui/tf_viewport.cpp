@@ -17,6 +17,7 @@
 
 // VGUI panel includes
 #include <vgui_controls/Panel.h>
+#include <vgui_controls/AnimationController.h>
 #include <vgui/ISurface.h>
 #include <KeyValues.h>
 #include <vgui/Cursor.h>
@@ -24,6 +25,7 @@
 #include <vgui/IVGui.h>
 #include <vgui/ILocalize.h>
 #include <vgui/VGUI.h>
+#include "tier0/icommandline.h"
 
 // client dll/engine defines
 #include "hud.h"
@@ -36,6 +38,7 @@
 
 #include "vguicenterprint.h"
 #include "text_message.h"
+#include "hud_chat.h"
 #include "tf_classmenu.h"
 
 #include "tf_textwindow.h"
@@ -115,7 +118,14 @@ CON_COMMAND( changeteam, "Choose a new team" )
 	// don't let the player open the team menu themselves until they're on a team
 	if ( pPlayer && ( pPlayer->GetTeamNumber() != TEAM_UNASSIGNED ) )
 	{
-		gViewPortInterface->ShowPanel( PANEL_TEAM, true );
+		if ( TFGameRules()->IsInArenaMode() && tf_arena_use_queue.GetBool() )
+		{
+			gViewPortInterface->ShowPanel( PANEL_ARENATEAMSELECT, true );
+		}
+		else
+		{
+			gViewPortInterface->ShowPanel( PANEL_TEAM, true );
+		}
 	}
 }
 
@@ -128,6 +138,36 @@ CON_COMMAND( changeclass, "Choose a new class" )
 
 	if ( pPlayer && pPlayer->CanShowClassMenu() )
 	{
+		if ( TFGameRules() )
+		{
+			if ( TFGameRules()->IsInArenaMode() && pPlayer->IsAlive() )
+			{
+				if ( pPlayer->GetTeamNumber() > TEAM_SPECTATOR && ( tf_arena_force_class.GetBool() || TFGameRules()->InStalemate() ) )
+				{
+					CHudChat *pChat = GET_HUDELEMENT( CHudChat );
+					if ( pChat )
+					{
+						char msg[100];
+						g_pVGuiLocalize->ConvertUnicodeToANSI( g_pVGuiLocalize->Find( "#TF_Arena_NoClassChange" ), msg, sizeof( msg ) );
+
+						pChat->ChatPrintf( pPlayer->entindex(), CHAT_FILTER_NONE, "%s ", msg );
+					}
+				}
+			}
+
+			if ( TFGameRules()->IsMannVsMachineMode() && !TFGameRules()->InSetup() )
+			{
+				CHudChat *pChat = GET_HUDELEMENT( CHudChat );
+				if ( pChat )
+				{
+					char msg[100];
+					g_pVGuiLocalize->ConvertUnicodeToANSI( g_pVGuiLocalize->Find( "#TF_MVM_NoClassChangeAfterSetup" ), msg, sizeof( msg ) );
+
+					pChat->ChatPrintf( pPlayer->entindex(), CHAT_FILTER_NONE, "%s ", msg );
+				}
+			}
+		}
+
 		switch( pPlayer->GetTeamNumber() )
 		{
 		case TF_TEAM_RED:
@@ -169,6 +209,11 @@ CON_COMMAND( togglescores, "Toggles score panel")
 	}
 }
 
+TFViewport::TFViewport()
+{
+	ivgui()->AddTickSignal( GetVPanel(), 0 );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: called when the VGUI subsystem starts up
 //			Creates the sub panels and initialises them
@@ -187,10 +232,14 @@ void TFViewport::ApplySchemeSettings( vgui::IScheme *pScheme )
 	SetPaintBackgroundEnabled( false );
 
 	// Precache some font characters for the 360
- 	if ( IsX360() )
+ 	if ( IsX360() || CommandLine()->CheckParm( "-precachefontchars" ) || CommandLine()->CheckParm( "-precachefontintlchars" ) )
  	{
- 		wchar_t *pAllChars = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.!:";
- 		wchar_t *pNumbers = L"0123456789";
+ 		wchar_t const *pAllChars = L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.!:";
+ 		wchar_t const *pNumbers = L"0123456789";
+
+		static wchar_t const IntlChars[] ={'a', 'b', 'c', 'i', 'o', 'y', 'A', 'B', 'C', 0xbf, 0xc1, 0xd1, 0xd3, 0x00};
+		if ( CommandLine()->CheckParm( "-precachefontintlchars" ) )
+			pAllChars = IntlChars;
  
  		vgui::surface()->PrecacheFontCharacters( pScheme->GetFont( "ScoreboardTeamName" ), pAllChars );
  		vgui::surface()->PrecacheFontCharacters( pScheme->GetFont( "ScoreboardMedium" ), pAllChars );
@@ -257,7 +306,7 @@ IViewPortPanel* TFViewport::CreatePanelByName(const char *szPanelName)
 	{
 		newpanel = new CTFClassMenu_Blue( this );	
 	}
-		else if ( Q_strcmp( PANEL_CLASS_GREEN, szPanelName ) == 0)
+	else if ( Q_strcmp( PANEL_CLASS_GREEN, szPanelName ) == 0)
 	{
 		newpanel = new CTFClassMenu_Green(this);
 	}
@@ -353,4 +402,12 @@ void TFViewport::OnScreenSizeChanged( int iOldWide, int iOldTall )
 			}
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void TFViewport::OnTick()
+{
+	m_pAnimController->UpdateAnimations( gpGlobals->curtime );
 }

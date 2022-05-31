@@ -1,0 +1,18 @@
+"UnlitGeneric"
+{
+	"$baseTexture" "models\props_spytech/light_glow_worn"
+
+	"$blendtintbybasealpha" "0" 
+	"$blendtintcoloroverbase" "0"  
+
+
+	"Proxies"
+	{
+		"TextureScroll"
+		{
+			"texturescrollvar" "$basetexturetransform"
+			"texturescrollrate" 0.008
+			"texturescrollangle" 0
+		}
+	}	
+}

@@ -44,8 +44,10 @@ void ToolFramework_RecordMaterialParams( IMaterial *pMaterial );
 #define SNIPER_DOT_SPRITE_CLEAR		"effects/sniperdot_clear.vmt"
 
 #ifdef CLIENT_DLL
-	ConVar tf2v_sniper_crosshair( "tf2v_sniper_crosshair", "0", FCVAR_CLIENTDLL|FCVAR_ARCHIVE, "Shows the crosshair on Sniper Rifles.", true, 0, true, 1 );
+	ConVar tf2v_sniper_crosshair( "tf2v_sniper_crosshair", "1", FCVAR_CLIENTDLL|FCVAR_ARCHIVE, "Shows the crosshair on Sniper Rifles.", true, 0, true, 1 );
 #endif
+ConVar tf2v_allow_sniper_crosshairs( "tf2v_allow_sniper_crosshairs", "0", FCVAR_NOTIFY | FCVAR_REPLICATED, "Allows clients to enable crosshairs on their sniper rifles.", true, 0, true, 1 );
+
 
 //=============================================================================
 //
@@ -738,6 +740,10 @@ bool CTFSniperRifle::CanFireCriticalShot( bool bIsHeadshot )
 	if ( nSniperNoHeadshot == 1 )
 		return false;
 
+	// can only fire a crit shot if this is a headshot, unless we're critboosted
+	if ( !bIsHeadshot )
+		return false;
+
 	int nSniperFullChargeHeadShotOnly = 0;
 	CALL_ATTRIB_HOOK_INT( nSniperFullChargeHeadShotOnly, sniper_no_headshot_without_full_charge );
 	if ( nSniperFullChargeHeadShotOnly == 1 && m_flChargedDamage < TF_WEAPON_SNIPERRIFLE_DAMAGE_MAX )
@@ -836,7 +842,7 @@ void CTFSniperRifle::ActivateFocus(void)
 bool CTFSniperRifle::ShouldDrawCrosshair( void )
 {
 #ifdef CLIENT_DLL
-	if (tf2v_sniper_crosshair.GetBool())
+	if (tf2v_sniper_crosshair.GetBool() && tf2v_allow_sniper_crosshairs.GetBool())
 	{
 		CTFPlayer *pPlayer = GetTFPlayerOwner();
 		if (pPlayer)

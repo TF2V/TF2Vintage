@@ -452,8 +452,7 @@ void CGibShooter::Spawn( void )
 CGib *CGibShooter::CreateGib ( void )
 {
 	ConVarRef violence_hgibs( "violence_hgibs" );
-	ConVarRef tf2v_lv( "tf2v_lv" );
-	if ( violence_hgibs.IsValid() && ( ( violence_hgibs.GetInt() == 0 ) || ( tf2v_lv.GetInt() == 1 ) ) )
+	if ( violence_hgibs.IsValid() && ( violence_hgibs.GetInt() == 0 ) )
 		return NULL;
 
 	CGib *pGib = CREATE_ENTITY( CGib, "gib" );
@@ -2306,7 +2305,11 @@ void EffectsPrecache( void *pUser )
 
 	if ( gpGlobals->maxClients > 1 )
 	{
+#ifdef TF_VINTAGE
+		CBaseEntity::PrecacheScriptSound( "TFHudChat.Message" );
+#else
 		CBaseEntity::PrecacheScriptSound( "HudChat.Message" );
+#endif
 	}
 }
 

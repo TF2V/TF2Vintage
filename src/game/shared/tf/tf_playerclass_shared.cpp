@@ -163,9 +163,14 @@ void TFPlayerClassData_t::ParseData( KeyValues *pKeyValuesData )
 	}
 
 	// Grenades.
-	m_aGrenades[0] = GetWeaponId( pKeyValuesData->GetString( "grenade1" ) );
-	m_aGrenades[1] = GetWeaponId( pKeyValuesData->GetString( "grenade2" ) );
-
+	int j;
+	char bufg[32];
+	for ( j=0; j<TF_PLAYER_GRENADE_COUNT;j++ )
+	{
+		Q_snprintf( bufg, sizeof(bufg), "grenade%d", j+1 );		
+		m_aGrenades[j] = GetWeaponId( pKeyValuesData->GetString( bufg ) );
+	}
+	
 	// Ammo Max.
 	KeyValues *pAmmoKeyValuesData = pKeyValuesData->FindKey( "AmmoMax" );
 	if ( pAmmoKeyValuesData )
@@ -247,6 +252,15 @@ TFPlayerClassData_t *GetPlayerClassData( int iClass )
 
 BEGIN_RECV_TABLE_NOBASE( CTFPlayerClassShared, DT_TFPlayerClassShared )
 	RecvPropInt( RECVINFO( m_iClass ) ),
+	RecvPropString( RECVINFO( m_iszClassIcon ) ),
+	RecvPropString( RECVINFO( m_iszCustomModel ) ),
+	RecvPropVector( RECVINFO( m_vecCustomModelOffset ) ),
+	RecvPropQAngles( RECVINFO( m_angCustomModelRotation ) ),
+	RecvPropBool( RECVINFO( m_bCustomModelRotates ) ),
+	RecvPropBool( RECVINFO( m_bCustomModelRotationSet ) ),
+	RecvPropBool( RECVINFO( m_bCustomModelVisibleToSelf ) ),
+	RecvPropBool( RECVINFO( m_bUseClassAnimations ) ),
+	RecvPropInt( RECVINFO( m_iClassModelParity ) ),
 END_RECV_TABLE()
 
 // Server specific.
@@ -254,6 +268,15 @@ END_RECV_TABLE()
 
 BEGIN_SEND_TABLE_NOBASE( CTFPlayerClassShared, DT_TFPlayerClassShared )
 	SendPropInt( SENDINFO( m_iClass ), Q_log2( TF_CLASS_COUNT_ALL )+1, SPROP_UNSIGNED ),
+	SendPropStringT( SENDINFO( m_iszClassIcon ) ),
+	SendPropStringT( SENDINFO( m_iszCustomModel ) ),
+	SendPropVector( SENDINFO( m_vecCustomModelOffset ) ),
+	SendPropQAngles( SENDINFO( m_angCustomModelRotation ) ),
+	SendPropBool( SENDINFO( m_bCustomModelRotates ) ),
+	SendPropBool( SENDINFO( m_bCustomModelRotationSet ) ),
+	SendPropBool( SENDINFO( m_bCustomModelVisibleToSelf ) ),
+	SendPropBool( SENDINFO( m_bUseClassAnimations ) ),
+	SendPropInt( SENDINFO( m_iClassModelParity ), 3, SPROP_UNSIGNED ),
 END_SEND_TABLE()
 
 #endif
@@ -265,6 +288,20 @@ END_SEND_TABLE()
 CTFPlayerClassShared::CTFPlayerClassShared()
 {
 	m_iClass.Set( TF_CLASS_UNDEFINED );
+#ifdef CLIENT_DLL
+	m_iszClassIcon[0] = '\0';
+	m_iszCustomModel[0] = '\0';
+#else
+	m_iszClassIcon.Set( NULL_STRING );
+	m_iszCustomModel.Set( NULL_STRING );
+#endif
+	m_vecCustomModelOffset = vec3_origin;
+	m_angCustomModelRotation = vec3_angle;
+	m_bCustomModelRotates = true;
+	m_bCustomModelRotationSet = false;
+	m_bCustomModelVisibleToSelf = true;
+	m_bUseClassAnimations = false;
+	m_iClassModelParity = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -274,7 +311,30 @@ bool CTFPlayerClassShared::Init( int iClass )
 {
 	Assert ( ( iClass >= TF_FIRST_NORMAL_CLASS ) && ( iClass < TF_CLASS_COUNT_ALL ) );
 	m_iClass = iClass;
+
+#ifdef CLIENT_DLL
+	V_strncpy( m_iszClassIcon, g_aRawPlayerClassNamesShort[ m_iClass ], sizeof( m_iszClassIcon ) );
+#else
+	m_iszClassIcon.Set( AllocPooledString( g_aRawPlayerClassNamesShort[ m_iClass ] ) );
+#endif
+
 	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const char *CTFPlayerClassShared::GetModelName( void ) const
+{
+#ifdef CLIENT_DLL
+	if ( m_iszCustomModel[0] )
+		return m_iszCustomModel;
+#else
+	if ( m_iszCustomModel.Get() != NULL_STRING )
+		return ( STRING( m_iszCustomModel.Get() ) );
+#endif
+
+	return GetPlayerClassData( m_iClass )->GetModelName();
 }
 
 //-----------------------------------------------------------------------------
@@ -289,6 +349,46 @@ const char *CTFPlayerClassShared::GetHandModelName( bool bGunslinger /*= false*/
 	}
 
 	return GetPlayerClassData( m_iClass )->m_szModelHandsName;
+}
+
+#ifndef CLIENT_DLL
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFPlayerClassShared::SetCustomModel( const char *pszModelName, bool isUsingClassAnimations )
+{
+	if ( pszModelName && pszModelName[0] )
+	{
+		bool bAllowPrecache = CBaseEntity::IsPrecacheAllowed();
+		CBaseEntity::SetAllowPrecache( true );
+		CBaseEntity::PrecacheModel( pszModelName );
+		CBaseEntity::SetAllowPrecache( bAllowPrecache );
+
+		m_iszCustomModel.Set( AllocPooledString( pszModelName ) );
+		m_bUseClassAnimations = isUsingClassAnimations;
+	}
+	else
+	{
+		m_iszCustomModel.Set( NULL_STRING );
+		m_vecCustomModelOffset = vec3_origin;
+		m_angCustomModelRotation = vec3_angle;
+	}
+
+	m_iClassModelParity = ( m_iClassModelParity + 1 ) & ( 1 << 3 );
+}
+#endif // #ifndef CLIENT_DLL
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CTFPlayerClassShared::CustomModelHasChanged( void )
+{
+	if ( m_iClassModelParity != m_iOldClassModelParity )
+	{
+		m_iOldClassModelParity = m_iClassModelParity.Get();
+		return true;
+	}
+	return false;
 }
 
 // If needed, put this into playerclass scripts

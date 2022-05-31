@@ -253,7 +253,7 @@ void CTFGrenadePipebombProjectile::OnDataChanged( DataUpdateType_t updateType )
 		{
 			if ( C_BasePlayer::GetLocalPlayer() == GetThrower() )
 			{
-				Vector vecColor;
+				Vector vecColor( 0 );
 				if ( GetTeamNumber() == TF_TEAM_RED )
 					vecColor.Init( 150.f, 0.0f, 0.0f );
 				else if ( GetTeamNumber() == TF_TEAM_BLUE )
@@ -319,8 +319,6 @@ int CTFGrenadePipebombProjectile::DrawModel( int flags )
 #define TF_WEAPON_PIPEBOMB_BOUNCE_SOUND	   	 "Weapon_Grenade_Pipebomb.Bounce"
 #define TF_WEAPON_CANNONBALL_MODEL			 "models/weapons/w_models/w_cannonball.mdl"
 #define TF_WEAPON_CANNON_IMPACT_SOUND		 "Weapon_LooseCannon.BallImpact"
-#define TF_WEAPON_GRENADE_DETONATE_TIME    2.0f
-#define TF_WEAPON_GRENADE_XBOX_DAMAGE      112
 
 BEGIN_DATADESC( CTFGrenadePipebombProjectile )
 END_DATADESC()
@@ -333,6 +331,9 @@ PRECACHE_WEAPON_REGISTER( tf_projectile_pipe );
 
 LINK_ENTITY_TO_CLASS( tf_weapon_grenade_pipebomb_projectile, CTFGrenadePipebombProjectile );
 PRECACHE_WEAPON_REGISTER( tf_weapon_grenade_pipebomb_projectile );
+
+LINK_ENTITY_TO_CLASS( tf_projectile_cannonball, CTFGrenadePipebombProjectile );
+PRECACHE_WEAPON_REGISTER( tf_projectile_cannonball );
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -426,9 +427,8 @@ void CTFGrenadePipebombProjectile::Spawn()
 		{
 			SetModel( TF_WEAPON_GRENADE_MODEL );
 		}
-		float flDetonateTime = TF_WEAPON_GRENADE_DETONATE_TIME;
-		CALL_ATTRIB_HOOK_FLOAT_ON_OTHER( m_hLauncher.Get(), flDetonateTime, fuse_mult );
-		SetDetonateTimerLength( flDetonateTime );
+		
+		SetDetonateTimerLength( TF_WEAPON_GRENADE_DETONATE_TIME );
 		SetTouch( &CTFGrenadePipebombProjectile::PipebombTouch );
 	}
 
@@ -786,61 +786,72 @@ int CTFGrenadePipebombProjectile::OnTakeDamage( const CTakeDamageInfo &info )
 	bool bSameTeam = ( info.GetAttacker()->GetTeamNumber() == GetTeamNumber() );
 
 
-	if ( m_bTouched && ( info.GetDamageType() & (DMG_BULLET|DMG_BUCKSHOT|DMG_BLAST|DMG_CLUB|DMG_SLASH) ) && bSameTeam == false )
+	if ( m_bTouched && bSameTeam == false )
 	{
-		Vector vecForce = info.GetDamageForce();
-		// Sticky bombs get destroyed by bullets and melee, not pushed
-		if ( m_iType == TF_GL_MODE_REMOTE_DETONATE )
+		// Do this one outside of the if/else because it's custom damage, and a convar.
+		// TODO: This would belong in a 2019 setting.
+		/* if ( info.GetDamageCustom() == TF_DMG_CUSTOM_PLASMA_CHARGED )
 		{
-			if ( info.GetDamageType() & (DMG_BULLET|DMG_BUCKSHOT|DMG_CLUB|DMG_SLASH) )
-			{
-				m_bFizzle = true;
-				Detonate();
-			}
-			else if ( info.GetDamageType() & DMG_BLAST )
-			{
-				vecForce *= tf_grenade_forcefrom_blast.GetFloat();
-			}
-		}
-		else
+			m_bFizzle = true;
+			Detonate();
+		}*/
+	
+		if ( info.GetDamageType() & (DMG_BULLET|DMG_BUCKSHOT|DMG_BLAST|DMG_CLUB|DMG_SLASH) )
 		{
-			if ( info.GetDamageType() & DMG_BULLET )
+			Vector vecForce = info.GetDamageForce();
+			// Sticky bombs get destroyed by bullets and melee, not pushed
+			if ( m_iType == TF_GL_MODE_REMOTE_DETONATE )
 			{
-				vecForce *= tf_grenade_forcefrom_bullet.GetFloat();
+				if ( info.GetDamageType() & (DMG_BULLET|DMG_BUCKSHOT|DMG_CLUB|DMG_SLASH) )
+				{
+					m_bFizzle = true;
+					Detonate();
+				}
+				else if ( info.GetDamageType() & DMG_BLAST )
+				{
+					vecForce *= tf_grenade_forcefrom_blast.GetFloat();
+				}
 			}
-			else if ( info.GetDamageType() & DMG_BUCKSHOT )
+			else
 			{
-				vecForce *= tf_grenade_forcefrom_buckshot.GetFloat();
+				if ( info.GetDamageType() & DMG_BULLET )
+				{
+					vecForce *= tf_grenade_forcefrom_bullet.GetFloat();
+				}
+				else if ( info.GetDamageType() & DMG_BUCKSHOT )
+				{
+					vecForce *= tf_grenade_forcefrom_buckshot.GetFloat();
+				}
+				else if ( info.GetDamageType() & DMG_BLAST )
+				{
+					vecForce *= tf_grenade_forcefrom_blast.GetFloat();
+				}
 			}
-			else if ( info.GetDamageType() & DMG_BLAST )
+
+			// If the force is sufficient, detach & move the grenade/pipebomb/sticky
+			float flForce = tf_pipebomb_force_to_move.GetFloat();
+			if ( vecForce.LengthSqr() > (flForce*flForce) )
 			{
-				vecForce *= tf_grenade_forcefrom_blast.GetFloat();
+				if ( VPhysicsGetObject() )
+				{
+					VPhysicsGetObject()->EnableMotion( true );
+				}
+
+				CTakeDamageInfo newInfo = info;
+				newInfo.SetDamageForce( vecForce );
+
+				VPhysicsTakeDamage( newInfo );
+
+				// The sticky will re-stick to the ground after this time expires
+				m_flMinSleepTime = gpGlobals->curtime + tf_grenade_force_sleeptime.GetFloat();
+				m_bTouched = false;
+
+				// It has moved the data is no longer valid.
+				m_bUseImpactNormal = false;
+				m_vecImpactNormal.Init();
+
+				return 1;
 			}
-		}
-
-		// If the force is sufficient, detach & move the grenade/pipebomb/sticky
-		float flForce = tf_pipebomb_force_to_move.GetFloat();
-		if ( vecForce.LengthSqr() > (flForce*flForce) )
-		{
-			if ( VPhysicsGetObject() )
-			{
-				VPhysicsGetObject()->EnableMotion( true );
-			}
-
-			CTakeDamageInfo newInfo = info;
-			newInfo.SetDamageForce( vecForce );
-
-			VPhysicsTakeDamage( newInfo );
-
-			// The sticky will re-stick to the ground after this time expires
-			m_flMinSleepTime = gpGlobals->curtime + tf_grenade_force_sleeptime.GetFloat();
-			m_bTouched = false;
-
-			// It has moved the data is no longer valid.
-			m_bUseImpactNormal = false;
-			m_vecImpactNormal.Init();
-
-			return 1;
 		}
 	}
 
@@ -952,28 +963,31 @@ void CProxyStickyBombGlowColor::OnBind( void *pObject )
 		return;
 	}
 
-	Vector vecColor;
+	static Vector const vecRed( 100.f, 0 , 0 );
+	static Vector const vecBlue( 0, 0, 100.f );
 
 	if ( pProjectile->m_bGlowing )
 	{
 		if ( pProjectile->GetTeamNumber() == TF_TEAM_RED )
-			vecColor.Init( 100.0f, 0.0f, 0.0f );
+		{
+			pProjectile->m_pGlowObject->SetColor( vecRed * 2.5f );
+			m_pResult->SetVecValue( vecRed.x, vecRed.y, vecRed.z );
+		}
 		else if ( pProjectile->GetTeamNumber() == TF_TEAM_BLUE )
-			vecColor.Init( 0.0f, 0.0f, 100.0f );
-
-		pProjectile->m_pGlowObject->SetColor( vecColor * 2.5f );
-		m_pResult->SetVecValue( vecColor.x, vecColor.y, vecColor.z );
-
-		return;
+		{
+			pProjectile->m_pGlowObject->SetColor( vecBlue * 2.5f );
+			m_pResult->SetVecValue( vecBlue.x, vecBlue.y, vecBlue.z );
+		}
 	}
+	else
+	{
+		if ( pProjectile->GetTeamNumber() == TF_TEAM_RED )
+			pProjectile->m_pGlowObject->SetColor( vecRed + Vector( 100.f ) );
+		else if ( pProjectile->GetTeamNumber() == TF_TEAM_BLUE )
+			pProjectile->m_pGlowObject->SetColor( vecBlue + Vector( 100.f ) );
 
-	if ( pProjectile->GetTeamNumber() == TF_TEAM_RED )
-		vecColor.Init( 200.0f, 100.0f, 100.0f );
-	else if ( pProjectile->GetTeamNumber() == TF_TEAM_BLUE )
-		vecColor.Init( 100.0f, 100.0f, 200.0f );
-
-	pProjectile->m_pGlowObject->SetColor( vecColor );
-	m_pResult->SetVecValue( 1.0f, 1.0f, 1.0f );
+		m_pResult->SetVecValue( 1.0f, 1.0f, 1.0f );
+	}
 }
 
 EXPOSE_INTERFACE( CProxyStickyBombGlowColor, IMaterialProxy, "StickybombGlowColor" IMATERIAL_PROXY_INTERFACE_VERSION );

@@ -101,15 +101,15 @@ ActionResult<CTFBot> CTFBotSpyAttack::Update( CTFBot *me, float dt )
 	}
 
 	float flDesiredDot;
-	switch ( me->m_iSkill )
+	switch ( me->GetDifficulty() )
 	{
-		case CTFBot::EASY:
+		case CTFBot::DifficultyType::EASY:
 			flDesiredDot = VIEW_FIELD_ULTRA_NARROW;
 			break;
-		case CTFBot::NORMAL:
+		case CTFBot::DifficultyType::NORMAL:
 			flDesiredDot = DOT_45DEGREE;
 			break;
-		case CTFBot::HARD:
+		case CTFBot::DifficultyType::HARD:
 			flDesiredDot = 0.2;
 			break;
 
@@ -131,7 +131,7 @@ ActionResult<CTFBot> CTFBotSpyAttack::Update( CTFBot *me, float dt )
 	if ( flLength >= tf_bot_spy_knife_range.GetFloat() )
 	{
 		if ( victim->IsVisibleInFOVNow() )
-			bPullKnife = ( me->m_iSkill == CTFBot::EASY || vecToActor.Dot( vecFwd ) > flDesiredDot );
+			bPullKnife = ( me->IsDifficulty( CTFBot::DifficultyType::EASY ) || vecToActor.Dot( vecFwd ) > flDesiredDot );
 	}
 	else
 	{
@@ -162,7 +162,7 @@ ActionResult<CTFBot> CTFBotSpyAttack::Update( CTFBot *me, float dt )
 			me->GetBodyInterface()->AimHeadTowards( victimPlayer, IBody::MANDATORY, 0.1f, nullptr, "Aiming my stab" );
 
 			bool bWaitingForStab = false;
-			if ( me->m_iSkill == CTFBot::EASY || vecToActor.Dot( vecFwd ) > flDesiredDot )
+			if ( me->IsDifficulty( CTFBot::DifficultyType::EASY ) || vecToActor.Dot( vecFwd ) > flDesiredDot )
 			{
 				bWaitingForStab = true;
 			}
@@ -181,7 +181,7 @@ ActionResult<CTFBot> CTFBotSpyAttack::Update( CTFBot *me, float dt )
 
 			if ( me->GetDesiredAttackRange() > flLength )
 			{
-				if ( !me->m_Shared.InCond( TF_COND_DISGUISED ) || ( me->m_iSkill == CTFBot::EASY || vecToActor.Dot( vecFwd ) > flDesiredDot ) || m_bInDanger )
+				if ( !me->m_Shared.InCond( TF_COND_DISGUISED ) || ( me->IsDifficulty( CTFBot::DifficultyType::EASY ) || vecToActor.Dot( vecFwd ) > flDesiredDot ) || m_bInDanger )
 					me->PressFireButton();
 			}
 
@@ -192,17 +192,17 @@ ActionResult<CTFBot> CTFBotSpyAttack::Update( CTFBot *me, float dt )
 
 	me->GetBodyInterface()->AimHeadTowards( victimPlayer, IBody::MANDATORY, 0.1f, nullptr, "Aiming my pistol" );
 
-	if ( !threat->IsVisibleRecently() && me->IsRangeLessThan( threat->GetLastKnownPosition(), 200.0f ) )
+	if ( !victim->IsVisibleRecently() && me->IsRangeLessThan( victim->GetLastKnownPosition(), 200.0f ) )
 	{
-		me->GetVisionInterface()->ForgetEntity( threat->GetEntity() );
+		me->GetVisionInterface()->ForgetEntity( victim->GetEntity() );
 		return Action<CTFBot>::Done( "I lost my target!" );
 	}
 
 	if ( me->IsRangeGreaterThan( victimPlayer, me->GetDesiredAttackRange() ) || !me->IsLineOfFireClear( victimPlayer->EyePosition() ) )
 	{
-		if ( !threat->IsVisibleRecently() && me->IsRangeLessThan( threat->GetLastKnownPosition(), 200.0f ) )
+		if ( !victim->IsVisibleRecently() && me->IsRangeLessThan( victim->GetLastKnownPosition(), 200.0f ) )
 		{
-			me->GetVisionInterface()->ForgetEntity( threat->GetEntity() );
+			me->GetVisionInterface()->ForgetEntity( victim->GetEntity() );
 			return Action<CTFBot>::Done( "I lost my target!" );
 		}
 

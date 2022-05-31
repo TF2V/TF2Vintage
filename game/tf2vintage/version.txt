@@ -1,1 +1,1 @@
-version=1.0 Milestone 0
+version=3.6 Pandora

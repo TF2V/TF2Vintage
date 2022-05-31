@@ -41,7 +41,7 @@ ActionResult<CTFBot> CTFBotDefendPoint::OnStart( CTFBot *me, Action<CTFBot> *pri
 
 	m_PathFollower.SetMinLookAheadDistance( me->GetDesiredPathLookAheadRange() );
 	m_DefenseArea = nullptr;
-	m_bShouldRoam = ( RandomFloat( 0.0f, 100.0f ) < roamChance[Clamp( (int)me->m_iSkill, 0, 3 )] );
+	m_bShouldRoam = ( RandomFloat( 0.0f, 100.0f ) < roamChance[Clamp( (int)me->GetDifficulty(), 0, 3 )] );
 
 	return Action<CTFBot>::Continue();
 }
@@ -97,7 +97,7 @@ ActionResult<CTFBot> CTFBotDefendPoint::Update( CTFBot *me, float dt )
 			return Action<CTFBot>::SuspendFor( new CTFBotSeekAndDestroy( 15.0f ), "Going after an enemy" );
 
 		CTFWeaponBase *pWeapon = me->GetActiveTFWeapon();
-		if ( pWeapon && pWeapon->IsMeleeWeapon() || pWeapon->IsWeapon( TF_WEAPON_FLAMETHROWER ) )
+		if ( pWeapon && ( pWeapon->IsMeleeWeapon() || pWeapon->IsWeapon( TF_WEAPON_FLAMETHROWER ) ) )
 		{
 			RouteType iRouteType = me->IsPlayerClass( TF_CLASS_PYRO ) ? SAFEST_ROUTE : FASTEST_ROUTE;
 			CTFBotPathCost cost( me, iRouteType );
@@ -207,7 +207,7 @@ bool CTFBotDefendPoint::IsPointThreatened( CTFBot *actor )
 
 	if ( !point->HasBeenContested() || gpGlobals->curtime - point->LastContestedAt() >= 5.0f )
 	{
-		if ( !actor->m_cpChangedTimer.HasStarted() || actor->m_cpChangedTimer.IsElapsed() )
+		if ( !actor->HasPointRecentlyChanged() )
 			return false;
 	}
 
@@ -224,7 +224,7 @@ public:
 		m_flIncursionDist = area->GetIncursionDistance( iTeam ) <= 0.0f ? 249.0f : area->GetIncursionDistance( iTeam );
 	}
 
-	virtual bool operator()( CNavArea *a, CNavArea *priorArea, float travelDistanceSoFar ) override
+	virtual bool operator()( CNavArea *a, CNavArea *priorArea, float travelDistanceSoFar ) OVERRIDE
 	{
 		CTFNavArea *area = static_cast<CTFNavArea *>( a );
 		if ( TFGameRules()->IsInKothMode() || area->GetIncursionDistance( m_iTeam ) <= m_flIncursionDist )
@@ -241,14 +241,14 @@ public:
 		return true;
 	}
 
-	virtual bool ShouldSearch( CNavArea *adjArea, CNavArea *currentArea, float travelDistanceSoFar ) override
+	virtual bool ShouldSearch( CNavArea *adjArea, CNavArea *currentArea, float travelDistanceSoFar ) OVERRIDE
 	{
 		int team = ( TFGameRules()->IsInKothMode() ? TEAM_ANY : m_iTeam );
 
 		if ( adjArea->IsBlocked( team ) || travelDistanceSoFar > tf_bot_max_point_defend_range.GetFloat() )
 			return false;
 
-		if ( abs( currentArea->ComputeAdjacentConnectionHeightChange( adjArea ) ) < 65.0f )
+		if ( fabs( currentArea->ComputeAdjacentConnectionHeightChange( adjArea ) ) < 65.0f )
 			return true;
 
 		return false;
@@ -299,7 +299,7 @@ bool CTFBotDefendPoint::WillBlockCapture( CTFBot *actor ) const
 	if ( TFGameRules()->IsInTraining() )
 		return false;
 
-	switch ( actor->m_iSkill )
+	switch ( actor->GetDifficulty() )
 	{
 		case CTFBot::DifficultyType::EASY:
 			return false;

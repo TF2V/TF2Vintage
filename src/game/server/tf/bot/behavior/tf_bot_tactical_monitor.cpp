@@ -1,6 +1,13 @@
+//========= Copyright © Valve LLC, All rights reserved. =======================
+//
+// Purpose:		
+//
+// $NoKeywords: $
+//=============================================================================
 #include "cbase.h"
 #include "NextBot/NavMeshEntities/func_nav_prerequisite.h"
 #include "tf_bot.h"
+#include "tf_bot_squad.h"
 #include "tf_weaponbase.h"
 #include "tf_bot_tactical_monitor.h"
 #include "tf_gamerules.h"
@@ -18,6 +25,7 @@
 #include "tf_bot_retreat_to_cover.h"
 #include "tf_bot_destroy_enemy_sentry.h"
 #include "tf_bot_use_teleporter.h"
+#include "squad/tf_bot_escort_squad_leader.h"
 
 
 ConVar tf_bot_force_jump( "tf_bot_force_jump", "0", FCVAR_CHEAT, "Force bots to continuously jump", true, 0.0f, true, 1.0f );
@@ -87,7 +95,7 @@ ActionResult<CTFBot> CTFBotTacticalMonitor::Update( CTFBot *me, float dt )
 	if ( retreat == ANSWER_YES )
 		return BaseClass::SuspendFor( new CTFBotRetreatToCover, "Backing off" );
 
-	if ( retreat != ANSWER_NO && !me->m_Shared.InCond( TF_COND_INVULNERABLE ) && me->m_iSkill >= CTFBot::HARD )
+	if ( retreat != ANSWER_NO && !me->m_Shared.InCond( TF_COND_INVULNERABLE ) && me->GetDifficulty() >= CTFBot::DifficultyType::HARD )
 	{
 		CTFWeaponBase *pWeapon = (CTFWeaponBase *)me->Weapon_GetSlot( 1 );
 		if ( pWeapon && me->IsBarrageAndReloadWeapon( pWeapon ) )
@@ -138,7 +146,7 @@ ActionResult<CTFBot> CTFBotTacticalMonitor::Update( CTFBot *me, float dt )
 		if ( me->IsAmmoLow() && CTFBotGetAmmo::IsPossible( me ) )
 			return Action<CTFBot>::SuspendFor( new CTFBotGetAmmo, "Grabbing nearby ammo" );
 
-		if ( me->m_hTargetSentry && CTFBotDestroyEnemySentry::IsPossible( me ) )
+		if ( me->GetTargetSentry() && CTFBotDestroyEnemySentry::IsPossible( me ) )
 			return BaseClass::SuspendFor( new CTFBotDestroyEnemySentry, "Going after an enemy sentry to destroy it" );
 	}
 
@@ -148,6 +156,9 @@ ActionResult<CTFBot> CTFBotTacticalMonitor::Update( CTFBot *me, float dt )
 		AvoidBumpingEnemies( me );
 
 	me->UpdateDelayedThreatNotices();
+
+	if ( me->GetSquad() && me->GetSquad()->GetLeader() == me && me->GetSquad()->ShouldSquadLeaderWaitForFormation() )
+		return SuspendFor( new CTFBotWaitForOutOfPositionSquadMember, "Waiting for squadmates to get back into formation" );
 
 	return Action<CTFBot>::Continue();
 }
@@ -232,13 +243,13 @@ EventDesiredResult<CTFBot> CTFBotTacticalMonitor::OnCommandString( CTFBot *me, c
 
 void CTFBotTacticalMonitor::AvoidBumpingEnemies( CTFBot *actor )
 {
-	if ( actor->m_iSkill > CTFBot::NORMAL )
+	if ( actor->GetDifficulty() > CTFBot::DifficultyType::NORMAL )
 	{
 		CTFPlayer *pClosest = nullptr;
 		float flClosest = Square( 200.0f );
 
 		CUtlVector<CTFPlayer *> enemies;
-		CollectPlayers( &enemies, GetEnemyTeam( actor ), true );
+		CollectPlayers( &enemies, GetEnemyTeam( actor ), COLLECT_ONLY_LIVING_PLAYERS );
 		for ( int i=0; i<enemies.Count(); ++i )
 		{
 			CTFPlayer *pPlayer = enemies[i];
@@ -336,10 +347,12 @@ void CTFBotTacticalMonitor::MonitorArmedStickybombs( CTFBot *actor )
 	CUtlVector<CKnownEntity> knowns;
 	actor->GetVisionInterface()->CollectKnownEntities( &knowns );
 	
-	for ( CTFGrenadePipebombProjectile *pGrenade : pLauncher->m_Pipebombs )
+	FOR_EACH_VEC( pLauncher->m_Pipebombs, i )
 	{
-		for ( const CKnownEntity &pKnown : knowns )
+		CTFGrenadePipebombProjectile *pGrenade = pLauncher->m_Pipebombs[i];
+		FOR_EACH_VEC( knowns, j )
 		{
+			const CKnownEntity &pKnown = knowns[j];
 			if ( pKnown.IsObsolete() || pKnown.GetEntity()->IsBaseObject() )
 				continue;
 

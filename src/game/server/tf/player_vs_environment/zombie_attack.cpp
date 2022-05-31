@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -128,7 +128,7 @@ bool CZombieAttack::IsPotentiallyChaseable( CZombie *actor, CBaseCombatCharacter
 	if ( pArea == nullptr )
 		return false;
 
-	if ( pArea->HasTFAttributes( RED_SPAWN_ROOM | BLUE_SPAWN_ROOM ) )
+	if ( pArea->HasTFAttributes( TF_NAV_RED_SPAWN_ROOM | TF_NAV_BLUE_SPAWN_ROOM ) )
 		return false;
 
 	if ( other->GetGroundEntity() == nullptr )
@@ -149,22 +149,23 @@ void CZombieAttack::SelectVictim( CZombie *actor )
 	switch ( actor->GetTeamNumber() )
 	{
 		case TF_TEAM_RED:
-			CollectPlayers( &players, TF_TEAM_BLUE, true );
+			CollectPlayers( &players, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS );
 			break;
 		case TF_TEAM_BLUE:
-			CollectPlayers( &players, TF_TEAM_RED, true );
+			CollectPlayers( &players, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
 			break;
 		default:
-			CollectPlayers( &players, TF_TEAM_RED, true );
-			CollectPlayers( &players, TF_TEAM_RED, true, true );
+			CollectPlayers( &players, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+			CollectPlayers( &players, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
 			break;
 	}
 
 	CBaseCombatCharacter *pClosest = nullptr;
 	float flMinDist = FLT_MAX;
 
-	for ( CTFPlayer *pPlayer : players )
+	FOR_EACH_VEC( players, i )
 	{
+		CTFPlayer *pPlayer = players[i];
 		if ( !IsPotentiallyChaseable( actor, pPlayer ) )
 			continue;
 

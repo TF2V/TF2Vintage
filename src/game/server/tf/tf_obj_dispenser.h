@@ -58,6 +58,8 @@ public:
 	virtual float GetDispenserRadius( void );
 	virtual float GetHealRate( void );
 	virtual float GetAmmoRate( void );
+
+	virtual int	DispenseMetal( CTFPlayer *pPlayer );
 	virtual int GetAvailableMetal( void ) const { return m_iAmmoMetal; }
 
 	virtual void StartTouch( CBaseEntity *pOther );
@@ -67,7 +69,7 @@ public:
 
 	virtual int GetBaseHealth( void );
 
-	bool DispenseAmmo( CTFPlayer *pPlayer );
+	virtual bool DispenseAmmo( CTFPlayer *pPlayer );
 
 	void StartHealing( CBaseEntity *pOther );
 	void StopHealing( CBaseEntity *pOther );
@@ -75,8 +77,6 @@ public:
 	void AddHealingTarget( CBaseEntity *pOther );
 	void RemoveHealingTarget( CBaseEntity *pOther );
 	bool IsHealingTarget( CBaseEntity *pTarget );
-
-	void ResetHealingTargets( void );
 
 	bool CouldHealTarget( CBaseEntity *pTarget );
 
@@ -98,15 +98,20 @@ private:
 	void StartUpgrading( void );
 	void FinishUpgrading( void );
 
+	void ResetHealingTargets( void );
 
-	//CNetworkArray( EHANDLE, m_hHealingTargets, MAX_DISPENSER_HEALING_TARGETS );
+	virtual void PlayActiveSound( void );
 
-
+protected:
+	
 	// Entities currently being touched by this trigger
 	CUtlVector< EHANDLE >	m_hTouchingEntities;
 
 	CNetworkVar( int, m_iAmmoMetal );
 	CNetworkVar( bool, m_bStealthed );
+
+	bool m_bPlayRefillSound;
+	bool m_bPlayAmmoPickupSound;
 
 	// Time when the upgrade animation will complete
 	float m_flUpgradeCompleteTime;

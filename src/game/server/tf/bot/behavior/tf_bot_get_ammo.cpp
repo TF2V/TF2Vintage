@@ -201,10 +201,10 @@ bool CAmmoFilter::IsSelected( const CBaseEntity *ent ) const
 	// Can't use enemy teams resupply cabinet
 	if ( FClassnameIs( const_cast<CBaseEntity *>( ent ), "func_regenerate" ) )
 	{
-		if ( m_pActor->GetTeamNumber() == TF_TEAM_RED && pArea->HasTFAttributes( BLUE_SPAWN_ROOM ) )
+		if ( m_pActor->GetTeamNumber() == TF_TEAM_RED && pArea->HasTFAttributes( TF_NAV_BLUE_SPAWN_ROOM ) )
 			return false;
 
-		if ( m_pActor->GetTeamNumber() == TF_TEAM_BLUE && pArea->HasTFAttributes( RED_SPAWN_ROOM ) )
+		if ( m_pActor->GetTeamNumber() == TF_TEAM_BLUE && pArea->HasTFAttributes( TF_NAV_RED_SPAWN_ROOM ) )
 			return false;
 	}
 
@@ -215,7 +215,7 @@ bool CAmmoFilter::IsSelected( const CBaseEntity *ent ) const
 		// Don't try to syphon metal from an unupgraded dispenser if we're trying to setup
 		if ( m_pActor->IsPlayerClass( TF_CLASS_ENGINEER ) &&
 			 pObject->GetUpgradeLevel() <= 2 &&
-			 m_pActor->GetObjectOfType( OBJ_SENTRYGUN, OBJECT_MODE_NONE ) != NULL )
+			 m_pActor->GetObjectOfType( OBJ_SENTRYGUN ) != NULL )
 		{
 			return false;
 		}
@@ -233,7 +233,7 @@ bool CAmmoFilter::IsSelected( const CBaseEntity *ent ) const
 	if ( !pArea->IsMarked() || m_flMinCost < pArea->GetCostSoFar() )
 		return false;
 
-	const_cast<CAmmoFilter *>( this )->m_flMinCost = pArea->GetCostSoFar();
+	m_flMinCost = pArea->GetCostSoFar();
 
 	return true;
 }

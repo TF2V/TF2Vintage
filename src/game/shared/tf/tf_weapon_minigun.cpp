@@ -394,15 +394,10 @@ void CTFMinigun::FireAttack( int nDamageAmount )
 	DispatchParticleEffect("heavy_ring_of_fire", pOwner->GetAbsOrigin(), vec3_angle);
 	// We explode in a small radius, set us up as an explosion.
 	CTakeDamageInfo newInfo(pOwner, pOwner, this, vec3_origin, pOwner->GetAbsOrigin(), nDamageAmount, DMG_IGNITE);
-	CTFRadiusDamageInfo radiusInfo;
-	radiusInfo.info = &newInfo;
-	radiusInfo.m_vecSrc = pOwner->GetAbsOrigin();
-	radiusInfo.m_flRadius = 135;
-	radiusInfo.m_flSelfDamageRadius = 0;
-
+	CTFRadiusDamageInfo radiusInfo(&newInfo, pOwner->GetAbsOrigin(), 135.0f);
 	TFGameRules()->RadiusDamage( radiusInfo );
-		
 #endif
+
 	// Update the time for the next fire attack.
 	m_flNextFireAttack = gpGlobals->curtime + 0.5;
 }
@@ -624,8 +619,10 @@ float CTFMinigun::GetProjectileDamage( void )
 				flDamageMod = RemapValClamped( GetFiringTime(), 0.2, TF_MINIGUN_PENALTY_TIME, 0.5, 1 );			
 			break;
 			case 3:	// Rampup based on spinning time.
-			if ( GetWindingTime() < TF_MINIGUN_PENALTY_TIME + GetSpinUpLength() )
+			if ( GetWindingTime() < ( TF_MINIGUN_PENALTY_TIME + GetSpinUpLength() ) )
 				flDamageMod = RemapValClamped( GetWindingTime(), 0.2, (TF_MINIGUN_PENALTY_TIME + GetSpinUpLength()), 0.5, 1 );				
+			break;
+			default:
 			break;
 		}
 		
@@ -649,18 +646,18 @@ float CTFMinigun::GetWeaponSpread( void )
 		switch (tf2v_use_new_minigun_rampup.GetInt())
 		{
 			case 1:	// Rampup based on firing time.
-			case 2:
 			if ( GetFiringTime() < TF_MINIGUN_PENALTY_TIME )
 				flSpreadMod = RemapValClamped( GetFiringTime(), 0.2, TF_MINIGUN_PENALTY_TIME, 0.5, 1 );			
 			break;
+			case 2:
 			case 3:	// Rampup based on spinning time.
-			if ( GetWindingTime() < TF_MINIGUN_PENALTY_TIME + GetSpinUpLength() )
+			if ( GetWindingTime() < ( TF_MINIGUN_PENALTY_TIME + GetSpinUpLength() ) )
 				flSpreadMod = RemapValClamped( GetWindingTime(), 0.2, (TF_MINIGUN_PENALTY_TIME + GetSpinUpLength()), 0.5, 1 );				
 			break;
+			default:
+			break;
 		}
-		
-		if ( flSpreadMod != 1.0f )	// If damage modified, adjust.
-			flSpread *= flSpreadMod;
+		flSpread *= flSpreadMod;
 	}
 	
 	return flSpread;
@@ -788,10 +785,10 @@ void CTFMinigun::UpdateBarrelMovement()
 {
 	if ( m_flBarrelCurrentVelocity != m_flBarrelTargetVelocity )
 	{
-		float flSpinupTime = GetSpinUpLength();
+		float flBarrelAcceleration = 0.1f;
 
 		// update barrel velocity to bring it up to speed or to rest
-		m_flBarrelCurrentVelocity = Approach( m_flBarrelTargetVelocity, m_flBarrelCurrentVelocity, 0.1 / flSpinupTime );
+		m_flBarrelCurrentVelocity = Approach( m_flBarrelTargetVelocity, m_flBarrelCurrentVelocity, flBarrelAcceleration );
 
 		if ( 0 == m_flBarrelCurrentVelocity )
 		{	

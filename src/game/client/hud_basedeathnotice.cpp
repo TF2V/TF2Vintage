@@ -66,6 +66,9 @@ void CHudBaseDeathNotice::Init( void )
 	ListenForGameEvent( "teamplay_capture_blocked" );
 	ListenForGameEvent( "teamplay_flag_event" );
 	ListenForGameEvent( "rd_robot_killed" );
+	ListenForGameEvent( "humiliation_fish" );
+	ListenForGameEvent( "humiliation_arm" );
+	ListenForGameEvent( "humiliation_slap" );
 }
 
 //-----------------------------------------------------------------------------
@@ -681,7 +684,12 @@ void CHudBaseDeathNotice::FireGameEvent( IGameEvent *event )
 		// Try and find the death identifier in the icon list
 		// On consoles, we flip usage of the inverted icon to make it more visible
 		bool bInverted = m_DeathNotices[iMsg].bLocalPlayerInvolved;
+#ifdef TF_VINTAGE_CLIENT
+		ConVarRef cl_hud_console( "cl_hud_console" );
+		if ( IsConsole() || ( cl_hud_console.IsValid() && cl_hud_console.GetBool() ) )
+#else
 		if ( IsConsole() )
+#endif
 		{
 			bInverted = !bInverted;
 		}

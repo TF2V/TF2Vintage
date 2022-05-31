@@ -156,7 +156,7 @@ float3 LightMapSample( sampler LightmapSampler, float2 vTexCoord )
 {
 #	if ( !defined( _X360 ) || !defined( USE_32BIT_LIGHTMAPS_ON_360 ) )
 	{
-		float3 sample = tex2D( LightmapSampler, vTexCoord );
+		float3 sample = tex2D( LightmapSampler, vTexCoord ).xyz;
 
 		return sample;
 	}
@@ -199,4 +199,3 @@ float3 LightMapSample( sampler LightmapSampler, float2 vTexCoord )
 	}
 #	endif
 }
-

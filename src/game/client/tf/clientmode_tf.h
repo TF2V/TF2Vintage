@@ -17,6 +17,7 @@
 class CHudMenuEngyBuild;
 class CHudMenuEngyDestroy;
 class CHudMenuSpyDisguise;
+class CHudInspectPanel;
 class CTFFreezePanel;
 
 #if defined( _X360 )
@@ -56,24 +57,33 @@ public:
 	virtual void	PostRenderVGui();
 
 	virtual bool	CreateMove( float flInputSampleTime, CUserCmd *cmd );
+	virtual void	Update( void );
 
 	virtual int		HudElementKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
 	virtual int		HandleSpectatorKeyInput( int down, ButtonCode_t keynum, const char *pszCurrentBinding );
+
+	virtual void	OnDemoRecordStart( char const *pDemoBaseName ) OVERRIDE;
+	virtual void	OnDemoRecordStop( void ) OVERRIDE;
+
+#if !defined(NO_STEAM)
+	STEAM_CALLBACK_MANUAL( ClientModeTFNormal, OnScreenshotRequested, ScreenshotRequested_t, m_CallbackScreenshotRequested );
+#endif
 	
 private:
 	
 	void			MessageHooks( void );
 	//void			UpdateSpectatorMode( void );
 
-	void			PrintTextToChat( const char *msg );
+	void			PrintTextToChat( const char *msg, KeyValues *pData );
 
 private:
 
-	CHudMenuEngyBuild *m_pMenuEngyBuild;
+	CHudMenuEngyBuild	*m_pMenuEngyBuild;
 	CHudMenuEngyDestroy *m_pMenuEngyDestroy;
 	CHudMenuSpyDisguise *m_pMenuSpyDisguise;
 	CTFFreezePanel		*m_pFreezePanel;
-	IGameUI			*m_pGameUI;
+	CHudInspectPanel	*m_pInspectPanel;
+	IGameUI				*m_pGameUI;
 
 #if defined( _X360 )
 	CTFClientScoreBoardDialog	*m_pScoreboard;

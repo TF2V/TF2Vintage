@@ -66,6 +66,8 @@ public:
 	DECLARE_CLASS( CTFScatterGun, CTFShotgun );
 	DECLARE_NETWORKCLASS(); 
 	DECLARE_PREDICTABLE();
+	
+	CTFScatterGun();
 
 	virtual int		GetWeaponID( void ) const			{ return TF_WEAPON_SCATTERGUN; }
 	virtual void	FireBullet( CTFPlayer *pShooter );
@@ -75,12 +77,12 @@ public:
 #endif
 
 	virtual void	Equip( CBaseCombatCharacter *pEquipTo );
-	virtual bool	Deploy( void );
-	virtual bool	Holster( CBaseCombatWeapon *pSwitchTo );
+	virtual bool	CanAutoReload( void ) { return m_bAutoReload; }
 	virtual void	FinishReload( void );
 	virtual bool	SendWeaponAnim( int iActivity );
 
 	bool			HasKnockback( void ) const;
+	bool 			IsDoubleBarrel( void ) const;
 
 private:
 	bool m_bAutoReload;
@@ -173,7 +175,7 @@ public:
 	virtual bool	Holster( CBaseCombatWeapon *pSwitchTo );
 	virtual void	Detach( void );
 
-	virtual const char *GetEffectLabelText( void ) { return "#TF_REVENGE"; }
+	virtual const char* GetEffectLabelText( void ) { return "#TF_REVENGE"; }
 
 #ifdef GAME_DLL
 	virtual void	OnSentryKilled( class CObjectSentrygun *pSentry );

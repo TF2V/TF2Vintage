@@ -38,9 +38,11 @@ public:
 	virtual void 		ItemPostFrame( void );
 
 #ifdef GAME_DLL
-	virtual void		EurekaTeleport(void);
+	virtual void		EurekaTeleport(bool bToTeleporter = false);
 
-	virtual void OnFriendlyBuildingHit( CBaseObject *pObject, CTFPlayer *pPlayer, Vector vecHitPos );
+	void				ApplyBuildingHealthUpgrade( void );
+
+	virtual void		OnFriendlyBuildingHit( CBaseObject *pObject, CTFPlayer *pPlayer, Vector vecHitPos );
 #endif
 
 private:

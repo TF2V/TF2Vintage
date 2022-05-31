@@ -185,19 +185,20 @@ void C_ObjectDispenser::UpdateEffects( void )
 
 			if ( bHaveEffect )
 			{
-				if ( pPlayer->m_Shared.InCond( TF_COND_STEALTHED ) && !pPlayer->InLocalTeam() )
+				if ( ( pPlayer->m_Shared.IsStealthed() || pPlayer->m_Shared.InCond( TF_COND_STEALTHED_BLINK ) ) 
+					 && !pPlayer->InLocalTeam() )
 				{
 					ParticleProp()->StopEmission( m_hHealingTargetEffects[i].pEffect );
 					m_hHealingTargetEffects.Remove( i );
 					if ( m_hHealingTargets.Count() == 1 )
 						StopSound( "Building_Dispenser.Heal" );
-					continue;
 				}
-				else
-					continue;
+
+				continue;
 			}
 
-			if ( pPlayer->m_Shared.InCond( TF_COND_STEALTHED ) && !pPlayer->InLocalTeam() )
+			if ( ( pPlayer->m_Shared.IsStealthed() || pPlayer->m_Shared.InCond( TF_COND_STEALTHED_BLINK ) )
+				 && !pPlayer->InLocalTeam() )
 			{
 				continue;
 			}
@@ -207,10 +208,21 @@ void C_ObjectDispenser::UpdateEffects( void )
 			const char *pszEffectName = ConstructTeamParticle( "dispenser_heal_%s", GetTeamNumber() );
 			CNewParticleEffect *pEffect = NULL;
 
-			if ( GetObjectFlags() & OF_IS_CART_OBJECT )
-				pEffect = ParticleProp()->Create( pszEffectName, PATTACH_ABSORIGIN_FOLLOW );
+			if ( GetObjectFlags() & OF_DOESNT_HAVE_A_MODEL )
+			{
+				if ( GetObjectFlags() & OF_PLAYER_DESTRUCTION )
+				{
+					pEffect = ParticleProp()->Create( pszEffectName, PATTACH_ABSORIGIN_FOLLOW, NULL, Vector( 0, 0, 50 ) );
+				}
+				else
+				{
+					pEffect = ParticleProp()->Create( pszEffectName, PATTACH_ABSORIGIN_FOLLOW );
+				}
+			}
 			else
+			{
 				pEffect = ParticleProp()->Create( pszEffectName, PATTACH_POINT_FOLLOW, "heal_origin" );
+			}
 
 			ParticleProp()->AddControlPoint( pEffect, 1, pTarget, PATTACH_ABSORIGIN_FOLLOW, NULL, Vector(0,0,50) );
 

@@ -39,6 +39,7 @@ public:
 
 	void			Spawn( void );
 	CBaseEntity*	Respawn( void );
+	virtual void	Precache( void );
 	virtual void	Materialize( void );
 	virtual bool	ValidTouch( CBasePlayer *pPlayer );
 	virtual bool	MyTouch( CBasePlayer *pPlayer );
@@ -47,6 +48,7 @@ public:
 	void			SetDisabled( bool bDisabled );
 
 	virtual float	GetRespawnDelay( void ) 				{ return g_pGameRules->FlItemRespawnTime( this ); }
+	virtual float	GetLifeTime()							{ return 30.0f; }
 
 	void			DropSingleInstance( const Vector &vecVelocity, CBaseCombatCharacter *pOwner, float flUnknown, float flRestTime );
 

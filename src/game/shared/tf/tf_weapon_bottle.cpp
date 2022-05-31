@@ -93,13 +93,6 @@ void CTFBottle::SwitchBodyGroups( void )
 			pTFPlayer->GetViewModel()->SetBodygroup( TF_BOTTLE_SWITCHGROUP, iState );
 		}
 	}
-	
-#ifndef GAME_DLL
-	// Also update the c_models.
-	C_ViewmodelAttachmentModel *pAttach = GetViewmodelAddon();
-	if (pAttach)
-		pAttach->SetBodygroup(TF_BOTTLE_SWITCHGROUP, iState);
-#endif
 }
 
 void CTFBottle::Smack( void )

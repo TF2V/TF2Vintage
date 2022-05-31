@@ -67,6 +67,7 @@ private:
 	CNetworkVar( float, m_flKnifeRegenTime );
 	CNetworkVar( bool, m_bForcedSwap );
 	CNetworkVar( float, m_flSwapBlocked);
+	CNetworkVar( bool, m_bDelayedStab );
 	
 	CTFKnife( const CTFKnife & ) {}
 };

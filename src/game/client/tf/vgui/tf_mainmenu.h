@@ -14,7 +14,7 @@ enum MenuPanel //position in this enum = zpos on the screen
 	PAUSE_MENU,
 	SHADEBACKGROUND_MENU, //add popup/additional menus below:		
 	LOADOUT_MENU,
-	ITEMSELCTION_MENU,
+	ITEMSELECTION_MENU,
 	STATSUMMARY_MENU,
 	OPTIONSDIALOG_MENU,
 	QUIT_MENU,
@@ -32,7 +32,7 @@ enum MenuPanel //position in this enum = zpos on the screen
 	dynamic_cast<className*>(MAINMENU_ROOT->GetMenuPanel(#className))
 
 class CTFMenuPanelBase;
-bool bFromPause = false;
+extern bool g_bFromPause;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------

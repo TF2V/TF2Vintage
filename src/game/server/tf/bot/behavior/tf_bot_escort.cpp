@@ -1,18 +1,24 @@
-/* reverse engineering by sigsegv
- * based on TF2 version 20151007a
- * server/tf/bot/behavior/tf_bot_escort.cpp
- * used in MvM: TODO
- * 
- * completely unused
- */
+//========= Copyright � Valve LLC, All rights reserved. =======================
+//
+// Purpose:		
+//
+// $NoKeywords: $
+//=============================================================================
+#include "cbase.h"
+#include "tf_bot.h"
+#include "tf_bot_escort.h"
+#include "demoman/tf_bot_prepare_stickybomb_trap.h"
+#include "tf_bot_attack.h"
+#include "tf_bot_destroy_enemy_sentry.h"
+#include "tf_obj_sentrygun.h"
 
 
-ConVar tf_bot_escort_range("tf_bot_escort_range", "300", FCVAR_CHEAT);
+ConVar tf_bot_escort_range( "tf_bot_escort_range", "300", FCVAR_CHEAT );
 
 
-CTFBotEscort::CTFBotEscort(CBaseEntity *who)
+CTFBotEscort::CTFBotEscort( CBaseCombatCharacter *who )
 {
-	this->m_hWho = who;
+	m_hWho = who;
 }
 
 CTFBotEscort::~CTFBotEscort()
@@ -26,81 +32,81 @@ const char *CTFBotEscort::GetName() const
 }
 
 
-ActionResult<CTFBot> CTFBotEscort::OnStart(CTFBot *actor, Action<CTFBot> *action)
+ActionResult<CTFBot> CTFBotEscort::OnStart( CTFBot *me, Action<CTFBot> *priorAction )
 {
-	this->m_PathFollower.SetMinLookAheadDistance(actor->GetDesiredPathLookAheadRange());
-	
-	return ActionResult<CTFBot>::Continue();
+	m_PathFollower.SetMinLookAheadDistance( me->GetDesiredPathLookAheadRange() );
+
+	return Action<CTFBot>::Continue();
 }
 
-ActionResult<CTFBot> CTFBotEscort::Update(CTFBot *actor, float dt)
+ActionResult<CTFBot> CTFBotEscort::Update( CTFBot *me, float dt )
 {
-	const CKnownEntity *threat = actor->GetVisionInterface()->GetPrimaryKnownThreat(false);
-	if (threat != nullptr && threat->IsVisibleInFOVNow()) {
-		return ActionResult<CTFBot>::SuspendFor(new CTFBotAttack(),
-			"Attacking nearby threat");
-	}
-	
-	if (this->m_hWho != nullptr) {
-		if (actor->IsRangeGreaterThan(this->m_hWho, tf_bot_escort_range.GetFloat())) {
-			if (this->m_ctRecomputePath.IsElapsed()) {
-				CTFBotPathCost cost_func(actor, FASTEST_ROUTE);
-				this->m_PathFollower.Compute(actor, this->m_hWho, cost_func, 0.0f, true);
-				
-				this->m_ctRecomputePath.Start(RandomFloat(2.0f, 3.0f));
+	const CKnownEntity *threat = me->GetVisionInterface()->GetPrimaryKnownThreat( false );
+	if ( threat != nullptr && threat->IsVisibleInFOVNow() )
+		return Action<CTFBot>::SuspendFor( new CTFBotAttack, "Attacking nearby threat" );
+
+	if ( m_hWho != nullptr )
+	{
+		if ( me->IsRangeGreaterThan( m_hWho, tf_bot_escort_range.GetFloat() ) )
+		{
+			if ( m_ctRecomputePath.IsElapsed() )
+			{
+				CTFBotPathCost cost_func( me, FASTEST_ROUTE );
+				m_PathFollower.Compute( me, m_hWho, cost_func, 0.0f, true );
+
+				m_ctRecomputePath.Start( RandomFloat( 2.0f, 3.0f ) );
 			}
-			
-			this->m_PathFollower.Update(actor);
-		} else if (CTFBotPrepareStickybombTrap::IsPossible(actor)) {
-			return ActionResult<CTFBot>::SuspendFor(new CTFBotPrepareStickybombTrap(),
-				"Laying sticky bombs!");
+
+			m_PathFollower.Update( me );
+		}
+		else if ( CTFBotPrepareStickybombTrap::IsPossible( me ) )
+		{
+			return Action<CTFBot>::SuspendFor( new CTFBotPrepareStickybombTrap, "Laying sticky bombs!" );
 		}
 	}
-	
-	if (actor->m_hTargetSentry != nullptr && CTFBotDestroyEnemySentry::IsPossible(actor)) {
-		return ActionResult<CTFBot>::SuspendFor(new CTFBotDestroyEnemySentry(),
-			"Going after an enemy sentry to destroy it");
-	}
-	
-	return ActionResult<CTFBot>::Continue();
+
+	if ( me->GetTargetSentry() != nullptr && CTFBotDestroyEnemySentry::IsPossible( me ) )
+		return Action<CTFBot>::SuspendFor( new CTFBotDestroyEnemySentry, "Going after an enemy sentry to destroy it" );
+
+	return Action<CTFBot>::Continue();
 }
 
 
-EventDesiredResult<CTFBot> CTFBotEscort::OnMoveToSuccess(CTFBot *actor, const Path *path)
+EventDesiredResult<CTFBot> CTFBotEscort::OnMoveToSuccess( CTFBot *actor, const Path *path )
 {
-	return EventDesiredResult<CTFBot>::Continue();
+	return Action<CTFBot>::TryContinue();
 }
 
-EventDesiredResult<CTFBot> CTFBotEscort::OnMoveToFailure(CTFBot *actor, const Path *path, MoveToFailureType fail)
+EventDesiredResult<CTFBot> CTFBotEscort::OnMoveToFailure( CTFBot *actor, const Path *path, MoveToFailureType fail )
 {
-	return EventDesiredResult<CTFBot>::Continue();
+	return Action<CTFBot>::TryContinue();
 }
 
-EventDesiredResult<CTFBot> CTFBotEscort::OnStuck(CTFBot *actor)
+EventDesiredResult<CTFBot> CTFBotEscort::OnStuck( CTFBot *actor )
 {
-	this->m_ctRecomputePath.Invalidate();
-	
-	return EventDesiredResult<CTFBot>::Continue();
+	m_ctRecomputePath.Invalidate();
+
+	return Action<CTFBot>::TryContinue();
 }
 
-EventDesiredResult<CTFBot> CTFBotEscort::OnCommandApproach(CTFBot *actor, const Vector& v1, float f1)
+EventDesiredResult<CTFBot> CTFBotEscort::OnCommandApproach( CTFBot *actor, const Vector &v1, float f1 )
 {
-	return EventDesiredResult<CTFBot>::Continue();
-}
-
-
-QueryResponse CTFBotEscort::ShouldRetreat(const INextBot *nextbot) const
-{
-	return QueryResponse::NO;
+	return Action<CTFBot>::TryContinue();
 }
 
 
-CBaseEntity *CTFBotEscort::GetWho() const
+QueryResultType CTFBotEscort::ShouldRetreat( const INextBot *nextbot ) const
 {
-	return this->m_hWho;
+	return ANSWER_NO;
 }
 
-void CTFBotEscort::SetWho(CBaseEntity *who)
+
+CBaseCombatCharacter *CTFBotEscort::GetWho() const
 {
-	this->m_hWho = who;
+	return m_hWho;
+}
+
+void CTFBotEscort::SetWho( CBaseCombatCharacter *who )
+{
+	m_hWho = who;
 }

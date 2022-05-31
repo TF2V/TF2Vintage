@@ -51,8 +51,8 @@ ActionResult<CHeadlessHatman> CHeadlessHatmanTerrify::Update( CHeadlessHatman *m
 		if (m_stunDelay.IsElapsed())
 		{
 			CUtlVector<CTFPlayer *> victims;
-			CollectPlayers( &victims, TF_TEAM_RED, true );
-			CollectPlayers( &victims, TF_TEAM_BLUE, true, true );
+			CollectPlayers( &victims, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+			CollectPlayers( &victims, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
 
 			for (int i=0; i<victims.Count(); ++i)
 			{

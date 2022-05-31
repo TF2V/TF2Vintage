@@ -15,10 +15,13 @@ public:
 
 	C_NextBotCombatCharacter();
 
-	virtual bool IsNextBot( void ) override { return true; }
+	// HACK: Override to allow clientside interpolation
+	virtual bool IsNPC( void ) OVERRIDE { return true; }
 
-	virtual void Spawn( void ) override;
-	virtual void UpdateClientSideAnimation( void ) override;
+	virtual bool IsNextBot( void ) OVERRIDE { return true; }
+
+	virtual void Spawn( void ) OVERRIDE;
+	virtual void UpdateClientSideAnimation( void ) OVERRIDE;
 
 	virtual ShadowType_t ShadowCastType( void );
 	void UpdateShadowLOD( void );

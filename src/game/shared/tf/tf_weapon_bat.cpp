@@ -45,3 +45,18 @@ PRECACHE_WEAPON_REGISTER( tf_weapon_bat );
 CTFBat::CTFBat()
 {
 }
+
+//=============================================================================
+//
+// Weapon Fish 
+//
+IMPLEMENT_NETWORKCLASS_ALIASED( TFBat_Fish, DT_TFWeaponBat_Fish )
+
+BEGIN_NETWORK_TABLE( CTFBat_Fish, DT_TFWeaponBat_Fish )
+END_NETWORK_TABLE()
+
+BEGIN_PREDICTION_DATA( CTFBat_Fish )
+END_PREDICTION_DATA()
+
+LINK_ENTITY_TO_CLASS( tf_weapon_bat_fish, CTFBat_Fish );
+PRECACHE_WEAPON_REGISTER( tf_weapon_bat_fish );

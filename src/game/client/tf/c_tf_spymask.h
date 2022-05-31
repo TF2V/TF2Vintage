@@ -22,8 +22,9 @@ public:
 	C_TFSpyMask();
 
 	bool	InitializeAsClientEntity( const char *pszModelName, RenderGroup_t renderGroup );
-	bool	ShouldDraw( void );
-	int		GetSkin( void );
+	virtual int		InternalDrawModel( int flags );
+	virtual bool	ShouldDraw( void );
+	virtual int		GetSkin( void );
 };
 
 #endif // C_TF_SPYMASK_H

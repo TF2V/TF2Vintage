@@ -1,23 +1,29 @@
-/* reverse engineering by sigsegv
- * based on TF2 version 20151007a
- * server/tf/bot/map_entities/tf_hint_engineer_nest.h
- */
+//========= Copyright © Valve LLC, All rights reserved. =======================
+//
+// Purpose:		
+//
+// $NoKeywords: $
+//=============================================================================
+#ifndef TF_HINT_ENGINEER_NEST_H
+#define TF_HINT_ENGINEER_NEST_H
 
+#include "tf_hint_sentrygun.h"
+#include "tf_hint_teleexit.h"
 
-// sizeof: 0x398
 class CTFBotHintEngineerNest : public CBaseTFBotHintEntity
 {
+	DECLARE_CLASS( CTFBotHintEngineerNest, CBaseTFBotHintEntity );
 public:
 	CTFBotHintEngineerNest();
 	virtual ~CTFBotHintEngineerNest();
 	
-	virtual int UpdateTransmitState() override;
+	virtual int UpdateTransmitState() OVERRIDE;
 	
-	virtual void Spawn() override;
+	virtual void Spawn() OVERRIDE;
 	
-	virtual HintType GetHintType() const override;
+	virtual HintType GetHintType() const OVERRIDE;
 	
-	void DetonateStateNest();
+	void DetonateStaleNest();
 	
 	CTFBotHintSentrygun *GetSentryHint() const;
 	CTFBotHintTeleporterExit *GetTeleporterHint() const;
@@ -29,9 +35,11 @@ private:
 	void HintTeleporterThink();
 	
 	void DetonateObjectsFromHints(const CUtlVector<CHandle<CBaseTFBotHintEntity>>& hints);
-	CBaseTFBotHintEntity *GetHint(const CUtlVector<CHandle<CBaseTFBotHintEntity>>& hints);
+	CBaseTFBotHintEntity *GetHint(const CUtlVector<CHandle<CBaseTFBotHintEntity>>& hints) const;
 	
-	CUtlVector<CHandle<CBaseTFBotHintEntity>> m_SentryHints; // +0x36c
-	CUtlVector<CHandle<CBaseTFBotHintEntity>> m_TeleHints;   // +0x380
-	CNetworkVar(bool, m_bHasActiveTeleporter);               // +0x394
+	CUtlVector< CHandle<CBaseTFBotHintEntity> > m_SentryHints;
+	CUtlVector< CHandle<CBaseTFBotHintEntity> > m_TeleHints;
+	CNetworkVar( bool, m_bHasActiveTeleporter );
 };
+
+#endif

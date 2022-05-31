@@ -44,15 +44,20 @@
 extern BOOL no_cease_fire_text;
 extern BOOL cease_fire;
 
+class CArenaLogic;
 class CHealthKit;
 class CTeamControlPoint;
 class CTeamTrainWatcher;
 class CTFBotRoster;
+class CGhost;
 
 #endif
 
+struct CMannVsMachineUpgrades;
+
 extern ConVar tf_avoidteammates;
 extern ConVar tf_avoidteammates_pushaway;
+extern ConVar tf_arena_force_class;
 
 extern ConVar fraglimit;
 
@@ -62,9 +67,15 @@ extern Vector g_TFClassViewVectors[];
 class CTFRadiusDamageInfo
 {
 public:
-	CTFRadiusDamageInfo();
+	CTFRadiusDamageInfo( CTakeDamageInfo const *pInfo, Vector const &vecSrc, float flRadius, CBaseEntity *pIgnore = NULL, float flSelfDmgRadius = 0.0f )
+		: info(pInfo), m_vecSrc(vecSrc), m_flRadius(flRadius), m_flSelfDamageRadius(flSelfDmgRadius), m_pEntityIgnore(pIgnore)
+	{
+		m_iClassIgnore = 0;
+		m_flPushbackScale = 1.0f;
+		m_pTargetHit = NULL;
+	}
 
-	bool ApplyToEntity( CBaseEntity *pEntity );
+	int ApplyToEntity( CBaseEntity *pEntity );
 
 public:
 	const CTakeDamageInfo *info;
@@ -73,8 +84,13 @@ public:
 	float m_flSelfDamageRadius;
 	int m_iClassIgnore;
 	CBaseEntity *m_pEntityIgnore;
+	float m_flPushbackScale;
+	CBaseEntity *m_pTargetHit;
 };
 #endif
+
+bool TF_IsHolidayActive( /*EHoliday*/ int eHoliday );
+
 
 class CTFGameRulesProxy : public CTeamplayRoundBasedRulesProxy
 {
@@ -137,6 +153,7 @@ struct PlayerRoundScore_t
 };
 
 #define MAX_TEAMGOAL_STRING		256
+#define MAX_TEAMNAME_STRING		6
 
 class CTFGameRules : public CTeamplayRoundBasedRules
 {
@@ -176,16 +193,10 @@ public:
 #endif
 	static int		CalcPlayerScore( RoundStats_t *pRoundStats );
 
-	bool			IsBirthday( void );
-	bool			IsHalloween( void );
-	bool			IsFullMoon( void );
-	bool			IsChristmas( void );
-	bool			IsValentinesDay( void );
-	bool			IsAprilFools( void );
-	bool			IsEOTL( void );
-	bool			IsBreadUpdate( void );
-	bool			IsRememberingSoldier( void );
-	virtual bool	IsHolidayActive( /*EHoliday*/ int eHoliday );
+	bool			IsBirthday( void ) const;
+	bool			IsBirthdayOrPyroVision( void ) const;
+	virtual bool	IsHolidayActive( /*EHoliday*/ int eHoliday ) const;
+	bool			IsHolidayMap( /*EHoliday*/ int eHoliday ) const { return m_nMapHolidayType == eHoliday; }
 
 	bool 			IsNormalClass(CBaseEntity *pPlayer);
 	bool 			IsBossClass(CBaseEntity *pPlayer);
@@ -201,10 +212,30 @@ public:
 
 	virtual bool	ShouldBalanceTeams( void );
 
+#ifdef GAME_DLL
+	// Balls.
+	void			CheckBallSpawns( CTFPlayer *pPlayer );
+	bool m_bActiveBeachBall;
+	bool m_bActiveSoccerBall[TF_TEAM_COUNT];
+#endif
+
+
+	int GetGlobalAttributeCacheVersion( void ) const
+	{
+		return m_iGlobalAttributeCacheVersion;
+	}
+
+	void FlushAllAttributeCaches( void )
+	{
+		m_iGlobalAttributeCacheVersion++;
+	}
+
 	CTeamRoundTimer* GetBlueKothRoundTimer( void ) { if (IsInKothMode()) return m_hBlueKothTimer.Get(); else return NULL; }
 	CTeamRoundTimer* GetRedKothRoundTimer( void ) { if (IsInKothMode()) return m_hRedKothTimer.Get(); else return NULL; }
 	CTeamRoundTimer* GetGreenKothRoundTimer( void ) { return m_hGreenKothTimer.Get(); }
 	CTeamRoundTimer* GetYellowKothRoundTimer( void ) { return m_hYellowKothTimer.Get(); }
+
+	float			GetPointEnableTime( void ) const { return m_flCapturePointEnableTime; }
 
 	CBaseEntity*	GetIT( void ) const { return m_itHandle.Get(); }
 	void			SetIT( CBaseEntity *pPlayer );
@@ -222,7 +253,9 @@ public:
 	void			RevertSingleConvar( ConVarRef &cvar );
 	void			RevertSavedConvars();
 
-	virtual void	RegisterScriptFunctions( void ) override;
+	virtual void	RegisterScriptFunctions( void ) OVERRIDE;
+
+	bool			PlayerReadyStatus_HaveMinPlayersToEnable( void );
 
 #ifdef GAME_DLL
 public:
@@ -322,6 +355,16 @@ public:
 	void			StopCompetitiveMatch(/*CMsgGC_Match_Result_Status*/int eMatchResult=0 );
 	void			EndCompetitiveMatch( void );
 
+	int				GetUpgradeTier( int iUpgradeIdx ) const;
+	bool			IsUpgradeTierEnabled( CTFPlayer *pPlayer, int iItemSlot, int iUpgradeIdx );
+	int				GetCostForUpgrade( CMannVsMachineUpgrades *pUpgrade, int iItemSlot, int iPlayerClass, CTFPlayer *pPlayer );
+	bool			CanUpgradeWithAttrib( CTFPlayer *pPlayer, int iItemSlot, attrib_def_index_t iAttrIndex, CMannVsMachineUpgrades *pUpgrade );
+
+	bool			PlayerReadyStatus_ArePlayersOnTeamReady( int iTeam );
+	void			PlayerReadyStatus_ResetState( void );
+	bool			PlayerReadyStatus_ShouldStartCountdown( void );
+	void			PlayerReadyStatus_UpdatePlayerState( CTFPlayer *pPlayer, bool bState );
+
 	void			RegisterBoss( CBaseCombatCharacter *pNPC )  { if( m_hBosses.Find( pNPC ) == m_hBosses.InvalidIndex() ) m_hBosses.AddToHead( pNPC ); }
 	void			RemoveBoss( CBaseCombatCharacter *pNPC )    { EHANDLE hNPC( pNPC ); m_hBosses.FindAndRemove( hNPC ); }
 	CBaseCombatCharacter *GetActiveBoss( void ) const           { if ( m_hBosses.IsEmpty() ) return nullptr; return m_hBosses[0]; }
@@ -382,7 +425,8 @@ public:
 	void			SetGravityMultiplier( float value ) { m_flGravityScale = value; }
 
 	virtual bool	IsFourTeamGame( void ){ return m_bFourTeamMode; };
-	bool			IsMannVsMachineMode( void ) { return false; };
+	bool			IsMannVsMachineMode( void ) { return m_bPlayingMannVsMachine; };
+	char const*		GetCustomUpgradesFile( void ) const { return m_pszCustomUpgradesFile; }
 	virtual bool	IsInArenaMode( void ) { return m_nGameType == TF_GAMETYPE_ARENA; }
 	virtual bool    IsInEscortMode( void ) { return m_nGameType == TF_GAMETYPE_ESCORT; }
 	virtual bool	IsInMedievalMode( void ) { return m_nGameType == TF_GAMETYPE_MEDIEVAL; }
@@ -394,7 +438,13 @@ public:
 	virtual bool	IsCompetitiveMode( void ) { return m_bCompetitiveMode; };
 	virtual bool	IsInHybridCTF_CPMode( void ) { return m_bPlayingHybrid_CTF_CP; };
 	virtual bool	IsInSpecialDeliveryMode( void ) { return m_bPlayingSpecialDeliveryMode; };
+	virtual bool	IsInRobotDestructionMode( void ) { return m_bPlayingRobotDestructionMode; }
+	virtual bool	IsPowerupMode( void ) { return m_bPowerupMode; }
+	void			SetPowerupMode( bool bValue );
 	bool			UsePlayerReadyStatusMode( void );
+
+	bool			GetMannVsMachineAlarmStatus( void ) const { return m_bMannVsMachineAlarmStatus; }
+	void			SetMannVsMachineAlarmStatus( bool bSet ) { m_bMannVsMachineAlarmStatus = bSet; }
 
 #ifdef CLIENT_DLL
 
@@ -403,6 +453,9 @@ public:
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
 	virtual void	HandleOvertimeBegin();
 	virtual void	GetTeamGlowColor( int nTeam, float &r, float &g, float &b );
+
+	virtual bool	AllowMapParticleEffect( const char *pszParticleEffect );
+	virtual bool	AllowWeatherParticles( void );
 
 	virtual bool	AllowMapVisionFilterShaders( void );
 	virtual const char *TranslateEffectForVisionFilter( const char *pchEffectType, const char *pchEffectName );
@@ -425,6 +478,7 @@ private:
 	virtual ~CTFGameRules();
 
 	virtual bool	ClientCommand( CBaseEntity *pEdict, const CCommand &args );
+	virtual void	ClientCommandKeyValues( edict_t *pEntity, KeyValues *pKeyValues );
 	virtual void	Think();
 
 	bool			CheckWinLimit();
@@ -448,8 +502,6 @@ private:
 
 	virtual VoiceCommandMenuItem_t *VoiceCommand( CBaseMultiplayerPlayer *pPlayer, int iMenu, int iItem );
 
-	bool			IsInPreMatch() const;
-	float			GetPreMatchEndTime() const;	// Returns the time at which the prematch will be over.
 	void			GoToIntermission( void );
 
 	virtual int		GetAutoAimMode() { return AUTOAIM_NONE; }
@@ -492,24 +544,39 @@ private:
 
 	virtual void	PlayerSpawn( CBasePlayer *pPlayer );
 
-	const CUtlVector<EHANDLE> &GetAmmoEnts( void ) const { Assert( m_hAmmoEntities.Count() ); return m_hAmmoEntities; }
-	const CUtlVector<EHANDLE> &GetHealthEnts( void ) const { Assert( m_hHealthEntities.Count() ); return m_hHealthEntities; }
+	const CUtlVector<EHANDLE> &GetAmmoEnts( void ) const	{ return m_hAmmoEntities; }
+	const CUtlVector<EHANDLE> &GetHealthEnts( void ) const	{ return m_hHealthEntities; }
 
 	void			PushAllPlayersAway( Vector const &vecPos, float flRange, float flForce, int iTeamNum, CUtlVector<CTFPlayer *> *outVector );
 
-	CUtlVector< CHandle<CBaseCombatCharacter> > m_hBosses;
+	void			BeginHaunting( int nDesiredCount, float flMinLifetime, float flMaxLifetime );
 
+	int				CalculateCurrencyAmount_CustomPack( int nAmount );
+	int				CalculateCurrencyAmount_ByType( CurrencyRewards_t nType );
+	int				DistributeCurrencyAmount( int nAmount, CTFPlayer *pTFPlayer = NULL, bool bShared = true, bool b1 = false, bool bBonus = false );
+
+	void			SetNextMvMPopfile( const char *next );
+	const char*		GetNextMvMPopfile( void );
+
+	int 			GetTeamAssignmentOverride( CTFPlayer *pPlayer, int iDesiredTeam, bool );
+
+	virtual void	BetweenRounds_Start( void );
+	virtual void	BetweenRounds_End( void );
+	virtual void	BetweenRounds_Think( void );
+	virtual void	PreRound_Start( void ) OVERRIDE;
+	virtual void	PreRound_End( void ) OVERRIDE;
 private:
 
 	int				DefaultFOV( void ) { return 75; }
 
-	void			BeginHaunting( int nDesiredCount, float flMinLifetime, float flMaxLifetime );
 	void			SpawnHalloweenBoss( void );
 	void			SpawnZombieMob( void );
 	CountdownTimer	m_bossSpawnTimer;
 	CountdownTimer	m_mobSpawnTimer;
 	int				m_nZombiesToSpawn;
 	Vector			m_vecMobSpawnLocation;
+	CUtlVector< CHandle<CGhost> > m_hGhosts;
+	CUtlVector< CHandle<CBaseCombatCharacter> > m_hBosses;
 
 #endif
 
@@ -531,6 +598,9 @@ private:
 	int m_iCurrentMiniRoundMask;
 	float m_flTimerMayExpireAt;
 
+	int m_nCurrencyAccumulator;
+
+	CHandle<CArenaLogic> m_hArenaLogic;
 	bool m_bFirstBlood;
 	int	m_iArenaTeamCount;
 	float m_flArenaNotificationSend;
@@ -561,6 +631,7 @@ private:
 	CNetworkString( m_pszTeamGoalStringGreen, MAX_TEAMGOAL_STRING );
 	CNetworkString( m_pszTeamGoalStringYellow, MAX_TEAMGOAL_STRING );
 	CNetworkVar( float, m_flCapturePointEnableTime );
+	CNetworkVar( uint32, m_iGlobalAttributeCacheVersion );
 	CNetworkVar( int, m_nHudType );
 	CNetworkVar( bool, m_bPlayingKoth );
 	CNetworkVar( bool, m_bPlayingVSH );
@@ -573,6 +644,9 @@ private:
 	CNetworkVar( bool, m_bCompetitiveMode );
 	CNetworkVar( bool, m_bPowerupMode );
 	CNetworkVar( float, m_flGravityScale );
+	CNetworkString( m_pszCustomUpgradesFile, MAX_PATH );
+	CNetworkVar( bool, m_bMannVsMachineAlarmStatus );
+	CNetworkVar( bool, m_bHaveMinPlayersToEnableReady );
 	CNetworkVar( CHandle<CTeamRoundTimer>, m_hBlueKothTimer );
 	CNetworkVar( CHandle<CTeamRoundTimer>, m_hRedKothTimer );
 	CNetworkVar( CHandle<CTeamRoundTimer>, m_hGreenKothTimer );
@@ -582,21 +656,12 @@ private:
 	CNetworkVar( float, m_flHalloweenEffectStartTime );
 	CNetworkVar( float, m_flHalloweenEffectDuration );
 	CNetworkVar( int, m_halloweenScenario );
+	CNetworkVar( bool, m_bHelltowerPlayersInHell );
 
 public:
 
 	bool m_bControlSpawnsPerTeam[MAX_TEAMS][MAX_CONTROL_POINTS];
 	int	 m_iPreviousRoundWinners;
-
-	int	m_iBirthdayMode;
-	int	m_iHalloweenMode;
-	int	m_iFullMoonMode;
-	int	m_iChristmasMode;
-	int	m_iValentinesDayMode;
-	int	m_iAprilFoolsMode;
-	int	m_iBreadUpdateMode;
-	int	m_iEOTLMode;
-	int m_iSoldierMemorialMode;
 
 	CNetworkVar( bool, m_bFourTeamMode );
 	

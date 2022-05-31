@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -22,6 +22,7 @@
 #include "behavior/tf_bot_behavior.h"
 #include "behavior/tf_bot_use_item.h"
 #include "NextBotUtil.h"
+#include "soundenvelope.h"
 
 void DifficultyChanged( IConVar *var, const char *pOldValue, float flOldValue );
 void PrefixNameChanged( IConVar *var, const char *pOldValue, float flOldValue );
@@ -52,6 +53,7 @@ ConVar tf_bot_keep_items_after_death( "tf_bot_keep_items_after_death", "1", FCVA
 
 
 extern ConVar tf2v_force_melee;
+extern ConVar tf_mvm_miniboss_scale;
 
 
 LINK_ENTITY_TO_CLASS( tf_bot, CTFBot )
@@ -213,15 +215,16 @@ void CTFBot::Spawn( void )
 	BaseClass::Spawn();
 
 	m_iSkill = (DifficultyType)tf_bot_difficulty.GetInt();
-	m_nBotAttrs = AttributeType::NONE;
+	m_nBotAttributes = AttributeType::NONE;
 
 	m_useWeaponAbilityTimer.Start( 5.0f );
 	m_bLookingAroundForEnemies = true;
 	m_suspectedSpies.PurgeAndDeleteElements();
 	m_cpChangedTimer.Invalidate();
-	m_requiredEquipStack.RemoveAll();
+	m_requiredEquipStack.Clear();
 	m_hMyControlPoint = NULL;
 	m_hMyCaptureZone = NULL;
+	m_pIdleSound = NULL;
 
 	GetVisionInterface()->ForgetAllKnownEntities();
 
@@ -250,8 +253,11 @@ void CTFBot::Event_Killed( const CTakeDamageInfo &info )
 		NavAreaCollector visibleSet;
 		pArea->ForAllPotentiallyVisibleAreas( visibleSet );
 
-		for( CNavArea *pVisible : visibleSet.m_area )
-			static_cast<CTFNavArea *>( pVisible )->RemovePotentiallyVisibleActor( this );
+		FOR_EACH_VEC( visibleSet.m_area, i )
+		{
+			CTFNavArea *pVisible = (CTFNavArea *)visibleSet.m_area[i];
+			pVisible->RemovePotentiallyVisibleActor( this );
+		}
 	}
 
 	if ( info.GetInflictor() && info.GetInflictor()->GetTeamNumber() != GetTeamNumber() )
@@ -260,7 +266,7 @@ void CTFBot::Event_Killed( const CTakeDamageInfo &info )
 		if ( pSentry )
 		{
 			m_hTargetSentry = pSentry;
-			m_vecLastHurtBySentry = GetAbsOrigin();
+			m_vecLastNoticedSentry = GetAbsOrigin();
 		}
 	}
 }
@@ -633,6 +639,52 @@ bool CTFBot::IsBarrageAndReloadWeapon( CTFWeaponBase *weapon ) const
 	}
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::AddItem( char const *pszItemName )
+{
+	CEconItemDefinition *pDefinition = GetItemSchema()->GetItemDefinitionByName( pszItemName );
+	if ( pDefinition )
+	{
+		CEconItemView econItem( pDefinition->index );
+		CBaseEntity *pItem = GiveNamedItem( pDefinition->GetClassName(), 0, &econItem );
+		if ( pItem )
+		{
+			int iSlot = pDefinition->GetLoadoutSlot( GetPlayerClass()->GetClassIndex() );
+			if ( iSlot < TF_FIRST_COSMETIC_SLOT )
+			{
+				CBaseEntity *pExisting = GetEntityForLoadoutSlot( iSlot );
+				if ( pExisting )
+				{
+					Weapon_Detach( pExisting->MyCombatWeaponPointer() );
+					UTIL_Remove( pExisting );
+				}
+			}
+
+			CEconEntity *pEconEntity = assert_cast<CEconEntity *>( pItem );
+			pEconEntity->GiveTo( this );
+
+			PostInventoryApplication();
+		}
+		else
+		{
+			if ( pszItemName && pszItemName[0] )
+			{
+				DevMsg( "CTFBotSpawner::AddItemToBot: Invalid item %s.\n", pszItemName );
+			}
+		}
+	}
+	else
+	{
+		if ( pszItemName && pszItemName[0] )
+		{
+			DevMsg( "CTFBotSpawner::AddItemToBot: Invalid item %s.\n", pszItemName );
+		}
+	}
+
+}
+
 //TODO: why does this only care about the current weapon?
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -740,13 +792,17 @@ CTeamControlPoint *CTFBot::GetMyControlPoint( void )
 		TFGameRules()->CollectDefendPoints( this, &defensePoints );
 		TFGameRules()->CollectCapturePoints( this, &attackPoints );
 
-		if ( ( IsPlayerClass( TF_CLASS_SNIPER ) || IsPlayerClass( TF_CLASS_ENGINEER )/* || BYTE( this + 10061 ) & ( 1 << 4 ) */) && !defensePoints.IsEmpty() )
+		if ( ( IsPlayerClass( TF_CLASS_SNIPER ) || IsPlayerClass( TF_CLASS_ENGINEER ) ) 
+			 || HasAttribute( CTFBot::AttributeType::PRIORITIZEDEFENSE ) )
 		{
-			CTeamControlPoint *pPoint = SelectPointToDefend( defensePoints );
-			if ( pPoint )
+			if ( !defensePoints.IsEmpty() )
 			{
-				m_hMyControlPoint = pPoint;
-				return pPoint;
+				CTeamControlPoint *pPoint = SelectPointToDefend( defensePoints );
+				if ( pPoint )
+				{
+					m_hMyControlPoint = pPoint;
+					return pPoint;
+				}
 			}
 		}
 		else
@@ -759,8 +815,6 @@ CTeamControlPoint *CTFBot::GetMyControlPoint( void )
 			}
 			else
 			{
-				m_myCPValidDuration.Invalidate();
-
 				pPoint = SelectPointToDefend( defensePoints );
 				if ( pPoint )
 				{
@@ -921,7 +975,7 @@ CTeamControlPoint *CTFBot::SelectPointToDefend( CUtlVector<CTeamControlPoint *> 
 	if ( candidates.IsEmpty() )
 		return nullptr;
 
-	if ( ( m_nBotAttrs & CTFBot::AttributeType::DISABLEDODGE ) != 0 )
+	if ( HasAttribute( CTFBot::AttributeType::PRIORITIZEDEFENSE ) )
 		return SelectClosestPointByTravelDistance( candidates );
 
 	return candidates.Random();
@@ -977,31 +1031,47 @@ CCaptureZone *CTFBot::GetFlagCaptureZone( void )
 //-----------------------------------------------------------------------------
 CCaptureFlag *CTFBot::GetFlagToFetch( void )
 {
+	if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
+	{
+		if ( GetTeamNumber() == TF_TEAM_MVM_BOTS && IsPlayerClass( TF_CLASS_ENGINEER ) )
+		{
+			return NULL;
+		}
+
+		if ( HasAttribute( CTFBot::AttributeType::IGNOREFLAG ) )
+		{
+			return NULL;
+		}
+
+		if ( GetFlagTarget() )
+		{
+			return GetFlagTarget();
+		}
+	}
+
 	CUtlVector<CCaptureFlag *> flags;
 	int nNumStolen = 0;
-	for ( int i=0; i<ICaptureFlagAutoList::AutoList().Count(); ++i )
+	FOR_EACH_VEC( ICaptureFlagAutoList::AutoList(), i )
 	{
 		CCaptureFlag *pFlag = static_cast<CCaptureFlag *>( ICaptureFlagAutoList::AutoList()[i] );
 		if ( !pFlag || pFlag->IsDisabled() )
 			continue;
 
-		if ( HasTheFlag(/* 0, 0 */) && pFlag->GetOwnerEntity() == this )
+		if ( HasTheFlag() && pFlag->GetOwnerEntity() == this )
 			return pFlag;
 
-		if ( pFlag->GetGameType() > TF_FLAGTYPE_CTF && pFlag->GetGameType() <= TF_FLAGTYPE_INVADE )
+		if ( pFlag->GetGameType() > TF_FLAGTYPE_CTF && pFlag->GetGameType() <= TF_FLAGTYPE_RESOURCE_CONTROL )
 		{
 			if ( pFlag->GetTeamNumber() != GetEnemyTeam( this ) )
 				flags.AddToTail( pFlag );
-
-			nNumStolen += pFlag->IsStolen();
 		}
 		else if ( pFlag->GetGameType() == TF_FLAGTYPE_CTF )
 		{
 			if ( pFlag->GetTeamNumber() == GetEnemyTeam( this ) )
 				flags.AddToTail( pFlag );
-
-			nNumStolen += pFlag->IsStolen();
 		}
+
+		nNumStolen += pFlag->IsStolen();
 	}
 
 	float flMinDist = FLT_MAX;
@@ -1009,8 +1079,9 @@ CCaptureFlag *CTFBot::GetFlagToFetch( void )
 	CCaptureFlag *pClosest = NULL;
 	CCaptureFlag *pClosestStolen = NULL;
 
-	for ( CCaptureFlag *pFlag : flags )
+	FOR_EACH_VEC( flags, i )
 	{
+		CCaptureFlag *pFlag = flags[i];
 		float flDistance = ( pFlag->GetAbsOrigin() - GetAbsOrigin() ).LengthSqr();
 		if ( flDistance > flMinDist )
 		{
@@ -1032,6 +1103,26 @@ CCaptureFlag *CTFBot::GetFlagToFetch( void )
 		return pClosestStolen;
 
 	return pClosest;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::SetFlagTarget( CCaptureFlag *pFlag )
+{
+	if ( m_hMyCaptureFlag != pFlag )
+	{
+		if ( m_hMyCaptureFlag )
+		{
+			m_hMyCaptureFlag->RemoveFollower( this );
+		}
+
+		m_hMyCaptureFlag = pFlag;
+		if ( m_hMyCaptureFlag )
+		{
+			m_hMyCaptureFlag->AddFollower( this );
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1303,13 +1394,13 @@ bool CTFBot::ShouldFireCompressionBlast( void )
 {
 	if ( !tf_bot_pyro_always_reflect.GetBool() )
 	{
-		if ( TFGameRules()->IsInTraining() || m_iSkill == CTFBot::EASY )
+		if ( TFGameRules()->IsInTraining() || m_iSkill == CTFBot::DifficultyType::EASY )
 			return false;
 
-		if ( m_iSkill == CTFBot::NORMAL && TransientlyConsistentRandomValue( 1.0, 0 ) < 0.5f )
+		if ( m_iSkill == CTFBot::DifficultyType::NORMAL && TransientlyConsistentRandomValue( 1.0, 0 ) < 0.5f )
 			return false;
 
-		if ( m_iSkill == CTFBot::HARD && TransientlyConsistentRandomValue( 1.0, 0 ) < 0.1f )
+		if ( m_iSkill == CTFBot::DifficultyType::HARD && TransientlyConsistentRandomValue( 1.0, 0 ) < 0.1f )
 			return false;
 	}
 
@@ -1581,7 +1672,7 @@ void CTFBot::RealizeSpy( CTFPlayer *spy )
 	if ( info && info->IsCurrentlySuspected() )
 	{
 		CUtlVector<CTFPlayer *> teammates;
-		CollectPlayers( &teammates, GetTeamNumber(), true );
+		CollectPlayers( &teammates, GetTeamNumber(), COLLECT_ONLY_LIVING_PLAYERS );
 
 		FOR_EACH_VEC( teammates, i )
 		{
@@ -1614,7 +1705,7 @@ void CTFBot::ForgetSpy( CTFPlayer *spy )
 //-----------------------------------------------------------------------------
 void CTFBot::UpdateLookingAroundForEnemies( void )
 {
-	if ( !m_bLookingAroundForEnemies || m_Shared.IsControlStunned() || ( m_nBotAttrs & AttributeType::DONTLOOKAROUND ) == AttributeType::DONTLOOKAROUND )
+	if ( !m_bLookingAroundForEnemies || m_Shared.IsControlStunned() || HasAttribute( AttributeType::DONTLOOKAROUND ) )
 		return;
 
 	const CKnownEntity *threat = GetVisionInterface()->GetPrimaryKnownThreat();
@@ -1758,7 +1849,7 @@ bool CTFBot::EquipBestWeaponForThreat( const CKnownEntity *threat )
 				pWeapon = melee;
 		}
 
-		if ( m_iSkill != EASY )
+		if ( m_iSkill != DifficultyType::EASY )
 		{
 			if ( threat->WasEverVisible() && threat->GetTimeSinceLastSeen() <= 5.0f )
 			{
@@ -1848,39 +1939,6 @@ bool CTFBot::EquipLongRangeWeapon( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CTFBot::PushRequiredWeapon( CTFWeaponBase *weapon )
-{
-	CHandle<CTFWeaponBase> hndl;
-	if ( weapon ) hndl.Set( weapon );
-
-	m_requiredEquipStack.AddToTail( hndl );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CTFBot::PopRequiredWeapon( void )
-{
-	m_requiredEquipStack.RemoveMultipleFromTail( 1 );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CTFBot::EquipRequiredWeapon( void )
-{
-	if ( m_requiredEquipStack.Count() <= 0 )
-		return false;
-
-	CHandle<CTFWeaponBase> &hndl = m_requiredEquipStack.Tail();
-	CTFWeaponBase *weapon = hndl.Get();
-
-	return Weapon_Switch( weapon );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 bool CTFBot::IsSquadmate( CTFPlayer *player ) const
 {
 	if ( m_pSquad == nullptr )
@@ -1937,35 +1995,44 @@ void CTFBot::AccumulateSniperSpots( void )
 	for ( int i=0; i<tf_bot_sniper_spot_search_count.GetInt(); ++i )
 	{
 		SniperSpotInfo newInfo{};
-		newInfo.m_pHomeArea = m_sniperStandAreas.Random();
-		newInfo.m_vecHome = newInfo.m_pHomeArea->GetRandomPoint();
+		newInfo.m_pVantageArea = m_sniperStandAreas.Random();
+		newInfo.m_vecVantage = newInfo.m_pVantageArea->GetRandomPoint();
 		newInfo.m_pForwardArea = m_sniperLookAreas.Random();
 		newInfo.m_vecForward = newInfo.m_pForwardArea->GetRandomPoint();
 
-		newInfo.m_flRange = ( newInfo.m_vecHome - newInfo.m_vecForward ).Length();
+		newInfo.m_flRange = ( newInfo.m_vecVantage - newInfo.m_vecForward ).Length();
 
 		if ( newInfo.m_flRange < tf_bot_sniper_spot_min_range.GetFloat() )
 			continue;
 
-		if ( !IsLineOfFireClear( newInfo.m_vecHome + Vector( 0, 0, 60.0f ), newInfo.m_vecForward + Vector( 0, 0, 60.0f ) ) )
+		const Vector vecOffset( 0, 0, 60.0f );
+		if ( !IsLineOfFireClear( newInfo.m_vecVantage + vecOffset, newInfo.m_vecForward + vecOffset ) )
 			continue;
 
-		float flIncursion1 = newInfo.m_pHomeArea->GetIncursionDistance( GetEnemyTeam( this ) );
-		float flIncursion2 = newInfo.m_pForwardArea->GetIncursionDistance( GetEnemyTeam( this ) );
+		const float flIncursion1 = newInfo.m_pVantageArea->GetIncursionDistance( GetEnemyTeam( this ) );
+		const float flIncursion2 = newInfo.m_pForwardArea->GetIncursionDistance( GetEnemyTeam( this ) );
 
 		newInfo.m_flIncursionDiff = flIncursion1 - flIncursion2;
 
-		if ( m_sniperSpots.Count() < tf_bot_sniper_spot_max_count.GetInt() )
-			m_sniperSpots.AddToTail( newInfo );
-
-		for ( int j=0; j<m_sniperSpots.Count(); ++j )
+		if ( m_sniperSpots.Count() >= tf_bot_sniper_spot_max_count.GetInt() )
 		{
-			SniperSpotInfo *info = &m_sniperSpots[j];
+			int nWorst = 0;
+			for ( int j=0; j < m_sniperSpots.Count(); ++j )
+			{
+				SniperSpotInfo *info = &m_sniperSpots[j];
 
-			if ( flIncursion1 - flIncursion2 <= info->m_flIncursionDiff )
-				continue;
+				if ( m_sniperSpots[ nWorst ].m_flIncursionDiff <= info->m_flIncursionDiff )
+					continue;
 
-			*info = newInfo;
+				nWorst = j;
+			}
+
+			if ( newInfo.m_flIncursionDiff > m_sniperSpots[ nWorst ].m_flIncursionDiff )
+				m_sniperSpots[ nWorst ] = newInfo;
+		}
+		else
+		{
+			m_sniperSpots.AddToTail( newInfo );
 		}
 	}
 
@@ -1973,8 +2040,8 @@ void CTFBot::AccumulateSniperSpots( void )
 	{
 		for ( int i=0; i<m_sniperSpots.Count(); ++i )
 		{
-			NDebugOverlay::Cross3D( m_sniperSpots[i].m_vecHome, 5.0f, 255, 0, 255, true, 0.1f );
-			NDebugOverlay::Line( m_sniperSpots[i].m_vecHome, m_sniperSpots[i].m_vecForward, 0, 200, 0, true, 0.1f );
+			NDebugOverlay::Cross3D( m_sniperSpots[i].m_vecVantage, 5.0f, 255, 0, 255, true, 0.1f );
+			NDebugOverlay::Line( m_sniperSpots[i].m_vecVantage, m_sniperSpots[i].m_vecForward, 0, 200, 0, true, 0.1f );
 		}
 	}
 }
@@ -1991,25 +2058,13 @@ void CTFBot::SetupSniperSpotAccumulation( void )
 	{
 		CTeamTrainWatcher *pWatcher = TFGameRules()->GetPayloadToPush( GetTeamNumber() );
 		if ( !pWatcher )
-		{
 			pWatcher = TFGameRules()->GetPayloadToBlock( GetTeamNumber() );
-			if ( !pWatcher )
-			{
-				ClearSniperSpots();
-				return;
-			}
-		}
 
-		pObjective = pWatcher->GetTrainEntity();
+		if( pWatcher )
+			pObjective = pWatcher->GetTrainEntity();
 	}
-	else
+	else if ( TFGameRules()->GetGameType() == TF_GAMETYPE_CP )
 	{
-		if ( TFGameRules()->GetGameType() != TF_GAMETYPE_CP )
-		{
-			ClearSniperSpots();
-			return;
-		}
-
 		pObjective = GetMyControlPoint();
 	}
 
@@ -2019,8 +2074,12 @@ void CTFBot::SetupSniperSpotAccumulation( void )
 		return;
 	}
 
-	if ( pObjective == m_sniperGoalEnt && Square( tf_bot_sniper_goal_entity_move_tolerance.GetFloat() ) > ( pObjective->WorldSpaceCenter() - m_sniperGoal ).LengthSqr() )
-		return;
+	if ( pObjective == m_sniperGoalEnt )
+	{
+		Vector vecToCart = pObjective->WorldSpaceCenter() - m_sniperGoal;
+		if ( vecToCart.IsLengthLessThan( tf_bot_sniper_goal_entity_move_tolerance.GetFloat() ) )
+			return;
+	}
 
 	ClearSniperSpots();
 
@@ -2029,13 +2088,10 @@ void CTFBot::SetupSniperSpotAccumulation( void )
 	bool bCheckForward = false;
 	CTFNavArea *pObjectiveArea = nullptr;
 
-	m_sniperStandAreas.RemoveAll();
-	m_sniperLookAreas.RemoveAll();
-
 	if ( TFGameRules()->GetGameType() == TF_GAMETYPE_ESCORT )
 	{
-		pObjectiveArea = static_cast<CTFNavArea *>( TheNavMesh->GetNearestNavArea( pObjective->WorldSpaceCenter(), true, 500.0f ) );
-		bCheckForward = iEnemyTeam != pObjective->GetTeamNumber();
+		pObjectiveArea = static_cast<CTFNavArea *>( TheNavMesh->GetNearestNavArea( pObjective->WorldSpaceCenter(), false, 500.0f ) );
+		bCheckForward = iMyTeam != pObjective->GetTeamNumber();
 	}
 	else
 	{
@@ -2064,16 +2120,9 @@ void CTFBot::SetupSniperSpotAccumulation( void )
 		if ( flEnemyIncursion <= pObjectiveArea->GetIncursionDistance( iEnemyTeam ) )
 			m_sniperLookAreas.AddToTail( area );
 
-		if ( bCheckForward )
-		{
-			if ( pObjectiveArea->GetIncursionDistance( iMyTeam ) + tf_bot_sniper_spot_point_tolerance.GetFloat() >= flMyIncursion )
-				m_sniperStandAreas.AddToTail( area );
-		}
-		else
-		{
-			if ( pObjectiveArea->GetIncursionDistance( iMyTeam ) - tf_bot_sniper_spot_point_tolerance.GetFloat() >= flMyIncursion )
-				m_sniperStandAreas.AddToTail( area );
-		}
+		float flObjectiveIncursion = pObjectiveArea->GetIncursionDistance( iMyTeam ) + tf_bot_sniper_spot_point_tolerance.GetFloat() * bCheckForward ? 1 : -1;
+		if ( flObjectiveIncursion >= flMyIncursion )
+			m_sniperStandAreas.AddToTail( area );
 	}
 
 	m_sniperGoalEnt = pObjective;
@@ -2108,7 +2157,7 @@ void CTFBot::AvoidPlayers( CUserCmd *pCmd )
 	const float flRadius = 50.0;
 
 	CUtlVector<CTFPlayer *> teammates;
-	CollectPlayers( &teammates, GetTeamNumber(), true );
+	CollectPlayers( &teammates, GetTeamNumber(), COLLECT_ONLY_LIVING_PLAYERS );
 	for ( int i=0; i<teammates.Count(); i++ )
 	{
 		if ( IsSelf( teammates[i] ) || HasTheFlag() )
@@ -2176,7 +2225,7 @@ void CTFBot::SelectReachableObjects( CUtlVector<EHANDLE> const &knownHealth, CUt
 CTFPlayer *CTFBot::SelectRandomReachableEnemy( void )
 {
 	CUtlVector<CTFPlayer *> enemies;
-	CollectPlayers( &enemies, GetEnemyTeam( this ), true );
+	CollectPlayers( &enemies, GetEnemyTeam( this ), COLLECT_ONLY_LIVING_PLAYERS );
 
 	CUtlVector<CTFPlayer *> validEnemies;
 	for ( int i=0; i<enemies.Count(); ++i )
@@ -2192,6 +2241,163 @@ CTFPlayer *CTFBot::SelectRandomReachableEnemy( void )
 		return validEnemies.Random();
 
 	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::StartIdleSound( void )
+{
+	StopIdleSound();
+
+	if ( TFGameRules() && !TFGameRules()->IsMannVsMachineMode() )
+		return;
+
+	if ( !IsMiniBoss() )
+		return;
+	
+	const char *pszSoundName = NULL;
+	switch ( GetPlayerClass()->GetClassIndex() )
+	{
+		case TF_CLASS_HEAVYWEAPONS:
+		{
+			pszSoundName = "MVM.GiantHeavyLoop";
+			break;
+		}
+		case TF_CLASS_SOLDIER:
+		{
+			pszSoundName = "MVM.GiantSoldierLoop";
+			break;
+		}
+		case TF_CLASS_DEMOMAN:
+		{
+			if ( m_eMission == MissionType::DESTROY_SENTRIES )
+			{
+				pszSoundName = "MVM.SentryBusterLoop";
+			}
+			else
+			{
+				pszSoundName = "MVM.GiantDemomanLoop";
+			}
+			break;
+		}
+		case TF_CLASS_SCOUT:
+		{
+			pszSoundName = "MVM.GiantScoutLoop";
+			break;
+		}
+		case TF_CLASS_PYRO:
+		{
+			pszSoundName = "MVM.GiantPyroLoop";
+			break;
+		}
+	}
+
+	if ( pszSoundName )
+	{
+		CSoundEnvelopeController &controller = CSoundEnvelopeController::GetController();
+
+		CReliableBroadcastRecipientFilter filter;
+		m_pIdleSound = controller.SoundCreate( filter, entindex(), pszSoundName );
+
+		controller.Play( m_pIdleSound, 1.0, 100 );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::StopIdleSound( void )
+{
+	if ( m_pIdleSound )
+	{
+		CSoundEnvelopeController::GetController().SoundDestroy( m_pIdleSound );
+		m_pIdleSound = NULL;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::ModifyMaxHealth( int nNewMaxHealth, bool bSetCurrentHealth, bool bScaleModel )
+{
+	if ( GetMaxHealth() != nNewMaxHealth )
+	{
+		static CSchemaAttributeHandle pAttrDef_HiddenMaxHealthNonBuffed( "hidden maxhealth non buffed" );
+		if ( !pAttrDef_HiddenMaxHealthNonBuffed )
+		{
+			Warning( "TFBotSpawner: Invalid attribute 'hidden maxhealth non buffed'\n" );
+		}
+		else
+		{
+			CAttributeList *pAttrList = GetAttributeList();
+			if ( pAttrList )
+			{
+				pAttrList->SetRuntimeAttributeValue( pAttrDef_HiddenMaxHealthNonBuffed, nNewMaxHealth - GetMaxHealth() );
+			}
+		}
+	}
+
+	if ( bSetCurrentHealth )
+		SetHealth( nNewMaxHealth );
+
+	if ( bScaleModel && IsMiniBoss() )
+		SetModelScale( m_flModelScaleOverride > 0.0f ? m_flModelScaleOverride : tf_mvm_miniboss_scale.GetFloat() );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::SetMission( MissionType mission, bool bResetBehavior )
+{
+	m_prevMission = m_eMission;
+	m_eMission = mission;
+
+	if ( bResetBehavior )
+		GetIntentionInterface()->Reset();
+
+	if ( m_eMission > MissionType::NONE )
+		StartIdleSound();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::AddEventChangeAttributes( const CTFBot::EventChangeAttributes_t *newEvent )
+{
+	m_EventChangeAttributes.AddToTail( newEvent );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::ClearEventChangeAttributes( void )
+{
+	m_EventChangeAttributes.RemoveAll();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+const CTFBot::EventChangeAttributes_t *CTFBot::GetEventChangeAttributes( const char *pszEventName ) const
+{
+	for ( int i=0; i < m_EventChangeAttributes.Count(); ++i )
+	{
+		if ( FStrEq( m_EventChangeAttributes[i]->m_strName, pszEventName ) )
+		{
+			return m_EventChangeAttributes[i];
+		}
+	}
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFBot::OnEventChangeAttributes( const CTFBot::EventChangeAttributes_t *pEvent )
+{
+	if ( pEvent == nullptr )
+		return;
 }
 
 //-----------------------------------------------------------------------------
@@ -2228,7 +2434,7 @@ const char *CTFBot::GetNextSpawnClassname( void )
 		int m_nMinTeamSize;
 		int m_nRatioTeamSize;
 		int m_nMinimum;
-		int m_nMaximum[ DifficultyType::MAX ];
+		int m_nMaximum[ (int)DifficultyType::MAX ];
 	} ClassSelection_t;
 
 	static ClassSelection_t defenseRoster[] = 
@@ -2338,7 +2544,7 @@ const char *CTFBot::GetNextSpawnClassname( void )
 			break;
 		}
 
-		const int nMaximum = pInfo->m_nMaximum[ m_iSkill ];
+		const int nMaximum = pInfo->m_nMaximum[ (int)m_iSkill ];
 		if ( nMaximum > -1 && func.m_aClassCounts[ pInfo->m_iClass ] >= nMaximum )
 			continue;
 
@@ -2472,7 +2678,7 @@ void CTFBot::ManageRandomWeapons( void )
 		if ( pItem )
 		{
 			char szItemDefIndex[16];
-			_itoa_s( pItem->GetItemDefIndex(), szItemDefIndex, 10 );
+			V_sprintf_safe( szItemDefIndex, "%d", pItem->GetItemDefIndex() );
 
 			float flChance = TFBotItemSchema().GetItemChance( szItemDefIndex, "drop_chance" );
 			if ( ( flChance * 0.1f ) <= RandomFloat() )
@@ -2578,7 +2784,8 @@ float CTFBotPathCost::operator()( CNavArea *area, CNavArea *fromArea, const CNav
 
 void DifficultyChanged( IConVar *var, const char *pOldValue, float flOldValue )
 {
-	if ( tf_bot_difficulty.GetInt() >= CTFBot::EASY && tf_bot_difficulty.GetInt() <= CTFBot::EXPERT )
+	if ( (CTFBot::DifficultyType)tf_bot_difficulty.GetInt() >= CTFBot::DifficultyType::EASY &&
+		 (CTFBot::DifficultyType)tf_bot_difficulty.GetInt() <= CTFBot::DifficultyType::EXPERT )
 	{
 		CUtlVector<INextBot *> bots;
 		TheNextBots().CollectAllBots( &bots );
@@ -2588,7 +2795,7 @@ void DifficultyChanged( IConVar *var, const char *pOldValue, float flOldValue )
 			if ( pBot == nullptr )
 				continue;
 
-			pBot->m_iSkill = (CTFBot::DifficultyType)tf_bot_difficulty.GetInt();
+			pBot->SetDifficulty( (CTFBot::DifficultyType)tf_bot_difficulty.GetInt() );
 		}
 	}
 	else
@@ -2605,16 +2812,17 @@ void PrefixNameChanged( IConVar *var, const char *pOldValue, float flOldValue )
 		if ( pBot == nullptr )
 			continue;
 
+		extern const char *DifficultyToName( CTFBot::DifficultyType iSkillLevel );
 		if ( tf_bot_prefix_name_with_difficulty.GetBool() )
 		{
-			const char *szSkillName = DifficultyToName( pBot->m_iSkill );
+			const char *szSkillName = DifficultyToName( pBot->GetDifficulty() );
 			const char *szCurrentName = pBot->GetPlayerName();
 
 			engine->SetFakeClientConVarValue( pBot->edict(), "name", CFmtStr( "%s%s", szSkillName, szCurrentName ) );
 		}
 		else
 		{
-			const char *szSkillName = DifficultyToName( pBot->m_iSkill );
+			const char *szSkillName = DifficultyToName( pBot->GetDifficulty() );
 			const char *szCurrentName = pBot->GetPlayerName();
 
 			engine->SetFakeClientConVarValue( pBot->edict(), "name", &szCurrentName[Q_strlen( szSkillName )] );
@@ -2623,7 +2831,7 @@ void PrefixNameChanged( IConVar *var, const char *pOldValue, float flOldValue )
 }
 
 
-CON_COMMAND_F( tf_bot_add, "Add a bot.", FCVAR_GAMEDLL )
+CON_COMMAND_EXTERN_F( tf_bot_add, cc_tf_bot_add, "Add a bot.", FCVAR_GAMEDLL )
 {
 	if ( UTIL_IsCommandIssuedByServerAdmin() )
 	{
@@ -2632,12 +2840,14 @@ CON_COMMAND_F( tf_bot_add, "Add a bot.", FCVAR_GAMEDLL )
 		char const *pszClassName = "random";
 		int nNumBots = 1;
 		bool bNoQuota = false;
-		int nSkill = tf_bot_difficulty.GetInt();
+		CTFBot::DifficultyType nSkill = (CTFBot::DifficultyType)tf_bot_difficulty.GetInt();
 
-		for ( int i=0; i < args.ArgC(); ++i )
+		for ( int i=1; i < args.ArgC(); ++i )
 		{
-			nSkill = Max( nSkill, NameToDifficulty( args[i] ) );
-			nNumBots = V_atoi( args[i] );
+			extern CTFBot::DifficultyType NameToDifficulty( const char *pszSkillName );
+
+			CTFBot::DifficultyType nParsedSkill = NameToDifficulty( args[i] );
+			int nParsedNumBots = V_atoi( args[i] );
 
 			if ( IsPlayerClassName( args[i] ) )
 			{
@@ -2650,6 +2860,14 @@ CON_COMMAND_F( tf_bot_add, "Add a bot.", FCVAR_GAMEDLL )
 			else if ( !V_stricmp( args[i], "noquota" ) )
 			{
 				bNoQuota = true;
+			}
+			else if ( nParsedSkill != (CTFBot::DifficultyType)-1 )
+			{
+				nSkill = nParsedSkill;
+			}
+			else if ( nParsedNumBots >= 1 )
+			{
+				nNumBots = nParsedNumBots;
 			}
 			else if ( nNumBots == 1 )
 			{
@@ -2673,18 +2891,19 @@ CON_COMMAND_F( tf_bot_add, "Add a bot.", FCVAR_GAMEDLL )
 		char szBotName[128]; int nCount = 0;
 		for ( int i = 0; i < nNumBots; ++i )
 		{
+			extern void CreateBotName( int iTeamNum, int iClassIdx, CTFBot::DifficultyType iSkillLevel, char *out, int outlen );
 			if ( pszBotName == NULL )
 				CreateBotName( iTeam, GetClassIndexFromString( pszClassName ), nSkill, szBotName, sizeof szBotName );
 			else
 				V_strcpy_safe( szBotName, pszBotName );
 
-			CTFBot *pBot = NextBotCreatePlayerBot<CTFBot>( pszBotName );
+			CTFBot *pBot = NextBotCreatePlayerBot<CTFBot>( szBotName );
 			if ( pBot == nullptr )
 				break;
 
 			pBot->HandleCommand_JoinTeam( pszTeamName );
 			pBot->HandleCommand_JoinClass( pszClassName );
-			pBot->m_iSkill = (CTFBot::DifficultyType)nSkill;
+			pBot->SetDifficulty( (CTFBot::DifficultyType)nSkill );
 
 			nCount++;
 		}
@@ -2758,6 +2977,10 @@ CON_COMMAND_F( tf_bot_kick, "Remove a TFBot by name, or all bots (\"all\").", FC
 }
 
 CTFBotItemSchema s_BotSchema( "TFBotItemSchema" );
+CTFBotItemSchema &TFBotItemSchema( void )
+{
+	return s_BotSchema;
+}
 
 // Based on https://forums.alliedmods.net/showthread.php?p=1539933
 void CTFBotItemSchema::PostInit()
@@ -2814,20 +3037,20 @@ void CTFBotItemSchema::PostInit()
 						V_SplitString( indexTokens[i], "..", rangeTokens );
 
 						int iMin = atoi( rangeTokens[0] ), iMax = atoi( rangeTokens[1] );
-						if( iMin <= 0 && !FStrEq( "0", rangeTokens[0] ) || iMax <= 0 && !FStrEq( "0", rangeTokens[1] ) || iMin > iMax )
+						if( ( iMin <= 0 && !FStrEq( "0", rangeTokens[0] ) ) || ( iMax <= 0 && !FStrEq( "0", rangeTokens[1] ) ) || iMin > iMax )
 						{
-							Warning("Error while parsing config file: invalid range of indexes '%s'", indexTokens[i]);
+							Warning("Error while parsing config file: invalid range of indexes '%s'\n", indexTokens[i]);
 							continue;
 						}
 
 						for ( int j=iMin; j <= iMax; ++j )
 						{
 							char szIndex[32];
-							itoa( j, szIndex, sizeof szIndex );
+							V_sprintf_safe( szIndex, "%d", j );
 
 							KeyValues *pItem = NULL;
 							if ( ( pItem = m_pSchema->FindKey( szIndex ) ) != NULL )
-								Warning( "Duplicate entry found in %s: '%d'", pszConfigName, j );
+								Warning( "Duplicate entry found in %s: '%d'\n", pszConfigName, j );
 							else
 								pItem = m_pSchema->FindKey( szIndex, true );
 
@@ -2864,13 +3087,13 @@ void CTFBotItemSchema::PostInit()
 						int nItemIndex = atoi( indexTokens[i] );
 						if ( nItemIndex <= 0 )
 						{
-							Warning( "Error while parsing %s: invalid item index '%d'", pszConfigName, nItemIndex );
+							Warning( "Error while parsing %s: invalid item index '%d'\n", pszConfigName, nItemIndex );
 							continue;
 						}
 
 						KeyValues *pItem = NULL;
 						if ( ( pItem = m_pSchema->FindKey( indexTokens[i] ) ) != NULL )
-							Warning( "Duplicate entry found in %s: '%d'", pszConfigName, nItemIndex );
+							Warning( "Duplicate entry found in %s: '%d'\n", pszConfigName, nItemIndex );
 						else
 							pItem = m_pSchema->FindKey( indexTokens[i], true );
 

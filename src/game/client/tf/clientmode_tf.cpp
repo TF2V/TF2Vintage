@@ -44,12 +44,16 @@
 #include "tf_hud_menu_spy_disguise.h"
 #include "tf_statsummary.h"
 #include "tf_hud_freezepanel.h"
+#include "tf_hud_inspectpanel.h"
 #include "clienteffectprecachesystem.h"
 #include "glow_outline_effect.h"
 #include "cam_thirdperson.h"
 #include "usermessages.h"
 #include "utlvector.h"
 #include "props_shared.h"
+#include "weapon_selection.h"
+#include "tf_mann_vs_machine_stats.h"
+#include "tf_modalstack.h"
 
 #if defined( _X360 )
 #include "tf_clientscoreboard.h"
@@ -58,16 +62,73 @@
 extern ConVar r_drawviewmodel;
 
 ConVar default_fov( "default_fov", "75", FCVAR_CHEAT );
-ConVar fov_desired( "fov_desired", "75", FCVAR_ARCHIVE | FCVAR_USERINFO, "Sets the base field-of-view.", true, 75.0, true, MAX_FOV_UNLOCKED );
+ConVar fov_desired( "fov_desired", "90", FCVAR_ARCHIVE | FCVAR_USERINFO, "Sets the base field-of-view.", true, 75.0, true, MAX_FOV_UNLOCKED );
 
 ConVar tf_hud_no_crosshair_on_scope_zoom( "tf_hud_no_crosshair_on_scope_zoom", "1", FCVAR_ARCHIVE | FCVAR_CLIENTDLL );
 
+static void EnableSteamScreenshots( bool bEnable )
+{
+#if !defined(NO_STEAM)
+	if ( steamapicontext && steamapicontext->SteamScreenshots() )
+	{
+		ConVarRef cl_savescreenshotstosteam( "cl_savescreenshotstosteam" );
+		if ( cl_savescreenshotstosteam.IsValid() )
+		{
+			cl_savescreenshotstosteam.SetValue( bEnable );
+			steamapicontext->SteamScreenshots()->HookScreenshots( bEnable );
+		}
+	}
+#endif
+}
+
+#if !defined(NO_STEAM)
+void SteamScreenshotsCallBack( IConVar *var, const char *pOldString, float flOldValue )
+{
+	ConVarRef cl_steamscreenshots( var );
+	EnableSteamScreenshots( cl_steamscreenshots.GetBool() );
+}
+ConVar cl_steamscreenshots( "cl_steamscreenshots", "1", FCVAR_ARCHIVE, "Enable/disable saving screenshots to Steam", SteamScreenshotsCallBack );
+#endif
 
 void HUDMinModeChangedCallBack( IConVar *var, const char *pOldString, float flOldValue )
 {
+	ConVarRef cl_hud_console( "cl_hud_console" );
+	if ( cl_hud_console.GetBool() )
+		cl_hud_console.SetValue( false );
+
+	// Brute force, but i'm not feeling good to edit the whole build menu res files
+	ConVarRef tf_build_menu_controller_mode( "tf_build_menu_controller_mode" );
+	if ( tf_build_menu_controller_mode.GetBool() )
+		tf_build_menu_controller_mode.SetValue( false );
+
+	// Force Console Fast Switch
+	ConVarRef hud_fastswitch( "hud_fastswitch" );
+	if ( hud_fastswitch.GetInt() == HUDTYPE_PLUS )
+		hud_fastswitch.SetValue( HUDTYPE_BUCKETS );
+
 	engine->ExecuteClientCmd( "hud_reloadscheme" );
 }
 ConVar cl_hud_minmode( "cl_hud_minmode", "0", FCVAR_ARCHIVE, "Set to 1 to turn on the advanced minimalist HUD mode.", HUDMinModeChangedCallBack );
+
+// New TF2v cvars starts here
+void HUDConsoleModeChangedCallBack( IConVar *var, const char *pOldString, float flOldValue )
+{
+	if ( cl_hud_minmode.GetBool() )
+		cl_hud_minmode.SetValue( false );
+
+	// Brute force, but i'm not feeling good to edit the whole build menu res files
+	ConVarRef tf_build_menu_controller_mode( "tf_build_menu_controller_mode" );
+	if ( tf_build_menu_controller_mode.GetBool() )
+		tf_build_menu_controller_mode.SetValue( true );
+
+	// Force Console Fast Switch
+	ConVarRef hud_fastswitch( "hud_fastswitch" );
+	if ( hud_fastswitch.GetInt() < HUDTYPE_PLUS )
+		hud_fastswitch.SetValue( HUDTYPE_PLUS );
+
+	engine->ExecuteClientCmd( "hud_reloadscheme" );
+}
+ConVar cl_hud_console( "cl_hud_console", "0", FCVAR_ARCHIVE, "Set to 1 to turn on the console HUD mode.", HUDConsoleModeChangedCallBack );
 
 IClientMode *g_pClientMode = NULL;
 
@@ -93,7 +154,7 @@ void __MsgFunc_BreakModel_Pumpkin( bf_read &msg )
 
 	for ( int i=0; i < list.Count(); ++i )
 	{
-		breakmodel_t *model = &list[ i ];
+		breakmodel_t *model = &list[i];
 		model->burstScale = 1000.f;
 	}
 
@@ -111,7 +172,7 @@ void __MsgFunc_BreakModel_Pumpkin( bf_read &msg )
 
 	for ( int i=0; i < gibList.Count(); ++i )
 	{
-		C_BaseEntity *pGiblet = gibList[ i ];
+		C_BaseEntity *pGiblet = gibList[i];
 		if ( pGiblet == nullptr )
 			continue;
 
@@ -205,6 +266,22 @@ void __MsgFunc_PlayerShieldBlocked( bf_read &msg )
 	}
 }
 
+void __MsgFunc_RDTeamPointsChanged( bf_read &msg )
+{
+	int nPoints = (int)msg.ReadShort();
+	int nTeam = (int)msg.ReadByte();
+	int nMethod = (int)msg.ReadByte();
+
+	IGameEvent *event = gameeventmanager->CreateEvent( "rd_team_points_changed" );
+	if ( event )
+	{
+		event->SetInt( "points", nPoints );
+		event->SetInt( "team", nTeam );
+		event->SetInt( "method", nMethod );
+		gameeventmanager->FireEventClientSide( event );
+	}
+}
+
 // --------------------------------------------------------------------------------- //
 // CTFModeManager.
 // --------------------------------------------------------------------------------- //
@@ -228,7 +305,7 @@ CLIENTEFFECT_REGISTER_BEGIN( PrecachePostProcessingEffectsGlow )
 	CLIENTEFFECT_MATERIAL( "dev/glow_color" )
 	CLIENTEFFECT_MATERIAL( "dev/glow_downsample" )
 	CLIENTEFFECT_MATERIAL( "dev/halo_add_to_screen" )
-CLIENTEFFECT_REGISTER_END_CONDITIONAL(	engine->GetDXSupportLevel() >= 90 )
+CLIENTEFFECT_REGISTER_END_CONDITIONAL( engine->GetDXSupportLevel() >= 90 )
 
 // --------------------------------------------------------------------------------- //
 // CTFModeManager implementation.
@@ -239,13 +316,15 @@ CLIENTEFFECT_REGISTER_END_CONDITIONAL(	engine->GetDXSupportLevel() >= 90 )
 void CTFModeManager::Init()
 {
 	g_pClientMode = GetClientModeNormal();
-	
+
 	PanelMetaClassMgr()->LoadMetaClassDefinitionFile( SCREEN_FILE );
 
 	// Load the objects.txt file.
 	LoadObjectInfos( ::filesystem );
 
 	GetClientVoiceMgr()->SetHeadLabelOffset( 40 );
+
+	EnableSteamScreenshots( true );
 }
 
 void CTFModeManager::LevelInit( const char *newmap )
@@ -277,10 +356,15 @@ ClientModeTFNormal::ClientModeTFNormal()
 	m_pMenuSpyDisguise = NULL;
 	m_pGameUI = NULL;
 	m_pFreezePanel = NULL;
+	m_pInspectPanel = NULL;
 	MessageHooks();
 
 #if defined( _X360 )
 	m_pScoreboard = NULL;
+#endif
+
+#if !defined(NO_STEAM)
+	m_CallbackScreenshotRequested.Register( this, &ClientModeTFNormal::OnScreenshotRequested );
 #endif
 }
 
@@ -300,22 +384,25 @@ static CDllDemandLoader g_GameUI( "gameui" );
 //-----------------------------------------------------------------------------
 void ClientModeTFNormal::Init()
 {
-	m_pMenuEngyBuild = ( CHudMenuEngyBuild * )GET_HUDELEMENT( CHudMenuEngyBuild );
+	m_pMenuEngyBuild = (CHudMenuEngyBuild *)GET_HUDELEMENT( CHudMenuEngyBuild );
 	Assert( m_pMenuEngyBuild );
 
-	m_pMenuEngyDestroy = ( CHudMenuEngyDestroy * )GET_HUDELEMENT( CHudMenuEngyDestroy );
+	m_pMenuEngyDestroy = (CHudMenuEngyDestroy *)GET_HUDELEMENT( CHudMenuEngyDestroy );
 	Assert( m_pMenuEngyDestroy );
 
-	m_pMenuSpyDisguise = ( CHudMenuSpyDisguise * )GET_HUDELEMENT( CHudMenuSpyDisguise );
+	m_pMenuSpyDisguise = (CHudMenuSpyDisguise *)GET_HUDELEMENT( CHudMenuSpyDisguise );
 	Assert( m_pMenuSpyDisguise );
 
-	m_pFreezePanel = ( CTFFreezePanel * )GET_HUDELEMENT( CTFFreezePanel );
+	m_pFreezePanel = (CTFFreezePanel *)GET_HUDELEMENT( CTFFreezePanel );
 	Assert( m_pFreezePanel );
+
+	m_pInspectPanel = (CHudInspectPanel *)GET_HUDELEMENT( CHudInspectPanel );
+	Assert( m_pInspectPanel );
 
 	CreateInterfaceFn gameUIFactory = g_GameUI.GetFactory();
 	if ( gameUIFactory )
 	{
-		m_pGameUI = (IGameUI *) gameUIFactory(GAMEUI_INTERFACE_VERSION, NULL );
+		m_pGameUI = (IGameUI *)gameUIFactory( GAMEUI_INTERFACE_VERSION, NULL );
 		if ( NULL != m_pGameUI )
 		{
 			// insert stats summary panel as the loading background dialog
@@ -324,7 +411,7 @@ void ClientModeTFNormal::Init()
 			pPanel->SetVisible( false );
 			pPanel->MakePopup( false );
 			m_pGameUI->SetLoadingBackgroundDialog( pPanel->GetVPanel() );
-		}		
+		}
 	}
 
 #if defined( _X360 )
@@ -334,6 +421,8 @@ void ClientModeTFNormal::Init()
 
 	BaseClass::Init();
 
+	MannVsMachineStats_Init();
+	ListenForGameEvent( "localplayer_changeclass" );
 	ListenForGameEvent( "pumpkin_lord_summoned" );
 	ListenForGameEvent( "pumpkin_lord_killed" );
 	ListenForGameEvent( "eyeball_boss_summoned" );
@@ -366,11 +455,11 @@ IClientMode *GetClientModeNormal()
 }
 
 
-ClientModeTFNormal* GetClientModeTFNormal()
+ClientModeTFNormal *GetClientModeTFNormal()
 {
-	Assert( dynamic_cast< ClientModeTFNormal* >( GetClientModeNormal() ) );
+	Assert( dynamic_cast<ClientModeTFNormal *>( GetClientModeNormal() ) );
 
-	return static_cast< ClientModeTFNormal* >( GetClientModeNormal() );
+	return static_cast<ClientModeTFNormal *>( GetClientModeNormal() );
 }
 
 //-----------------------------------------------------------------------------
@@ -497,16 +586,16 @@ void ClientModeTFNormal::FireGameEvent( IGameEvent *event )
 	if ( !eventname || !eventname[0] )
 		return;
 
-	if (FStrEq( eventname, "pumpkin_lord_summoned" ))
+	if ( FStrEq( eventname, "pumpkin_lord_summoned" ) )
 	{
 		C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
-		if (pLocal)
+		if ( pLocal )
 			pLocal->EmitSound( "Halloween.HeadlessBossSpawn" );
 	}
-	else if (FStrEq( eventname, "pumpkin_lord_killed" ))
+	else if ( FStrEq( eventname, "pumpkin_lord_killed" ) )
 	{
 		C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
-		if (pLocal)
+		if ( pLocal )
 			pLocal->EmitSound( "Halloween.HeadlessBossDeath" );
 	}
 	else if ( FStrEq( eventname, "eyeball_boss_summoned" ) )
@@ -646,6 +735,19 @@ void ClientModeTFNormal::FireGameEvent( IGameEvent *event )
 	{
 		return; // server sends a colorized text string for this
 	}
+	else if ( FStrEq( "localplayer_changeclass", eventname ) )
+	{
+		C_TFPlayer *pLocalPlayer = C_TFPlayer::GetLocalTFPlayer();
+		if ( pLocalPlayer && pLocalPlayer->GetPlayerClass() )
+		{
+			int iClass = pLocalPlayer->GetPlayerClass()->GetClassIndex();
+
+			// have the player to exec a <class>.cfg file for the class they have selected
+			char szCmd[128];
+			Q_snprintf( szCmd, sizeof( szCmd ), "exec %s.cfg", GetPlayerClassData( iClass )->m_szClassName );
+			engine->ExecuteClientCmd( szCmd );
+		}
+	}
 
 	BaseClass::FireGameEvent( event );
 }
@@ -661,6 +763,21 @@ void ClientModeTFNormal::PostRenderVGui()
 bool ClientModeTFNormal::CreateMove( float flInputSampleTime, CUserCmd *cmd )
 {
 	return BaseClass::CreateMove( flInputSampleTime, cmd );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void ClientModeTFNormal::Update( void )
+{
+	BaseClass::Update();
+
+	TFModalStack()->Update();
+
+	if ( !engine->IsInGame() )
+	{
+		GetViewportAnimationController()->UpdateAnimations( gpGlobals->curtime );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -681,7 +798,7 @@ int	ClientModeTFNormal::HudElementKeyInput( int down, ButtonCode_t keynum, const
 #endif
 
 	C_TFPlayer *pPlayer = ToTFPlayer( C_BasePlayer::GetLocalPlayer() );
-	if( pPlayer )
+	if ( pPlayer )
 	{
 		if ( pPlayer->m_Shared.InCond( TF_COND_HALLOWEEN_THRILLER ) )
 			return 0;
@@ -717,6 +834,11 @@ int	ClientModeTFNormal::HudElementKeyInput( int down, ButtonCode_t keynum, const
 		m_pFreezePanel->HudElementKeyInput( down, keynum, pszCurrentBinding );
 	}
 
+	if ( m_pInspectPanel )
+	{
+		m_pInspectPanel->HudElementKeyInput( down, keynum, pszCurrentBinding );
+	}
+
 	return BaseClass::HudElementKeyInput( down, keynum, pszCurrentBinding );
 }
 
@@ -740,6 +862,25 @@ int ClientModeTFNormal::HandleSpectatorKeyInput( int down, ButtonCode_t keynum, 
 	return BaseClass::HandleSpectatorKeyInput( down, keynum, pszCurrentBinding );
 }
 
+void ClientModeTFNormal::OnDemoRecordStart( char const *pDemoBaseName )
+{
+	BaseClass::OnDemoRecordStart( pDemoBaseName );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void ClientModeTFNormal::OnDemoRecordStop( void )
+{
+	IGameEvent *event = gameeventmanager->CreateEvent( "ds_stop" );
+	if ( event )
+	{
+		gameeventmanager->FireEvent( event );
+	}
+
+	BaseClass::OnDemoRecordStop();
+}
+
 // FIXME: This is causing crashes for Linux and I don't know why
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -754,23 +895,36 @@ void ClientModeTFNormal::MessageHooks( void )
 	HOOK_MESSAGE( PlayerJaratedFade );
 	HOOK_MESSAGE( PlayerExtinguished );
 	HOOK_MESSAGE( PlayerShieldBlocked );
+	HOOK_MESSAGE( RDTeamPointsChanged );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Print messages to the chat
 //-----------------------------------------------------------------------------
-void ClientModeTFNormal::PrintTextToChat( const char *msg )
+void ClientModeTFNormal::PrintTextToChat( const char *msg, KeyValues *pData )
 {
 	CHudChat *pChat = GET_HUDELEMENT( CHudChat );
 	if ( pChat )
 	{
-		char buf[4096];
-		g_pVGuiLocalize->Find( msg );
-		g_pVGuiLocalize->ConvertUnicodeToANSI( g_pVGuiLocalize->Find( msg ), buf, sizeof( buf ) );
+		wchar_t wszText[1024]=L"";
+		g_pVGuiLocalize->ConstructString( wszText, ARRAYSIZE( wszText ), msg, pData );
 
-		pChat->ChatPrintf( 0, CHAT_FILTER_NONE, "%s", buf );
+		char buf[ sizeof wszText ];
+		g_pVGuiLocalize->ConvertUnicodeToANSI( wszText, buf, sizeof( buf ) );
+
+		pChat->Printf( CHAT_FILTER_NONE, "%s", buf );
 	}
 }
+
+#if !defined(NO_STEAM)
+void ClientModeTFNormal::OnScreenshotRequested( ScreenshotRequested_t *pParam )
+{
+	// Steam has requested a screenshot, act as if the key currently bound to screenshots
+	// has been pressed (we want tagging and the killcam screenshot behavior if applicable)
+	HudElementKeyInput( 0, BUTTON_CODE_INVALID, "screenshot" );
+	engine->ClientCmd( "screenshot" );
+}
+#endif
 
 void HandleBreakModel( bf_read &msg, bool bCheap )
 {

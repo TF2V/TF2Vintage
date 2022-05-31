@@ -53,7 +53,7 @@ public:
 	virtual bool ShouldShowPlayerLabel( int specmode ) { return false; }
 	void		 UpdateReinforcements( void );
 	virtual void ShowPanel(bool bShow);
-	virtual Color GetBlackBarColor( void ) { return Color(52,48,45, 255); }
+	virtual Color GetBlackBarColor( void );
 	virtual const char *GetResFilename( void );
 
 	virtual void FireGameEvent( IGameEvent *event );

@@ -55,7 +55,7 @@ static void SendPlayerToTheUnderworld( CTFPlayer *pPlayer, const char *pszTarget
 		CUtlVector<CTFPlayer *> players;
 		CUtlVector<CBaseEntity *> blocked;
 		
-		CollectPlayers( &players, GetEnemyTeam( pPlayer ), true );
+		CollectPlayers( &players, GetEnemyTeam( pPlayer ), COLLECT_ONLY_LIVING_PLAYERS );
 		for ( int i=0; i<players.Count(); ++i )
 		{
 			CTFPlayer *player = players[i];
@@ -294,8 +294,8 @@ void CTeleportVortex::VortexThink( void )
 	}
 
 	CUtlVector<CTFPlayer *> players;
-	CollectPlayers( &players, TF_TEAM_RED, true );
-	CollectPlayers( &players, TF_TEAM_BLUE, true, true );
+	CollectPlayers( &players, TF_TEAM_RED, COLLECT_ONLY_LIVING_PLAYERS );
+	CollectPlayers( &players, TF_TEAM_BLUE, COLLECT_ONLY_LIVING_PLAYERS, APPEND_PLAYERS );
 
 	for ( int i=0; i<players.Count(); ++i )
 	{

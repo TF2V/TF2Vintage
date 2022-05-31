@@ -22,6 +22,7 @@
 	#include "tf_generic_bomb.h"
 	#include "tf_obj.h"
 	#include "tf_halloween_boss.h"
+	#include "tf_robot_destruction_robot.h"
 #endif
 
 #ifdef GAME_DLL
@@ -39,6 +40,8 @@ const char *g_pszArrowModels[] =
 	"models/weapons/w_models/w_arrow_xmas.mdl",
 	"models/weapons/c_models/c_crusaders_crossbow/c_crusaders_crossbow_xmas_proj.mdl",
 	"models/weapons/c_models/c_grapple_proj.mdl",
+	"models/weapons/w_models/w_breadmonster/w_breadmonster.mdl",
+	"models/workshop_partner/weapons/c_models/c_sd_cleaver/c_sd_cleaver.mdl", // TF_WEAPON_CLEAVER_MODEL
 };
 
 #define ARROW_FADE_TIME		3.f
@@ -205,9 +208,9 @@ CTFProjectile_Arrow *CTFProjectile_Arrow::Create( CBaseEntity *pWeapon, const Ve
 
 		// Spawn.
 		DispatchSpawn( pArrow );
-		pArrow->m_flTrailReflectLifetime = 0;
+		pArrow->m_flTrailLifetime = 0;
 		// don't hit ourselves
-		pArrow->m_aHitEnemies.AddToTail( pOwner->entindex() );
+		pArrow->m_aHitEnemies.AddToTail( pOwner );
 
 		// Setup the initial velocity.
 		Vector vecForward, vecRight, vecUp;
@@ -367,11 +370,11 @@ void CTFProjectile_Arrow::ArrowTouch( CBaseEntity *pOther )
 		pActor = dynamic_cast<CBaseCombatCharacter *>( pOther->GetOwnerEntity() );
 	}
 
-	//CTFRobotDestruction_Robot *pRobot = dynamic_cast<CTFRobotDestruction_Robot *>( pOther );
+	CTFRobotDestruction_Robot *pRobot = dynamic_cast<CTFRobotDestruction_Robot *>( pOther );
 	//CTFMerasmusTrickOrTreatProp *pMerasProp = dynamic_cast<CTFMerasmusTrickOrTreatProp *>( pOther );
 
 	if ( !FNullEnt( pOther->edict() ) &&
-		( pActor != nullptr || pPumpkin != nullptr/* || pMerasProp != nullptr || pRobot != nullptr*/ || bImpactedItem ) )
+		( pActor != nullptr || pPumpkin != nullptr/* || pMerasProp != nullptr*/ || pRobot != nullptr || bImpactedItem ) )
 	{
 		CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>( pOther );
 		if ( !pAnimating )
@@ -527,10 +530,10 @@ bool CTFProjectile_Arrow::StrikeTarget( mstudiobbox_t *pBox, CBaseEntity *pTarge
 	{
 		if ( CanPenetrate() )
 		{
-			if ( m_aHitEnemies.Find( ENTINDEX( pTarget ) ) != m_aHitEnemies.InvalidIndex() )
+			if ( m_aHitEnemies.Find( pTarget ) != m_aHitEnemies.InvalidIndex() )
 				return true;
 
-			m_aHitEnemies.AddToTail( ENTINDEX( pTarget ) );
+			m_aHitEnemies.AddToTail( pTarget );
 		}
 
 		if ( InSameTeam( pTarget ) )
@@ -839,26 +842,10 @@ void CTFProjectile_Arrow::Deflected( CBaseEntity *pDeflectedBy, Vector &vecDir )
 	if ( pOwner )
 		pOwner->SpeakConceptIfAllowed( MP_CONCEPT_DEFLECTED, "projectile:1,victim:1" );
 
-	// Get arrow's speed.
-	float flVel = GetAbsVelocity().Length();
-
-	QAngle angForward;
-	VectorAngles( vecDir, angForward );
-
-	// Now change arrow's direction.
-	SetAbsAngles( angForward );
-	SetAbsVelocity( vecDir * flVel );
-
-	// And change owner.
-	IncremenentDeflected();
 	SetOwnerEntity( pDeflectedBy );
 	SetScorer( pDeflectedBy );
-	ChangeTeam( pDeflectedBy->GetTeamNumber() );
-
-	if ( m_iProjType != TF_PROJECTILE_ARROW && m_iProjType != TF_PROJECTILE_FESTIVE_ARROW )
-	{
-		m_nSkin = ( pDeflectedBy->GetTeamNumber() - 2 );
-	}
+	ChangeTeam( pDeflector->GetTeamNumber() );
+	SetLauncher( pDeflector->GetActiveWeapon() );
 
 	if ( pDeflector->m_Shared.IsCritBoosted() )
 		m_bCritical = true;
@@ -869,18 +856,19 @@ void CTFProjectile_Arrow::Deflected( CBaseEntity *pDeflectedBy, Vector &vecDir )
 		m_hSpriteTrail->Remove();
 	}
 
+	IncremenentDeflected();
 	CreateTrail();
 
 	// clean up so we can hit these things again
 	m_aHitEnemies.Purge();
 	// don't hit ourselves
-	m_aHitEnemies.AddToTail( ENTINDEX( pDeflectedBy ) );
+	m_aHitEnemies.AddToTail( pDeflectedBy );
 }
 
 void CTFProjectile_Arrow::IncremenentDeflected( void )
 {
 	m_iDeflected++;
-	m_flTrailReflectLifetime = 1.0f;
+	m_flTrailLifetime = 1.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -927,7 +915,7 @@ void CTFProjectile_Arrow::CreateTrail( void )
 	if ( IsDormant() || m_hSpriteTrail != nullptr )
 		return;
 
-	if ( m_iProjType == TF_PROJECTILE_HEALING_BOLT || m_iProjType == TF_PROJECTILE_FESTIVE_HEALING_BOLT )
+	if ( m_iProjType == TF_PROJECTILE_HEALING_BOLT || m_iProjType == TF_PROJECTILE_FESTIVE_HEALING_BOLT || m_iProjType == TF_PROJECTILE_GRAPPLINGHOOK )
 		return;
 
 	CSpriteTrail *pTrail = CSpriteTrail::SpriteTrailCreate( GetTrailParticleName(), GetAbsOrigin(), true );
@@ -939,7 +927,8 @@ void CTFProjectile_Arrow::CreateTrail( void )
 		pTrail->SetTextureResolution( 0.01f );
 		pTrail->SetLifeTime( 0.3f );
 		pTrail->SetAttachment( this, PATTACH_ABSORIGIN );
-		pTrail->SetContextThink( &CTFProjectile_Arrow::RemoveTrail, gpGlobals->curtime + 3.0f, "FadeTrail" );
+
+		SetContextThink( &CTFProjectile_Arrow::RemoveTrail, gpGlobals->curtime + 3.0f, "FadeTrail" );
 
 		m_hSpriteTrail = pTrail;
 	}
@@ -953,18 +942,18 @@ void CTFProjectile_Arrow::RemoveTrail( void )
 	if ( !m_hSpriteTrail )
 		return;
 
-	if( m_flTrailReflectLifetime <= 0 )
+	if( m_flTrailLifetime <= 0 )
 	{
 		UTIL_Remove( m_hSpriteTrail.Get() );
-		m_flTrailReflectLifetime = 1.0f;
+		m_flTrailLifetime = 1.0f;
 	}
 	else
 	{
 		CSpriteTrail *pSprite = dynamic_cast<CSpriteTrail *>( m_hSpriteTrail.Get() );
 		if ( pSprite )
-			pSprite->SetBrightness( m_flTrailReflectLifetime * 128.f );
+			pSprite->SetBrightness( m_flTrailLifetime * 128.f );
 
-		m_flTrailReflectLifetime -= 0.1;
+		m_flTrailLifetime -= 0.1;
 
 		SetContextThink( &CTFProjectile_Arrow::RemoveTrail, gpGlobals->curtime, "FadeTrail" );
 	}
@@ -976,7 +965,7 @@ void CTFProjectile_Arrow::RemoveTrail( void )
 void CTFProjectile_Arrow::AdjustDamageDirection( CTakeDamageInfo const &info, Vector &vecDirection, CBaseEntity *pEntity )
 {
 	if ( pEntity )
-		vecDirection = ( info.GetDamagePosition() - info.GetDamageForce() ) - pEntity->WorldSpaceCenter();
+		vecDirection = info.GetDamagePosition() - info.GetDamageForce() - pEntity->WorldSpaceCenter();
 }
 
 //-----------------------------------------------------------------------------

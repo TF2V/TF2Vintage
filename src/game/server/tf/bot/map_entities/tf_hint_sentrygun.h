@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -13,6 +13,8 @@
 
 #include "tf_hint_entity.h"
 
+class CTFPlayer;
+
 class CTFBotHintSentrygun : public CBaseTFBotHintEntity
 {
 	DECLARE_CLASS( CTFBotHintSentrygun, CBaseTFBotHintEntity );
@@ -22,7 +24,7 @@ public:
 
 	DECLARE_DATADESC();
 
-	virtual HintType GetHintType() const override;
+	virtual HintType GetHintType() const OVERRIDE;
 
 	bool IsAvailableForSelection( CTFPlayer *player ) const;
 

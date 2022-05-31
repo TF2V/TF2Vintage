@@ -46,11 +46,12 @@ public:
 
 	virtual bool		HasChargeBar( void );
 	virtual float		InternalGetEffectBarRechargeTime( void );
-	virtual const char	*GetEffectLabelText( void )					{ return "#TF_Sandwich"; }
+	virtual const char*	GetEffectLabelText( void )					{ return "#TF_Sandwich"; }
 	virtual void		SwitchBodyGroups( void );
 	virtual void		WeaponRegenerate();
 
 	virtual bool		IsChocolateOrFishcake();
+	virtual bool		IsSteak();
 
 #ifdef GAME_DLL
 	virtual void		Precache( void );

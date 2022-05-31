@@ -30,6 +30,8 @@ BEGIN_DATADESC( CCaptureZone )
 
 	// Outputs.
 	DEFINE_OUTPUT( m_outputOnCapture, "OnCapture" ),
+	DEFINE_OUTPUT( m_OnCapTeam1, "OnCapTeam1" ),
+	DEFINE_OUTPUT( m_OnCapTeam2, "OnCapTeam2" ),
 
 END_DATADESC()
 
@@ -37,6 +39,7 @@ LINK_ENTITY_TO_CLASS( func_capturezone, CCaptureZone );
 
 
 IMPLEMENT_SERVERCLASS_ST( CCaptureZone, DT_CaptureZone )
+	SendPropInt( SENDINFO( m_bDisabled ) ),
 END_SEND_TABLE()
 
 
@@ -64,6 +67,7 @@ void CCaptureZone::Spawn()
 	}
 
 	m_flNextTouchingEnemyZoneWarning = -1;
+	AddSpawnFlags( SF_TRIGGER_ALLOW_ALL );
 }
 
 //-----------------------------------------------------------------------------
@@ -82,7 +86,7 @@ void CCaptureZone::CaptureTouch( CBaseEntity *pOther )
 		// Check to see if the player has the capture flag.
 		if ( pPlayer->HasItem() && ( pPlayer->GetItem()->GetItemID() == TF_ITEM_CAPTURE_FLAG ) )
 		{
-			CCaptureFlag *pFlag = dynamic_cast<CCaptureFlag*>( pPlayer->GetItem() );
+			CCaptureFlag *pFlag = dynamic_cast<CCaptureFlag *>( pPlayer->GetItem() );
 			if ( pFlag && !pFlag->IsCaptured() )
 			{
 				// does this capture point have a team number asssigned?
@@ -123,6 +127,15 @@ void CCaptureZone::CaptureTouch( CBaseEntity *pOther )
 
 					// Output.
 					m_outputOnCapture.FireOutput( this, this );
+					switch ( pPlayer->GetTeamNumber() )
+					{
+						case TF_TEAM_RED:
+							m_OnCapTeam1.FireOutput( this, this );
+							break;
+						case TF_TEAM_BLUE:
+							m_OnCapTeam2.FireOutput( this, this );
+							break;
+					}
 
 					IGameEvent *event = gameeventmanager->CreateEvent( "ctf_flag_captured" );
 					if ( event )
@@ -141,6 +154,19 @@ void CCaptureZone::CaptureTouch( CBaseEntity *pOther )
 						event->SetInt( "priority", 9 ); // HLTV priority
 
 						gameeventmanager->FireEvent( event );
+					}
+
+					// TODO:
+					if ( TFGameRules() )
+					{
+						if ( TFGameRules()->IsHolidayActive( kHoliday_EOTL ) )
+						{
+							//TFGameRules()->DropBonusDuck( pPlayer->GetAbsOrigin(), pPlayer, NULL, NULL, false, true );
+						}
+						else if ( TFGameRules()->IsHolidayActive( kHoliday_Halloween ) )
+						{
+							//TFGameRules()->DropHalloweenSoulPackToTeam( 5, GetAbsOrigin(), pPlayer->GetTeamNumber(), TEAM_SPECTATOR );
+						}
 					}
 				}
 			}

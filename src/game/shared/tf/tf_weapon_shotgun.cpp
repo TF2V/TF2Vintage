@@ -35,6 +35,8 @@ float AirBurstDamageForce( Vector const &vecSize, float damage, float scale )
 	return Min( flDamageForce, 1000.0f );
 }
 
+extern ConVar tf2v_use_manual_sodapopper;
+
 //=============================================================================
 //
 // Weapon Shotgun tables.
@@ -92,6 +94,15 @@ void CTFShotgun::UpdatePunchAngles( CTFPlayer *pPlayer )
 //
 // Weapon Scatter Gun functions.
 //
+
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+CTFScatterGun::CTFScatterGun()
+{
+	m_bReloadsSingly = true;
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -193,10 +204,11 @@ void CTFScatterGun::Equip( CBaseCombatCharacter *pEquipTo )
 		}
 	}
 
-	int nScatterGunNoReloadSingle = 0;
-	CALL_ATTRIB_HOOK_INT( nScatterGunNoReloadSingle, set_scattergun_no_reload_single );
-	if ( nScatterGunNoReloadSingle == 1 )
+	if ( IsDoubleBarrel() )
+	{
 		m_bReloadsSingly = false;
+		m_bAutoReload = false;
+	}
 
 	BaseClass::Equip( pEquipTo );
 }
@@ -204,60 +216,26 @@ void CTFScatterGun::Equip( CBaseCombatCharacter *pEquipTo )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CTFScatterGun::Deploy()
-{
-	if ( !ReloadsSingly() )
-	{
-	#if defined( CLIENT_DLL )
-		cl_autoreload.SetValue( 0 );
-	#else
-		CTFPlayer *pOwner = ToTFPlayer( GetOwner() );
-		if ( pOwner )
-			pOwner->SetAutoReload( false );
-	#endif
-	}
-
-	return BaseClass::Deploy();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CTFScatterGun::Holster(CBaseCombatWeapon *pSwitchTo)
-{
-	if ( !ReloadsSingly() )
-	{
-	#if defined( CLIENT_DLL )
-		cl_autoreload.SetValue( m_bAutoReload );
-	#else
-		CTFPlayer *pOwner = ToTFPlayer( GetOwner() );
-		if ( pOwner )
-			pOwner->SetAutoReload( m_bAutoReload );
-	#endif
-	}
-
-	return BaseClass::Holster( pSwitchTo );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CTFScatterGun::FinishReload()
 {
+	// Finish with the regular code if we're not the Double Barrel.
+	if ( !UsesClipsForAmmo1() || !IsDoubleBarrel() )
+	{
+		BaseClass::FinishReload();
+		return;
+	}
+	
 	CTFPlayer *pOwner = ToTFPlayer( GetOwner() );
 	if ( !pOwner )
 		return;
 
-	if ( !UsesClipsForAmmo1() )
-		return;
-
-	if ( ReloadsSingly() )
-		return;
-
+	// Double Barrels replenish all their clip at once.
 	m_iClip1 += Min( GetMaxClip1() - m_iClip1, pOwner->GetAmmoCount( m_iPrimaryAmmoType ) );
 
+	// Downside to the double barrel is that they will discard any bullets, even unfired ones.
 	if ( !BaseClass::IsEnergyWeapon() )
 		pOwner->RemoveAmmo( GetMaxClip1(), m_iPrimaryAmmoType );
+
 }
 
 //-----------------------------------------------------------------------------
@@ -265,7 +243,7 @@ void CTFScatterGun::FinishReload()
 //-----------------------------------------------------------------------------
 bool CTFScatterGun::SendWeaponAnim( int iActivity )
 {
-	if ( GetTFPlayerOwner() && HasKnockback() )
+	if ( GetTFPlayerOwner() && IsDoubleBarrel() )
 	{
 		switch ( iActivity )
 		{
@@ -320,6 +298,15 @@ bool CTFScatterGun::HasKnockback() const
 	return nScatterGunHasKnockback == 1;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CTFScatterGun::IsDoubleBarrel() const
+{
+	int nScatterGunNoReloadSingle = 0;
+	CALL_ATTRIB_HOOK_INT(nScatterGunNoReloadSingle, set_scattergun_no_reload_single );
+	return nScatterGunNoReloadSingle == 1;
+}
 
 
 //=============================================================================
@@ -546,12 +533,15 @@ void CTFSodaPopper::SecondaryAttack(void)
 	if ( !pOwner )
 		return;
 
-	int nBuildsHype = 0;
-	CALL_ATTRIB_HOOK_INT( nBuildsHype, set_weapon_mode );
-	if ( nBuildsHype == 1 )
+	if ( tf2v_use_manual_sodapopper.GetBool() )
 	{
-		if ( pOwner->m_Shared.GetHypeMeter() >= 100.0f )
-			pOwner->m_Shared.AddCond( TF_COND_SODAPOPPER_HYPE );
+		int nBuildsHype = 0;
+		CALL_ATTRIB_HOOK_INT( nBuildsHype, set_weapon_mode );
+		if ( nBuildsHype == 1 )
+		{
+			if ( pOwner->m_Shared.GetHypeMeter() >= 100.0f )
+				pOwner->m_Shared.AddCond( TF_COND_SODAPOPPER_HYPE );
+		}
 	}
 }
 

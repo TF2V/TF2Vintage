@@ -8,16 +8,15 @@
 #include "func_flagdetectionzone.h"
 #include "entity_capture_flag.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_DATADESC( CFlagDetectionZone )
 
-	DEFINE_KEYFIELD( m_bShouldAlarm, FIELD_BOOLEAN, "alarm" ),
+	DEFINE_KEYFIELD( m_bDisabled,	FIELD_BOOLEAN,	"StartDisabled" ),
+	DEFINE_KEYFIELD( m_bShouldAlarm, FIELD_BOOLEAN,	"alarm" ),
 
 	// Inputs.
-	//DEFINE_INPUTFUNC( FIELD_VOID, "Test", InputTest ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
 
 	// Outputs.
 	DEFINE_OUTPUT( m_outOnStartTouchFlag, "OnStartTouchFlag" ),
@@ -32,15 +31,16 @@ IMPLEMENT_AUTO_LIST( IFlagDetectionZoneAutoList );
 LINK_ENTITY_TO_CLASS( func_flagdetectionzone, CFlagDetectionZone );
 
 
+CFlagDetectionZone::CFlagDetectionZone()
+{
+	m_bShouldAlarm = false;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
 void CFlagDetectionZone::Spawn( void )
 {
-	BaseClass::Spawn();
-
-	AddSpawnFlags( SF_TRIGGER_ALLOW_CLIENTS );
-
 	InitTrigger();
 
 	if ( m_bDisabled )
@@ -166,11 +166,12 @@ void CFlagDetectionZone::StartTouch( CBaseEntity *pOther )
 	if ( IsDisabled() || !pOther )
 		return;
 
-	BaseClass::StartTouch( pOther );
+	m_OnStartTouch.FireOutput( pOther, this );
 
 	if ( IsTouching( pOther ) && EntityIsFlagCarrier( pOther ) )
 	{
 		m_outOnStartTouchFlag.FireOutput( this, this );
+
 		IGameEvent *pEvent = gameeventmanager->CreateEvent( "flag_carried_in_detection_zone" );
 		if ( pEvent )
 		{
@@ -192,7 +193,7 @@ void CFlagDetectionZone::EndTouch( CBaseEntity *pOther )
 		m_outOnEndTouchFlag.FireOutput( this, this );
 	}
 
-	BaseClass::EndTouch( pOther );
+	m_OnEndTouch.FireOutput(pOther, this);
 }
 
 

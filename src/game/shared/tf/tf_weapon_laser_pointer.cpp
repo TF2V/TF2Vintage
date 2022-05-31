@@ -13,7 +13,7 @@
 #endif
 
 #ifdef GAME_DLL
-ConVar tf_debug_wrangler( "tf_wrangler_debug", "0", FCVAR_CHEAT );
+ConVar tf_wrangler_debug( "tf_wrangler_debug", "0", FCVAR_CHEAT );
 #endif
 
 IMPLEMENT_NETWORKCLASS_ALIASED( TFLaserPointer, DT_WeaponLaserPointer )
@@ -232,7 +232,7 @@ void CTFLaserPointer::UpdateLaserDot( void )
 	vecForward = vecEnd - vecStart;
 	m_hGun->UpdateSentryAngles( vecForward ); 
 
-	if ( tf_debug_wrangler.GetBool() ) 
+	if ( tf_wrangler_debug.GetBool() ) 
 	{
 		NDebugOverlay::Line( vecStart, vecEnd, 0, 255, 0, true, 0.25f );
 	}

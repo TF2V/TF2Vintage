@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
+//========= Copyright Â© 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: HUD Target ID element
 //
@@ -20,7 +20,9 @@
 #include "tier0/memdbgon.h"
 
 extern ConVar tf2v_allow_disguiseweapons;
-
+	
+ConVar tf2v_enable_disguise_text( "tf2v_enable_disguise_text", "0", FCVAR_CLIENTDLL|FCVAR_ARCHIVE, "Enables the text notification in chatbox when you are diguised.", true, 0.0f, true, 1.0f );
+	
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -234,4 +236,76 @@ void CDisguiseStatus::Paint(void)
 
 	if (m_pTargetHealth)
 		m_pTargetHealth->SetHealth(pPlayer->m_Shared.GetDisguiseHealth(), pPlayer->m_Shared.GetDisguiseMaxHealth(), pPlayer->m_Shared.GetDisguiseMaxBuffedHealth());
+	
+	if (tf2v_enable_disguise_text.GetBool())
+	{
+		int xpos = 0;
+		int ypos = 0;
+
+		#define MAX_DISGUISE_STATUS_LENGTH	128
+		wchar_t szStatus[MAX_DISGUISE_STATUS_LENGTH];
+		szStatus[0] = '\0';
+
+		wchar_t *pszTemplate = NULL;
+		int nDisguiseClass = TF_CLASS_UNDEFINED, nDisguiseTeam = TEAM_UNASSIGNED;
+		if ( pPlayer->m_Shared.InCond( TF_COND_DISGUISING ) )
+		{
+			pszTemplate = g_pVGuiLocalize->Find( "#TF_Spy_Disguising" );
+			nDisguiseClass = pPlayer->m_Shared.GetDesiredDisguiseClass();
+			nDisguiseTeam = pPlayer->m_Shared.GetDesiredDisguiseTeam();
+		}
+		else if ( pPlayer->m_Shared.InCond( TF_COND_DISGUISED ) )
+		{
+			pszTemplate = g_pVGuiLocalize->Find( "#TF_Spy_Disguised_as" );
+			nDisguiseClass = pPlayer->m_Shared.GetDisguiseClass();
+			nDisguiseTeam = pPlayer->m_Shared.GetDisguiseTeam();
+		}
+
+		wchar_t *pszClassName = g_pVGuiLocalize->Find( GetPlayerClassData( nDisguiseClass )->m_szLocalizableName );
+
+		wchar_t *pszTeamName = NULL;
+		if ( nDisguiseTeam == TF_TEAM_RED )
+		{
+			pszTeamName = g_pVGuiLocalize->Find("#TF_Spy_Disguise_Team_Red");
+		}
+		else
+		{
+			pszTeamName = g_pVGuiLocalize->Find("#TF_Spy_Disguise_Team_Blue");
+		}
+
+		if ( pszTemplate && pszClassName && pszTeamName )
+		{
+			wcsncpy( szStatus, pszTemplate, MAX_DISGUISE_STATUS_LENGTH );
+
+			g_pVGuiLocalize->ConstructString( szStatus, MAX_DISGUISE_STATUS_LENGTH*sizeof(wchar_t), pszTemplate,
+				2,
+				pszTeamName,
+				pszClassName );	
+		}
+
+		if ( szStatus[0] != '\0' )
+		{
+			vgui::surface()->DrawSetTextFont( m_hFont );
+
+			Color cPlayerColor;
+
+			if ( pPlayer->m_Shared.InCond( TF_COND_DISGUISED ) )
+			{
+				cPlayerColor = g_PR->GetTeamColor( pPlayer->m_Shared.GetDisguiseTeam() );
+			}
+			else
+			{
+				cPlayerColor = g_PR->GetTeamColor( pPlayer->GetTeamNumber() );
+			}
+
+			// draw a black dropshadow ( the default one looks horrible )
+			vgui::surface()->DrawSetTextPos( xpos+1, ypos+1 );
+			vgui::surface()->DrawSetTextColor( Color(0,0,0,255) );
+			vgui::surface()->DrawPrintText( szStatus, wcslen(szStatus) );		
+
+			vgui::surface()->DrawSetTextPos( xpos, ypos );
+			vgui::surface()->DrawSetTextColor( cPlayerColor );
+			vgui::surface()->DrawPrintText( szStatus, wcslen(szStatus) );
+		}
+	}
 }

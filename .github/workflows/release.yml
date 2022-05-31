@@ -1,0 +1,59 @@
+name: Release
+
+on: 
+  push:
+    paths:
+      - 'src/**'
+      - 'game/tf2vintage/**'
+  pull_request:
+   paths:
+      - 'src/**'
+      - 'game/tf2vintage/**'
+  workflow_dispatch:
+
+env:
+  STEAM_RUNTIME_PATH: /valve/steam-runtime
+  CCACHE_VERSION: 4.2.1
+  CCACHE_DIR: ${{ github.workspace }}/src/ccache
+
+jobs:
+  build-windows:
+    uses: ./.github/workflows/windows.yml
+
+  build-linux:
+    uses: ./.github/workflows/linux.yml
+
+
+  build-game:
+    needs: [build-windows, build-linux]
+    runs-on:
+      ubuntu-20.04
+    
+    steps:
+      - name: Checkout game assets
+        uses: actions/checkout@v2
+      - name: Download Windows Binary
+        uses: actions/download-artifact@v3
+        with:
+          name: tf2vintage-windows
+          path: game/tf2vintage/bin/
+      - name: Download Linux Binary
+        uses: actions/download-artifact@v3
+        with:
+          name: tf2vintage-linux
+          path: game/tf2vintage/bin/
+      - name: Pack [7z]
+        uses: edgarrc/action-7z@v1
+        with:
+          args: 7z a -t7z -mx=9 tf2vintage.7z ./game/tf2vintage/
+      - name: Upload product [7z]
+        uses: actions/upload-artifact@v3
+        with:
+          name: tf2vintage
+          path: tf2vintage.7z
+      - name: Clean up leftover binaries
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: |
+            tf2vintage-windows
+            tf2vintage-linux

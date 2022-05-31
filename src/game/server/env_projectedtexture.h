@@ -4,9 +4,12 @@
 //
 //=============================================================================
 #include "cbase.h"
+#ifndef ENV_PROJECTEDTEXTURE_H
+#define ENV_PROJECTEDTEXTURE_H
+#ifdef _WIN32
+#pragma once
+#endif
 
-#define ENV_PROJECTEDTEXTURE_STARTON			(1<<0)
-#define ENV_PROJECTEDTEXTURE_ALWAYSUPDATE		(1<<1)
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -20,6 +23,7 @@ public:
 
 	CEnvProjectedTexture();
 	bool KeyValue( const char *szKeyName, const char *szValue );
+	virtual bool GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen );
 
 	// Always transmit to clients
 	virtual int UpdateTransmitState();
@@ -30,16 +34,20 @@ public:
 	void InputAlwaysUpdateOn( inputdata_t &inputdata );
 	void InputAlwaysUpdateOff( inputdata_t &inputdata );
 	void InputSetFOV( inputdata_t &inputdata );
+	void InputSetHorFOV( inputdata_t &inputdata );
 	void InputSetTarget( inputdata_t &inputdata );
 	void InputSetCameraSpace( inputdata_t &inputdata );
+	void InputSetUseAtten( inputdata_t &inputdata );
 	void InputSetLightOnlyTarget( inputdata_t &inputdata );
 	void InputSetLightWorld( inputdata_t &inputdata );
 	void InputSetEnableShadows( inputdata_t &inputdata );
 	void InputSetLightColor( inputdata_t &inputdata );
+	void InputSetBrightness( inputdata_t &inputdata );
 	void InputSetSpotlightTexture( inputdata_t &inputdata );
+	void InputSetSpotlightDX8Texture( inputdata_t &inputdata );
 	void InputSetAmbient( inputdata_t &inputdata );
-	void InputSetNearZ( inputdata_t &inputdata );
-	void InputSetFarZ( inputdata_t &inputdata );
+	void InputSetAtten( inputdata_t &inputdata );
+	void InputSetQuadratic( inputdata_t &inputdata );
 
 	void InitialThink( void );
 
@@ -48,22 +56,29 @@ public:
 private:
 
 	CNetworkVar( bool, m_bState );
-	CNetworkVar( bool, m_bAlwaysUpdate )
+	CNetworkVar( bool, m_bAlwaysUpdate );
 	CNetworkVar( float, m_flLightFOV );
+	CNetworkVar( float, m_flLightHorFOV );
 	CNetworkVar( bool, m_bEnableShadows );
 	CNetworkVar( bool, m_bLightOnlyTarget );
 	CNetworkVar( bool, m_bLightWorld );
 	CNetworkVar( bool, m_bCameraSpace );
+	CNetworkVar( bool, m_bAtten );
 	CNetworkColor32( m_LightColor );
-	CNetworkVar( float, m_flColorTransitionTime )
+	CNetworkVar( float, m_fBrightness );
+	CNetworkVar( float, m_flColorTransitionTime );
 	CNetworkVar( float, m_flAmbient );
 	CNetworkString( m_SpotlightTextureName, MAX_PATH );
+	CNetworkString( m_SpotlightDX8TextureName, MAX_PATH );
 	CNetworkVar( int, m_nSpotlightTextureFrame );
 	CNetworkVar( float, m_flNearZ );
 	CNetworkVar( float, m_flFarZ );
+	CNetworkVar( float, m_flAtten );
+	CNetworkVar( float, m_flQuadratic );
 	CNetworkVar( int, m_nShadowQuality );
-	CNetworkVar( float, m_flQuadraticAtten );
-	CNetworkVar( float, m_flLinearAtten );
-	CNetworkVar( float, m_flConstantAtten );
-	CNetworkVar( float, m_flShadowAtten );
+	CNetworkVar( float, m_flProjectionSize );
+	CNetworkVar( float, m_flRotation );
 };
+
+
+#endif	// ENV_PROJECTEDTEXTURE_H

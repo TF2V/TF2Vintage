@@ -119,7 +119,6 @@ QueryResultType CTFBotSpyHide::ShouldAttack( const INextBot *me, const CKnownEnt
 }
 
 
-#pragma warning( disable:4701 ) // it only *may* be uninitialized
 bool CTFBotSpyHide::FindHidingSpot( CTFBot *actor )
 {
 	if ( actor->GetLastKnownArea() == nullptr )
@@ -132,51 +131,27 @@ bool CTFBotSpyHide::FindHidingSpot( CTFBot *actor )
 
 	CUtlSortVector<IncursionEntry_t, SpyHideIncursionDistanceLess> entries;
 
-	/* this is almost certainly some mangled inlining stuff that we've done a
-	 * relatively poor job of un-spaghettifying */
+	float incursion_max = m_flEnemyIncursionDistance + 1000.0f;
+	int enemy_team = GetEnemyTeam( actor->GetTeamNumber() );
 
-	float incursion_max;
-
-	int enemy_team1 = actor->GetTeamNumber();
-	int enemy_team2 = enemy_team1;
-
-	if ( enemy_team1 > TF_TEAM_BLUE )
+	if ( actor->GetLastKnownArea()->GetIncursionDistance( enemy_team ) < 0.0f )
 	{
 		incursion_max = 999999.0f;
 	}
-	else
+
+	FOR_EACH_VEC( nearby, i )
 	{
-		if ( enemy_team1 == TF_TEAM_RED )
+		auto area = static_cast<CTFNavArea *>( nearby[i] );
+
+		if ( area->GetHidingSpots()->Count() &&
+				area->GetIncursionDistance( enemy_team ) >= 0.0f && area->GetIncursionDistance( enemy_team ) <= incursion_max )
 		{
-			enemy_team1 = TF_TEAM_BLUE;
-			enemy_team2 = TF_TEAM_BLUE;
-		}
-		else if ( enemy_team1 == TF_TEAM_BLUE )
-		{
-			enemy_team1 = TF_TEAM_RED;
-			enemy_team2 = TF_TEAM_RED;
-		}
+			IncursionEntry_t entry;
 
-		if ( actor->GetLastKnownArea()->GetIncursionDistance( enemy_team2 ) >= 0.0f )
-			incursion_max = m_flEnemyIncursionDistance + 1000.0f;
-	}
+			entry.teamnum = enemy_team;
+			entry.area    = area;
 
-	if ( enemy_team1 <= TF_TEAM_BLUE )
-	{
-		FOR_EACH_VEC( nearby, i )
-		{
-			auto area = static_cast<CTFNavArea *>( nearby[i] );
-
-			if ( area->GetHidingSpots()->Count() &&
-				 area->GetIncursionDistance( enemy_team2 ) >= 0.0f && area->GetIncursionDistance( enemy_team2 ) <= incursion_max )
-			{
-				IncursionEntry_t entry;
-
-				entry.teamnum = enemy_team2;
-				entry.area    = area;
-
-				entries.Insert( entry );
-			}
+			entries.Insert( entry );
 		}
 	}
 
@@ -190,7 +165,6 @@ bool CTFBotSpyHide::FindHidingSpot( CTFBot *actor )
 
 	return false;
 }
-#pragma warning( default:4701 )
 
 
 bool SpyHideIncursionDistanceLess::Less( const IncursionEntry_t& lhs, const IncursionEntry_t& rhs, void* )

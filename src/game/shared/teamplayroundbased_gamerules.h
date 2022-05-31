@@ -89,10 +89,11 @@ enum {
 	WINREASON_TIMELIMIT,
 	WINREASON_WINLIMIT,
 	WINREASON_WINDIFFLIMIT,
-#if defined(TF_CLIENT_DLL) || defined(TF_DLL)
+#if defined(TF_CLIENT_DLL) || defined(TF_DLL) || defined(TF_VINTAGE) || defined(TF_VINTAGE_CLIENT)
 	WINREASON_RD_REACTOR_CAPTURED,
 	WINREASON_RD_CORES_COLLECTED,
 	WINREASON_RD_REACTOR_RETURNED,
+	WINREASON_PD_POINTS,
 #endif
 };
 
@@ -309,6 +310,7 @@ public:
 	virtual void	BetweenRounds_End( void ) { return; }
 	virtual void	BetweenRounds_Think( void ) { return; }
 
+	virtual void	PreRound_Start( void ) { return; }
 	virtual void	PreRound_End( void ) { return; }
 
 	bool PrevRoundWasWaitingForPlayers() { return m_bPrevRoundWasWaitingForPlayers; }

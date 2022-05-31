@@ -56,54 +56,52 @@ int C_TFSpyMask::GetSkin( void )
 		return BaseClass::GetSkin();
 	
 	// If the target is being ubered, show the uber skin instead.
-	if (pOwner->m_Shared.InCond(TF_COND_INVULNERABLE))
+	if ( pOwner->m_Shared.InCond( TF_COND_INVULNERABLE ) )
 	{
 		int iVisibleTeam = pOwner->GetTeamNumber();
-		int nSkin;
 
 		// if this player is disguised and on the other team, use disguise team
-		if (pOwner->m_Shared.InCond(TF_COND_DISGUISED) && pOwner->IsEnemyPlayer())
+		if ( pOwner->m_Shared.InCond( TF_COND_DISGUISED ) && pOwner->IsEnemyPlayer() )
 		{
 			iVisibleTeam = pOwner->m_Shared.GetDisguiseTeam();
 		}
 		
 		// Convert to local team skin number.
-		switch (iVisibleTeam)
-		{
-			case TF_TEAM_RED:
-			nSkin = 0;
-			break;
-
-			case TF_TEAM_BLUE:
-			nSkin = 1;
-			break;
-		
-			case TF_TEAM_GREEN:
-			nSkin = 2;
-			break;
-			
-			case TF_TEAM_YELLOW:
-			nSkin = 3;
-			break;
-			
-			default:
-			nSkin = 0;
-			break;
-		}
-		
-		nSkin += 9; // Our mask's uber skins are on 9 10, 11, 12 (0, 1, 2, 3 offset 9)
-		return nSkin;
+		return ( iVisibleTeam - 2 ) + 9; // Our mask's uber skins are on 9 10, 11, 12 (0, 1, 2, 3 offset 9)
 	}
 		
-		// If this is an enemy spy disguised as a spy show a fake disguise class.
-		if ( pOwner->IsEnemyPlayer() && pOwner->m_Shared.GetDisguiseClass() == TF_CLASS_SPY )
-		{
-			return ( pOwner->m_Shared.GetMaskClass() - 1 );
-		}
-		else
-		{
-			return ( pOwner->m_Shared.GetDisguiseClass() - 1 );
-		}
+	// If this is an enemy spy disguised as a spy show a fake disguise class.
+	if ( pOwner->IsEnemyPlayer() && pOwner->m_Shared.GetDisguiseClass() == TF_CLASS_SPY )
+	{
+		return ( pOwner->m_Shared.GetMaskClass() - 1 );
+	}
+	else
+	{
+		return ( pOwner->m_Shared.GetDisguiseClass() - 1 );
+	}
+}
 
-	return BaseClass::GetSkin();
+
+//-----------------------------------------------------------------------------
+// Purpose: Overlay Uber
+//-----------------------------------------------------------------------------
+int C_TFSpyMask::InternalDrawModel( int flags )
+{
+	C_TFPlayer *pOwner = ToTFPlayer( GetOwnerEntity() );
+	bool bUseInvulnMaterial = ( pOwner && pOwner->m_Shared.InCond( TF_COND_INVULNERABLE ) );
+	bUseInvulnMaterial |= ( pOwner && pOwner->m_Shared.InCond( TF_COND_INVULNERABLE_HIDE_UNLESS_DAMAGE ) && gpGlobals->curtime < ( pOwner->GetLastDamageTime() + 2.0f ) );
+
+	if ( bUseInvulnMaterial )
+	{
+		modelrender->ForcedMaterialOverride( pOwner->GetInvulnMaterial() );
+	}
+
+	int ret = BaseClass::InternalDrawModel( flags );
+
+	if ( bUseInvulnMaterial )
+	{
+		modelrender->ForcedMaterialOverride( NULL );
+	}
+
+	return ret;
 }

@@ -8,12 +8,35 @@
 #include "cbase.h"
 
 #include <vgui_controls/ScrollBarSlider.h>
+#include <vgui_controls/TextImage.h>
 #include "vgui/ILocalize.h"
 #include "vgui/ISurface.h"
 #include "tf_controls.h"
 
 
 using namespace vgui;
+
+//-----------------------------------------------------------------------------
+// Purpose: Colorize a control's close button
+//-----------------------------------------------------------------------------
+bool SetXToRed( Label *pPanel )
+{
+	if ( pPanel == NULL )
+		return false;
+
+	wchar wszLabelText[256];
+	pPanel->GetText( wszLabelText, sizeof wszLabelText );
+	// Make sure it's actually an X
+	if ( wszLabelText[0] != L' ' || ( wszLabelText[0] | 0x20 ) != L'x' )
+		return false;
+
+	pPanel->GetTextImage()->ClearColorChangeStream();
+	pPanel->GetTextImage()->AddColorChange( Color( 200, 80, 60, 255 ), 0 );
+	pPanel->GetTextImage()->AddColorChange( pPanel->GetFgColor(), 1 );
+
+	return true;
+}
+
 
 DECLARE_BUILD_FACTORY_DEFAULT_TEXT( CExButton, CExButton );
 DECLARE_BUILD_FACTORY_DEFAULT_TEXT( CExLabel, CExLabel );

@@ -1,4 +1,4 @@
-//====== Copyright © 1996-2004, Valve Corporation, All rights reserved. =======
+//====== Copyright ï¿½ 1996-2004, Valve Corporation, All rights reserved. =======
 //
 // Purpose: 
 //
@@ -170,6 +170,66 @@ const char *g_aRawPlayerClassNames[TF_CLASS_MENU_BUTTONS] =
 	"saxtonhale",
 	"",
 	"random"
+};
+
+const char g_szBotModels[][MAX_PATH] =
+{
+	"", //TF_CLASS_UNDEFINED
+
+	"models/bots/scout/bot_scout.mdl",
+	"models/bots/sniper/bot_sniper.mdl",
+	"models/bots/soldier/bot_soldier.mdl",
+	"models/bots/demo/bot_demo.mdl",
+	"models/bots/medic/bot_medic.mdl",
+	"models/bots/heavy/bot_heavy.mdl",
+	"models/bots/pyro/bot_pyro.mdl",
+	"models/bots/spy/bot_spy.mdl",
+	"models/bots/engineer/bot_engineer.mdl"
+};
+
+const char g_szBotBossModels[][MAX_PATH] =
+{
+	"", //TF_CLASS_UNDEFINED
+
+	"models/bots/scout_boss/bot_scout_boss.mdl",
+	"models/bots/sniper/bot_sniper.mdl",
+	"models/bots/soldier_boss/bot_soldier_boss.mdl",
+	"models/bots/demo_boss/bot_demo_boss.mdl",
+	"models/bots/medic/bot_medic.mdl",
+	"models/bots/heavy_boss/bot_heavy_boss.mdl",
+	"models/bots/pyro_boss/bot_pyro_boss.mdl",
+	"models/bots/spy/bot_spy.mdl",
+	"models/bots/engineer/bot_engineer.mdl"
+};
+
+const char g_szRomePromoItems_Hat[][MAX_PATH] =
+{
+	"", //TF_CLASS_UNDEFINED
+
+	"tw_scoutbot_hat",
+	"tw_sniperbot_helmet",
+	"tw_soldierbot_helmet",
+	"tw_demobot_helmet",
+	"tw_medibot_hat",
+	"tw_heavybot_helmet",
+	"tw_pyrobot_helmet",
+	"tw_spybot_hood",
+	"tw_engineerbot_helmet"
+};
+
+const char g_szRomePromoItems_Misc[][MAX_PATH] =
+{
+	"", //TF_CLASS_UNDEFINED
+
+	"tw_scoutbot_armor",
+	"tw_sniperbot_armor",
+	"tw_soldierbot_armor",
+	"tw_demobot_armor",
+	"tw_medibot_chariot",
+	"tw_heavybot_armor",
+	"tw_pyrobot_armor",
+	"tw_spybot_armor",
+	"tw_engineerbot_armor"
 };
 
 const char *g_aDominationEmblems[] =
@@ -382,7 +442,10 @@ const char *g_aAmmoNames[] =
 	"TF_AMMO_METAL",
 	"TF_AMMO_GRENADES1",
 	"TF_AMMO_GRENADES2",
-	"TF_AMMO_GRENADES3"
+	"TF_AMMO_GRENADES3",
+	"TF_AMMO_SPECIAL1",
+	"TF_AMMO_SPECIAL2",
+	"TF_AMMO_SPECIAL3"
 };
 
 struct pszWpnEntTranslationListEntry
@@ -401,54 +464,49 @@ struct pszWpnEntTranslationListEntry
 };
 static pszWpnEntTranslationListEntry pszWpnEntTranslationList[] =
 {
+	{
 	"tf_weapon_shotgun",			// Base weapon to translate
 	NULL,
-	"tf_weapon_shotgun_primary",	// Scout
-	"tf_weapon_shotgun_primary",	// Sniper
+	NULL,							// Scout
+	NULL,							// Sniper
 	"tf_weapon_shotgun_soldier",	// Soldier
-	"tf_weapon_shotgun_primary",	// Demoman
-	"tf_weapon_shotgun_primary",	// Medic
+	NULL,							// Demoman
+	NULL,							// Medic
 	"tf_weapon_shotgun_hwg",		// Heavy
 	"tf_weapon_shotgun_pyro",		// Pyro
-	"tf_weapon_shotgun_primary",	// Spy
+	NULL,							// Spy
 	"tf_weapon_shotgun_primary",	// Engineer
+	},
 
+	{
 	"tf_weapon_pistol",				// Base weapon to translate
 	NULL,
 	"tf_weapon_pistol_scout",		// Scout
-	"tf_weapon_pistol",				// Sniper
-	"tf_weapon_pistol",				// Soldier
-	"tf_weapon_pistol",				// Demoman
-	"tf_weapon_pistol",				// Medic
-	"tf_weapon_pistol",				// Heavy
-	"tf_weapon_pistol",				// Pyro
-	"tf_weapon_pistol",				// Spy
+	NULL,							// Sniper
+	NULL,							// Soldier
+	NULL,							// Demoman
+	NULL,							// Medic
+	NULL,							// Heavy
+	NULL,							// Pyro
+	NULL,							// Spy
 	"tf_weapon_pistol",				// Engineer
+	},
 
-	"tf_weapon_shovel",				// Base weapon to translate
+	{
+	"tf_weapon_katana",				// Base weapon to translate
 	NULL,
-	"tf_weapon_shovel",				// Scout
-	"tf_weapon_shovel",				// Sniper
+	NULL,							// Scout
+	NULL,							// Sniper
 	"tf_weapon_shovel",				// Soldier
 	"tf_weapon_bottle",				// Demoman
-	"tf_weapon_shovel",				// Medic
-	"tf_weapon_shovel",				// Heavy
-	"tf_weapon_shovel",				// Pyro
-	"tf_weapon_shovel",				// Spy
-	"tf_weapon_shovel",				// Engineer
+	NULL,							// Medic
+	NULL,							// Heavy
+	NULL,							// Pyro
+	NULL,							// Spy
+	NULL,							// Engineer
+	},
 
-	"tf_weapon_bottle",				// Base weapon to translate
-	NULL,
-	"tf_weapon_bottle",				// Scout
-	"tf_weapon_bottle",				// Sniper
-	"tf_weapon_shovel",				// Soldier
-	"tf_weapon_bottle",				// Demoman
-	"tf_weapon_bottle",				// Medic
-	"tf_weapon_bottle",				// Heavy
-	"tf_weapon_bottle",				// Pyro
-	"tf_weapon_bottle",				// Spy
-	"tf_weapon_bottle",				// Engineer
-
+	{
 	"saxxy",						// Base weapon to translate
 	NULL,
 	"tf_weapon_bat",				// Scout
@@ -456,11 +514,13 @@ static pszWpnEntTranslationListEntry pszWpnEntTranslationList[] =
 	"tf_weapon_shovel",				// Soldier
 	"tf_weapon_bottle",				// Demoman
 	"tf_weapon_bonesaw",			// Medic
-	"tf_weapon_fireaxe",			// Heavy
+	"tf_weapon_fists",				// Heavy
 	"tf_weapon_fireaxe",			// Pyro
 	"tf_weapon_knife",				// Spy
 	"tf_weapon_wrench",				// Engineer
+	},
 
+	{
 	"tf_weapon_throwable",			// Base weapon to translate
 	NULL,
 	"tf_weapon_throwable", //UNK_10D88B2
@@ -472,30 +532,36 @@ static pszWpnEntTranslationListEntry pszWpnEntTranslationList[] =
 	"tf_weapon_throwable", //UNK_10D88B2
 	"tf_weapon_throwable", //UNK_10D88B2
 	"tf_weapon_throwable", //UNK_10D88B2
+	},
 
+	{
 	"tf_weapon_parachute",			// Base weapon to translate
 	NULL,
-	"tf_weapon_parachute_secondary",	// Scout
-	"tf_weapon_parachute_secondary",	// Sniper
+	NULL,								// Scout
+	NULL,								// Sniper
 	"tf_weapon_parachute_primary",		// Soldier
 	"tf_weapon_parachute_secondary",	// Demoman
-	"tf_weapon_parachute_secondary",	// Medic
-	"tf_weapon_parachute_secondary",	// Heavy
-	"tf_weapon_parachute_secondary",	// Pyro
-	"tf_weapon_parachute_secondary",	// Spy
-	0,									// Engineer
+	NULL,								// Medic
+	NULL,								// Heavy
+	NULL,								// Pyro
+	NULL,								// Spy
+	NULL,								// Engineer
+	},
 
+	{
 	"tf_weapon_revolver",			// Base weapon to translate
 	NULL,
-	"tf_weapon_revolver_secondary", // Scout
-	"tf_weapon_revolver_secondary",	// Sniper
-	"tf_weapon_revolver_secondary",	// Soldier
-	"tf_weapon_revolver_secondary",	// Demoman
-	"tf_weapon_revolver_secondary",	// Medic
-	"tf_weapon_revolver_secondary",	// Heavy
-	"tf_weapon_revolver_secondary",	// Pyro
+	NULL, 							// Scout
+	NULL,							// Sniper
+	NULL,							// Soldier
+	NULL,							// Demoman
+	NULL,							// Medic
+	NULL,							// Heavy
+	NULL,							// Pyro
 	"tf_weapon_revolver",			// Spy
 	"tf_weapon_revolver_secondary",	// Engineer
+	},
+	
 };
 
 //-----------------------------------------------------------------------------
@@ -505,7 +571,7 @@ const char *g_aWeaponNames[] =
 {
 	"TF_WEAPON_NONE",
 	"TF_WEAPON_BAT",
-	"TF_WEAPON_BOTTLE", 
+	"TF_WEAPON_BOTTLE",
 	"TF_WEAPON_FIREAXE",
 	"TF_WEAPON_CLUB",
 	"TF_WEAPON_CROWBAR",
@@ -562,8 +628,8 @@ const char *g_aWeaponNames[] =
 	"TF_WEAPON_LUNCHBOX",
 	"TF_WEAPON_LUNCHBOX_DRINK",
 	"TF_WEAPON_COMPOUND_BOW",
-	"TF_WEAPON_JAR", 
-	"TF_WEAPON_LASER_POINTER", 
+	"TF_WEAPON_JAR",
+	"TF_WEAPON_LASER_POINTER",
 	"TF_WEAPON_HANDGUN_SCOUT_PRIMARY",
 	"TF_WEAPON_STICKBOMB",
 	"TF_WEAPON_BAT_WOOD",
@@ -637,7 +703,8 @@ const char *g_aWeaponNames[] =
 	"TF_WEAPON_FLAME_BALL",
 	"TF_WEAPON_FLAREGUN_REVENGE",
 	"TF_WEAPON_ROCKETLAUNCHER_FIREBALL",
-	
+	"TF_WEAPON_DEFIB",
+
 	"TF_WEAPON_COUNT",	// end marker, do not add below here
 };
 
@@ -777,6 +844,7 @@ int g_aWeaponDamageTypes[] =
 	DMG_IGNITE | DMG_HALF_FALLOFF | DMG_USEDISTANCEMOD,	// TF_WEAPON_FLAME_BALL,
 	DMG_IGNITE,                                 // TF_WEAPON_FLAREGUN_REVENGE
 	DMG_IGNITE | DMG_HALF_FALLOFF | DMG_USEDISTANCEMOD,	// TF_WEAPON_ROCKETLAUNCHER_FIREBALL
+	DMG_CLUB,									// TF_WEAPON_DEFIB,
 	
 	// This is a special entry that must match with TF_WEAPON_COUNT
 	// to protect against updating the weapon list without updating this list
@@ -948,6 +1016,17 @@ const char *g_pszHintMessages[] =
 	"#Hint_enemy_using_tp_entrance",
 	"#Hint_enemy_using_tp_exit",
 };
+COMPILE_TIME_ASSERT( ARRAYSIZE( g_pszHintMessages ) == NUM_HINTS );
+
+const char *g_pszDeathCallingCardModels[] =
+{
+	"",
+	"models/props_gameplay/tombstone_specialdelivery.mdl",
+	"models/props_gameplay/tombstone_crocostyle.mdl",
+	"models/props_gameplay/tombstone_tankbuster.mdl",
+	"models/props_gameplay/tombstone_gasjockey.mdl",
+};
+COMPILE_TIME_ASSERT( ARRAYSIZE( g_pszDeathCallingCardModels ) == CALLING_CARD_COUNT );
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -1076,7 +1155,7 @@ int condition_to_attribute_translation[] =
 	TF_COND_LAST,
 };
 
-int ConditionExpiresFast( int nCond )
+bool ConditionExpiresFast( int nCond )
 {
 	// Damaging conds
 	if ( nCond == TF_COND_BURNING ||
@@ -1090,6 +1169,44 @@ int ConditionExpiresFast( int nCond )
 		return true;
 
 	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Traces.
+//-----------------------------------------------------------------------------
+bool CTraceFilterIgnoreTeammatesAndTeamObjects::ShouldHitEntity( IHandleEntity *pServerEntity, int contentsMask )
+{
+	CBaseEntity *pEntity = EntityFromEntityHandle( pServerEntity );
+	if ( pEntity && pEntity->GetTeamNumber() == m_iIgnoreTeam )
+		return false;
+
+	CTFPlayer *pPlayer = dynamic_cast<CTFPlayer *>( pEntity );
+	if ( pPlayer )
+	{
+		if ( pPlayer->m_Shared.InCond( TF_COND_DISGUISED ) && pPlayer->m_Shared.GetDisguiseTeam() == m_iIgnoreTeam )
+			return false;
+
+		if ( pPlayer->m_Shared.IsStealthed() )
+			return false;
+	}
+
+	return BaseClass::ShouldHitEntity( pServerEntity, contentsMask );
+}
+
+
+bool CTraceFilterIgnoreFriendlyCombatItems::ShouldHitEntity( IHandleEntity *pServerEntity, int contentsMask )
+{
+	CBaseEntity *pEntity = EntityFromEntityHandle( pServerEntity );
+	if ( pEntity->IsCombatItem() )
+	{
+		if ( pEntity->GetTeamNumber() == m_iIgnoreTeam )
+			return false;
+
+		if ( m_bSkipBaseTrace )
+			return true;
+	}
+
+	return BaseClass::ShouldHitEntity( pServerEntity, contentsMask );
 }
 
 //-----------------------------------------------------------------------------
@@ -1424,4 +1541,33 @@ void BuildBigHeadTransformation( CBaseAnimating *pAnimating, CStudioHdr *pStudio
 		MatrixSetColumn( transform, 3, hat );
 	}
 #endif
+}
+
+const char *GetRDScoreMethodName( ERDScoreMethod iScoreMethod )
+{
+	static const char *aRDScoreMethodNames[] =
+	{
+		"SCORE_UNDEFINED",
+		"SCORE_REACTOR_CAPTURED",
+		"SCORE_CORES_COLLECTED",
+		"SCORE_REACTOR_RETURNED",
+		"SCORE_REACTOR_STEAL",
+
+		"NUM_SCORE_TYPES"
+	};
+
+	return aRDScoreMethodNames[iScoreMethod + 1];
+}
+
+ERDScoreMethod GetRDScoreMethodFromName( const char *pszName )
+{
+	for ( int i=SCORE_UNDEFINED; i < NUM_SCORE_TYPES; ++i )
+	{
+		if ( FStrEq( pszName, GetRDScoreMethodName( (ERDScoreMethod)i ) ) )
+		{
+			return (ERDScoreMethod)i;
+		}
+	}
+
+	return SCORE_UNDEFINED;
 }

@@ -743,13 +743,6 @@ ClampAngles
 */
 void CInput::ClampAngles( QAngle& viewangles )
 {
-	
-#if defined ( TF_VINTAGE_CLIENT )
-	// If we allow the player to flip around, don't constrain our angles.
-	if ( tf2v_flips.GetBool() )
-		return;
-#endif
-
 	if ( viewangles[PITCH] > cl_pitchdown.GetFloat() )
 	{
 		viewangles[PITCH] = cl_pitchdown.GetFloat();
@@ -760,6 +753,11 @@ void CInput::ClampAngles( QAngle& viewangles )
 	}
 
 #ifndef PORTAL	// Don't constrain Roll in Portal because the player can be upside down! -Jeep
+#if defined ( TF_VINTAGE_CLIENT )
+	// If we allow the player to flip around, don't constrain our angles.
+	if ( tf2v_flips.GetBool() )
+		return;
+#endif
 	if ( viewangles[ROLL] > 50 )
 	{
 		viewangles[ROLL] = 50;

@@ -120,9 +120,9 @@ protected:
 	bool m_bImpacted;
 
 	bool m_bCanPenetrate;
-	CUtlVector<int16> m_aHitEnemies;
+	CUtlVector<EHANDLE> m_aHitEnemies;
 
-	float m_flTrailReflectLifetime;
+	float m_flTrailLifetime;
 	EHANDLE m_hSpriteTrail;
 #else
 	bool		m_bCritical;

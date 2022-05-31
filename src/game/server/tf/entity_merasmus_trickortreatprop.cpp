@@ -73,10 +73,10 @@ void CTFMerasmusTrickOrTreatProp::Event_Killed( CTakeDamageInfo const &info )
 	DispatchParticleEffect( "merasmus_object_spawn", WorldSpaceCenter(), GetAbsAngles() );
 	EmitSound( "Halloween.Merasmus_Hiding_Explode" );
 
-	if ( !TFGameRules()->m_hBosses.IsEmpty() && TFGameRules()->m_hBosses.Head() )
+	if ( TFGameRules()->GetActiveBoss() )
 	{
 		// Theoretically one shouldn't exist without the other, so assumptions are made here
-		CMerasmus *pMerasmus = assert_cast<CMerasmus *>( TFGameRules()->m_hBosses[0].Get() );
+		CMerasmus *pMerasmus = assert_cast<CMerasmus *>( TFGameRules()->GetActiveBoss() );
 		if ( pMerasmus->IsNextKilledPropMerasmus() )
 		{
 			pMerasmus->SetAbsOrigin( GetAbsOrigin() );

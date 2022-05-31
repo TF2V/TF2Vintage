@@ -784,7 +784,11 @@ void CBaseHudChat::MsgFunc_SayText( bf_read &msg )
 	}
 
 	CLocalPlayerFilter filter;
+#ifdef TF_VINTAGE_CLIENT
+	C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "TFHudChat.Message" );
+#else
 	C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "HudChat.Message" );
+#endif
 
 	Msg( "%s", szString );
 }
@@ -842,7 +846,11 @@ void CBaseHudChat::MsgFunc_SayText2( bf_read &msg )
 		Msg( "%s\n", RemoveColorMarkup(ansiString) );
 
 		CLocalPlayerFilter filter;
+#ifdef TF_VINTAGE_CLIENT
+		C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "TFHudChat.Message" );
+#else
 		C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "HudChat.Message" );
+#endif
 	}
 	else
 	{

@@ -243,7 +243,7 @@ CBaseEntity *CTFBat_Wood::LaunchBall( CTFPlayer *pPlayer )
 
 	//GetProjectileFireSetup( pPlayer, vecOffset, &vecSrc, &angForward, false, false );
 
-	CTFStunBall *pProjectile = CTFStunBall::Create(this, vecSrc, pPlayer->EyeAngles(), vecVelocity, pPlayer, pPlayer, spin, GetTFWpnData() );
+	CTFStunBall* pProjectile = CTFStunBall::Create(this, vecSrc, pPlayer->EyeAngles(), vecVelocity, pPlayer, pPlayer, spin, GetTFWpnData() );
 	if ( pProjectile )
 	{
 		CalcIsAttackCritical();
@@ -418,7 +418,7 @@ CBaseEntity *CTFBat_Giftwrap::LaunchBall( CTFPlayer *pPlayer )
 
 	//GetProjectileFireSetup( pPlayer, vecOffset, &vecSrc, &angForward, false, false );
 
-	CTFStunBall *pProjectile = CTFBauble::Create(this, vecSrc, pPlayer->EyeAngles(), vecVelocity, pPlayer, pPlayer, spin, GetTFWpnData() );
+	CTFBauble* pProjectile = CTFBauble::Create(this, vecSrc, pPlayer->EyeAngles(), vecVelocity, pPlayer, pPlayer, spin, GetTFWpnData() );
 	if ( pProjectile )
 	{
 		CalcIsAttackCritical();

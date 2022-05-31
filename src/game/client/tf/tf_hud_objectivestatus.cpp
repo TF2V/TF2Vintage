@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2006, Valve Corporation, All rights reserved. ============//
+//========= Copyright ï¿½ 1996-2006, Valve Corporation, All rights reserved. ============//
 //
 // Purpose:
 //
@@ -28,6 +28,7 @@
 #include "c_team_objectiveresource.h"
 #include "tf_hud_flagstatus.h"
 #include "tf_hud_objectivestatus.h"
+#include "tf_hud_robot_destruction_status.h"
 #include "tf_spectatorgui.h"
 #include "teamplayroundbased_gamerules.h"
 #include "tf_gamerules.h"
@@ -714,7 +715,7 @@ CTFHudObjectiveStatus::CTFHudObjectiveStatus( const char *pElementName ) : CHudE
 	m_pEscortPanel = new CTFHudEscort( this, "ObjectiveStatusEscort", TF_TEAM_BLUE, false );
 	m_pEscortRacePanel = new CTFHudMultipleEscort( this, "ObjectiveStatusMultipleEscort" );
 	//m_pTrainingPanel = new CTFHudTraining( this, "ObjectiveStatusTraining" );
-	//m_pRobotDestructionPanel = new CTFHUDRobotDestruction( this, "ObjectiveStatusRobotDestruction" );
+	m_pRobotDestructionPanel = new CTFHUDRobotDestruction( this, "ObjectiveStatusRobotDestruction" );
 
 	SetHiddenBits( 0 );
 
@@ -767,6 +768,16 @@ void CTFHudObjectiveStatus::Reset()
 	{
 		m_pEscortRacePanel->Reset();
 	}
+
+	if ( m_pControlPointProgressBar )
+	{
+		m_pControlPointProgressBar->Reset();
+	}
+
+	if ( m_pRobotDestructionPanel )
+	{
+		m_pRobotDestructionPanel->Reset();
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -787,63 +798,13 @@ void CTFHudObjectiveStatus::SetVisiblePanels( void )
 
 	TurnOffPanels();
 
-	if ( TFGameRules()->GetHudType() )
-	{
-		switch ( TFGameRules()->GetHudType() )
-		{
-		case TF_GAMETYPE_CTF:
-			// turn on the flag panel
-			if ( m_pFlagPanel && !m_pFlagPanel->IsVisible() )
-			{
-				m_pFlagPanel->SetVisible( true );
-			}
-			return;
-			break;
-
-		case TF_GAMETYPE_MEDIEVAL:
-		case TF_GAMETYPE_ARENA:
-		case TF_GAMETYPE_CP:
-			// turn on the control point icons
-			if ( m_pControlPointIconsPanel && !m_pControlPointIconsPanel->IsVisible() )
-			{
-				m_pControlPointIconsPanel->SetVisible(true);
-			}
-			return;
-			break;
-
-		case TF_GAMETYPE_ESCORT:
-
-			if (TeamplayRoundBasedRules()->HasMultipleTrains())
-			{
-				// turn on the payload race panel
-				if (m_pEscortRacePanel && !m_pEscortRacePanel->IsVisible())
-				{
-					m_pEscortRacePanel->SetVisible(true);
-				}
-			}
-			else
-			{
-				// turn on the payload panel
-				if (m_pEscortPanel && !m_pEscortPanel->IsVisible())
-				{
-					m_pEscortPanel->SetVisible(true);
-				}
-			}
-			return;
-			break;
-
-		default:
-			break;
-		}
-	}
-
 	switch ( TFGameRules()->GetGameType() )
 	{
 		case TF_GAMETYPE_CTF:
 			// turn on the flag panel
 			if ( m_pFlagPanel && !m_pFlagPanel->IsVisible() )
 			{
-				m_pFlagPanel->SetVisible(true);
+				m_pFlagPanel->SetVisible( true );
 			}
 			break;
 
@@ -868,21 +829,40 @@ void CTFHudObjectiveStatus::SetVisiblePanels( void )
 			break;
 
 		case TF_GAMETYPE_ESCORT:
-			if (TeamplayRoundBasedRules()->HasMultipleTrains())
+			if ( TeamplayRoundBasedRules()->HasMultipleTrains() )
 			{
 				// turn on the payload race panel
-				if (m_pEscortRacePanel && !m_pEscortRacePanel->IsVisible())
+				if ( m_pEscortRacePanel && !m_pEscortRacePanel->IsVisible() )
 				{
-					m_pEscortRacePanel->SetVisible(true);
+					m_pEscortRacePanel->SetVisible( true );
 				}
 			}
 			else
 			{
 				// turn on the payload panel
-				if (m_pEscortPanel && !m_pEscortPanel->IsVisible())
+				if ( m_pEscortPanel && !m_pEscortPanel->IsVisible() )
 				{
-					m_pEscortPanel->SetVisible(true);
+					m_pEscortPanel->SetVisible( true );
 				}
+			}
+			break;
+
+		case TF_GAMETYPE_MVM:
+			if ( TFGameRules()->State_Get() != GR_STATE_BETWEEN_RNDS && 
+				 TFGameRules()->State_Get() != GR_STATE_TEAM_WIN && 
+				 TFGameRules()->State_Get() != GR_STATE_GAME_OVER )
+			{
+				if ( m_pFlagPanel && !m_pFlagPanel->IsVisible() )
+				{
+					m_pFlagPanel->SetVisible( true );
+				}
+			}
+			break;
+
+		case TF_GAMETYPE_RD:
+			if ( m_pRobotDestructionPanel && !m_pRobotDestructionPanel->IsVisible() )
+			{
+				m_pRobotDestructionPanel->SetVisible( true );
 			}
 			break;
 
@@ -917,6 +897,11 @@ void CTFHudObjectiveStatus::TurnOffPanels()
 	{
 		m_pEscortRacePanel->SetVisible( false );
 	}
+
+	if ( m_pRobotDestructionPanel && m_pRobotDestructionPanel->IsVisible() )
+	{
+		m_pRobotDestructionPanel->SetVisible( false );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -924,7 +909,7 @@ void CTFHudObjectiveStatus::TurnOffPanels()
 //-----------------------------------------------------------------------------
 void CTFHudObjectiveStatus::Think()
 {
-	if ( !TeamplayRoundBasedRules() )
+	if ( !TeamplayRoundBasedRules() || !TFGameRules() )
 		return;
 
 	SetVisiblePanels();
