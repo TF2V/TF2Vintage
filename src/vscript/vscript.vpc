@@ -14,7 +14,7 @@ $Configuration
 {
 	$Compiler
 	{
-		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus;$SRCDIR\thirdparty\luajit\src"
+		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus;$SRCDIR\thirdparty\luajit\src;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\angelscript\include;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on"
 		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT"
 		$WarningLevel					"Level 3 (/W3)"
 	}
