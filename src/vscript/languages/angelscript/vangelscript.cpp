@@ -128,7 +128,8 @@ private:
 	void PrintFunc( asSMessageInfo *msg );
 	void OnException( asIScriptContext *ctx );
 	void OnLineCue( asIScriptContext *ctx );
-	void RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding, ScriptClassDesc_t *pClassDesc );
+	bool RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding, ScriptClassDesc_t *pClassDesc );
+	bool RegisterClassInheritance( ScriptClassDesc_t *pClassDesc );
 	bool ConvertToVariant( void *pData, int iTypeID, ScriptVariant_t *pVariant );
 
 	asIScriptEngine*				m_pEngine;
@@ -514,6 +515,9 @@ bool CAngelScriptVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 			return false;
 		}
 	}
+
+	if ( !RegisterClassInheritance( pClassDesc ) )
+		return false;
 
 	FOR_EACH_VEC( pClassDesc->m_FunctionBindings, i )
 	{
@@ -1013,7 +1017,7 @@ int CAngelScriptVM::GetNumTableEntries( HSCRIPT hScope )
 	return 0;
 }
 
-void CAngelScriptVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding, ScriptClassDesc_t *pClassDesc )
+bool CAngelScriptVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding, ScriptClassDesc_t *pClassDesc )
 {
 	CUtlString pszDecleration = "";
 	switch ( pFuncBinding->m_desc.m_ReturnType )
@@ -1050,7 +1054,7 @@ void CAngelScriptVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding
 			break;
 		default:
 			AssertMsg1( false, "Unhandled data type(%d) passed in function registration.", pFuncBinding->m_desc.m_ReturnType );
-			return;
+			return false;
 	}
 
 	pszDecleration += pFuncBinding->m_desc.m_pszScriptName;
@@ -1094,7 +1098,7 @@ void CAngelScriptVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding
 				break;
 			default:
 				AssertMsg1( false, "Unhandled data type(%d) passed in function registration.", pFuncBinding->m_desc.m_ReturnType );
-				return;
+				return false;
 		}
 
 		if ( ( i + 1 ) != nNumParams )
@@ -1106,14 +1110,83 @@ void CAngelScriptVM::RegisterFunctionGuts( ScriptFunctionBinding_t *pFuncBinding
 	// Store for cleanup
 	m_ScriptContexts.AddToTail( pContext );
 
+	int r = 0;
 	if ( pClassDesc )
 	{
-		Verify( m_pEngine->RegisterObjectMethod( pClassDesc->m_pszScriptName, pszDecleration, asFUNCTION( TranslateCall ), asCALL_GENERIC, pContext ) >= 0 );
+		r = m_pEngine->RegisterObjectMethod( pClassDesc->m_pszScriptName, pszDecleration, asFUNCTION( TranslateCall ), asCALL_GENERIC, pContext );
 	}
 	else
 	{
-		Verify( m_pEngine->RegisterGlobalFunction( pszDecleration, asFUNCTION( TranslateCall ), asCALL_GENERIC, pContext ) >= 0 );
+		r = m_pEngine->RegisterGlobalFunction( pszDecleration, asFUNCTION( TranslateCall ), asCALL_GENERIC, pContext );
 	}
+
+	return r >= 0;
+}
+
+bool CAngelScriptVM::RegisterClassInheritance( ScriptClassDesc_t *pClassDesc )
+{
+	ScriptClassDesc_t *pBaseDesc = pClassDesc->m_pBaseDesc;
+	while ( pBaseDesc )
+	{
+		FOR_EACH_VEC( pBaseDesc->m_FunctionBindings, i )
+		{
+			if ( !RegisterFunctionGuts( &pBaseDesc->m_FunctionBindings[i], pClassDesc ) )
+				return false;
+		}
+
+		FOR_EACH_VEC( pBaseDesc->m_MemberBindings, i )
+		{
+			ScriptMemberBinding_t &binding = pBaseDesc->m_MemberBindings[i];
+
+			char szDecleration[128] = "";
+			switch ( binding.m_nMemberType )
+			{
+				case FIELD_VOID:
+					V_strcpy_safe( szDecleration, "void " );
+					break;
+				case FIELD_CHARACTER:
+					V_strcpy_safe( szDecleration, "int8 " );
+					break;
+				case FIELD_BOOLEAN:
+					V_strcpy_safe( szDecleration, "bool " );
+					break;
+				case FIELD_INTEGER:
+					V_strcpy_safe( szDecleration, "int " );
+					break;
+				case FIELD_FLOAT:
+					V_strcpy_safe( szDecleration, "float " );
+					break;
+				case FIELD_CSTRING:
+					AssertMsg( false, "Need to handle conversion from c-string in member declaration" );
+					V_strcpy_safe( szDecleration, "string " );
+					break;
+				case FIELD_VECTOR:
+					V_strcpy_safe( szDecleration, "Vector3 " );
+					break;
+				case FIELD_QUATERNION:
+					V_strcpy_safe( szDecleration, "Quaternion " );
+					break;
+				case FIELD_MATRIX3X4:
+					V_strcpy_safe( szDecleration, "Matrix " );
+					break;
+				case FIELD_HSCRIPT:
+					V_strcpy_safe( szDecleration, "ref@ " );
+					break;
+			}
+
+			V_strcat_safe( szDecleration, binding.m_pszScriptName );
+			int r = m_pEngine->RegisterObjectProperty( pClassDesc->m_pszScriptName, szDecleration, binding.m_unMemberOffs, asOFFSET( CScriptClass, m_pInstance ), true );
+			if ( r < 0 )
+			{
+				Assert( false );
+				return false;
+			}
+		}
+
+		pBaseDesc = pBaseDesc->m_pBaseDesc;
+	}
+
+	return true;
 }
 
 ScriptClassDesc_t *CAngelScriptVM::GetClassDescForType( asITypeInfo *pInfo )
