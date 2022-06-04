@@ -208,7 +208,7 @@ DEFINE_FIXEDSIZE_ALLOCATOR( CScriptClass, 1, UTLMEMORYPOOL_GROW_FAST );
 
 
 CAngelScriptVM::CAngelScriptVM()
-	: m_JIT( JIT_ALLOC_SIMPLE|JIT_NO_SWITCHES )
+	: m_JIT( JIT_ALLOC_SIMPLE|JIT_SYSCALL_NO_ERRORS )
 {
 	m_pEngine = NULL;
 	m_nUniqueKeySerial = 0;
@@ -235,7 +235,7 @@ bool CAngelScriptVM::Init( void )
 	RegisterScriptDateTime( m_pEngine );
 	RegisterValveScriptMath( m_pEngine );
 
-	//m_ContextMgr.SetGetTimeCallback( &GetTime );
+	m_ContextMgr.SetGetTimeCallback( &GetTime );
 	m_ContextMgr.RegisterCoRoutineSupport( m_pEngine );
 
 	m_pEngine->SetJITCompiler( &m_JIT );
@@ -270,8 +270,7 @@ void CAngelScriptVM::Shutdown( void )
 
 bool CAngelScriptVM::Frame( float simTime )
 {
-	m_ContextMgr.ExecuteScripts();
-	return true;
+	return m_ContextMgr.ExecuteScripts() == 0;
 }
 
 ScriptStatus_t CAngelScriptVM::Run( const char *pszScript, bool bWait )
