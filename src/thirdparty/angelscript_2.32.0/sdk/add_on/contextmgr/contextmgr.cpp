@@ -2,6 +2,7 @@
 #include <string>
 
 #include "contextmgr.h"
+#include <tier0/threadtools.h>
 
 using namespace std;
 
@@ -152,6 +153,7 @@ CContextMgr::~CContextMgr()
 
 int CContextMgr::ExecuteScripts()
 {
+	LOCAL_THREAD_LOCK();
 	// TODO: Should have an optional time out for this function. If not all scripts executed before the
 	//       time out, the next time the function is called the loop should continue
 	//       where it left off.
