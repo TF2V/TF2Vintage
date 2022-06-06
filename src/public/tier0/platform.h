@@ -428,7 +428,6 @@ typedef unsigned int		uint;
 		#define  STDCALL			__attribute__ ((__stdcall__))
 	#else
 		#define  STDCALL
-		#define  __stdcall			__attribute__ ((__stdcall__))
 	#endif
 
 	#define  FASTCALL
