@@ -383,7 +383,7 @@ HSCRIPT CLuaVM::RegisterInstance( ScriptClassDesc_t *pDesc, void *pInstance )
 	if ( !RegisterClass( pDesc ) )
 		return NULL;
 
-	ScriptInstance_t *pScriptInstance = (ScriptInstance_t *)lua_newuserdata( GetVM(), sizeof ScriptInstance_t );
+	ScriptInstance_t *pScriptInstance = (ScriptInstance_t *)lua_newuserdata( GetVM(), sizeof( ScriptInstance_t ) );
 	pScriptInstance->m_pInstance = pInstance;
 	pScriptInstance->m_pClassDesc = pDesc;
 
@@ -435,13 +435,13 @@ void CLuaVM::SetInstanceUniqeId( HSCRIPT hInstance, const char *pszId )
 
 	lua_rawgeti( GetVM(), LUA_REGISTRYINDEX, (intptr_t)hInstance );
 	ScriptInstance_t *pInstance = (ScriptInstance_t *)lua_touserdata( GetVM(), -1 );
-	V_strncpy( pInstance->m_szUniqueId, pszId, sizeof pInstance->m_szUniqueId );
+	V_strncpy( pInstance->m_szUniqueId, pszId, sizeof( pInstance->m_szUniqueId ) );
 	lua_pop( GetVM(), 1 );
 }
 
 bool CLuaVM::GenerateUniqueKey( const char *pszRoot, char *pBuf, int nBufSize )
 {
-	V_snprintf( pBuf, nBufSize, "_%x%I64x_%s", RandomInt(0, 4095), ++m_nUniqueKeyQueries, pszRoot );
+	V_snprintf( pBuf, nBufSize, "_%x%lld_%s", RandomInt(0, 4095), ++m_nUniqueKeyQueries, pszRoot );
 
 	return true;
 }

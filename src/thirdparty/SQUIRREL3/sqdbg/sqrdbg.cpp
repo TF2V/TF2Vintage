@@ -76,11 +76,12 @@ SQBool sq_rdbg_connected(HSQREMOTEDBG rdbg)
 	if (rdbg->_endpoint == INVALID_SOCKET)
 		return FALSE;
 
-	FD_SET fdSet{};
+	fd_set fdSet;
+	FD_ZERO(&fdSet);
 	FD_SET(rdbg->_endpoint,&fdSet);
 
-	timeval timeout{};
-	timerclear(&timeout);
+	struct timeval timeout;
+	timeout.tv_sec = timeout.tv_usec = 0;
 
 	SOCKET sock = select(0,&fdSet,NULL,NULL,&timeout);
 	if (sock == INVALID_SOCKET)

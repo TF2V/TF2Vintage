@@ -9,7 +9,6 @@
 #include "scriptany/scriptany.h"
 #include "scriptdictionary/scriptdictionary.h"
 #include "scriptstdstring/scriptstdstring.h"
-#include "datetime/datetime.h"
 #include "scripthelper/scripthelper.h"
 
 #include "vscript/ivscript.h"
@@ -198,7 +197,7 @@ public:
 	ScriptClassDesc_t *GetDesc() const { return m_pClassDesc; }
 
 private:
-	friend CAngelScriptVM;
+	friend class CAngelScriptVM;
 	ScriptClassDesc_t *m_pClassDesc;
 	void *m_pInstance;
 	char m_szUniqueId[256];
@@ -232,7 +231,6 @@ bool CAngelScriptVM::Init( void )
 	RegisterStdStringUtils( m_pEngine );
 	RegisterScriptHandle( m_pEngine );
 	RegisterScriptMath( m_pEngine );
-	RegisterScriptDateTime( m_pEngine );
 	RegisterValveScriptMath( m_pEngine );
 
 	m_ContextMgr.SetGetTimeCallback( &GetTime );
@@ -1213,8 +1211,8 @@ void CAngelScriptVM::Free( void *p )
 
 int CAngelScriptVM::OnInclude( char const *pszFromFile, char const *pszSection, CScriptBuilder *pBuilder, void *pvParam )
 {
-	FILE *fp = NULL;
-	if ( fopen_s( &fp, pszFromFile, "rb" ) )
+	FILE *fp = fopen( pszFromFile, "rb" );
+	if ( fp == nullptr )
 		return -1;
 	
 	fseek( fp, 0, SEEK_END );
@@ -1222,7 +1220,7 @@ int CAngelScriptVM::OnInclude( char const *pszFromFile, char const *pszSection, 
 	fseek( fp, 0, SEEK_SET );
 
 	CUtlBuffer buf( 0, nFileLen+1 );
-	size_t nRead = fread_s( buf.Base(), nFileLen, 1, nFileLen, fp );
+	size_t nRead = fread( buf.Base(), 1, nFileLen, fp );
 	if ( nRead != nFileLen )
 		return -1;
 
@@ -1474,7 +1472,7 @@ void CAngelScriptVM::PrintAny( CScriptAny *pAny )
 	{
 		int64 llValue = 0;
 		pAny->Retrieve( llValue );
-		V_sprintf_safe( szValue, "%ld", llValue );
+		V_sprintf_safe( szValue, "%lld", llValue );
 	}
 	else if ( iTypeID == asTYPEID_BOOL )
 	{

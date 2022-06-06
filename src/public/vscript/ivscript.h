@@ -155,11 +155,6 @@ public:
 DECLARE_POINTER_HANDLE( HSCRIPT );
 #define INVALID_HSCRIPT ((HSCRIPT)-1)
 
-template <typename T> T *HScriptToClass( HSCRIPT hObj )
-{
-	return (hObj) ? (T*)g_pScriptVM->GetInstanceValue( hObj, GetScriptDesc( (T*)NULL ) ) : NULL;
-}
-
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
@@ -202,7 +197,7 @@ DECLARE_DEDUCE_FIELDTYPE( FIELD_VARIANT,    ScriptVariant_t );
 template <typename T>
 inline const char * ScriptFieldTypeName() 
 {
-	T::using_unknown_script_type(); 
+	return T::using_unknown_script_type();
 }
 
 #define DECLARE_NAMED_FIELDTYPE( fieldType, strName ) template <> inline const char * ScriptFieldTypeName<fieldType>() { return strName; }
@@ -1158,6 +1153,15 @@ public:
 
 };
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+
+template <typename T> T *HScriptToClass( HSCRIPT hObj )
+{
+	extern IScriptVM *g_pScriptVM;
+	return (hObj) ? (T*)g_pScriptVM->GetInstanceValue( hObj, GetScriptDesc( (T*)NULL ) ) : NULL;
+}
+
 
 //-----------------------------------------------------------------------------
 // Script scope helper class
@@ -1302,6 +1306,7 @@ public:
 		return ( hFunction != NULL ) ;
 	}
 
+#ifndef VSCRIPT_DLL_EXPORT
 	template<typename T>
 	void GetStruct( T *pStruct, HSCRIPT hScope = NULL )
 	{
@@ -1351,6 +1356,7 @@ public:
 			}
 		}
 	}
+#endif
 
 	//-----------------------------------------------------
 

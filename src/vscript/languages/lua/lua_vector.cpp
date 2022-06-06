@@ -51,7 +51,7 @@ int vec3_new( lua_State *L )
 {
 	lua_settop( L, 3 );
 
-	Vector *pVector = (Vector *)lua_newuserdata( L, sizeof Vector );
+	Vector *pVector = (Vector *)lua_newuserdata( L, sizeof( Vector ) );
 
 	luaL_getmetatable( L, "Vec3" );
 	lua_setmetatable( L, -2 );

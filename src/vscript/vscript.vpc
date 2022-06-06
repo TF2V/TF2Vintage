@@ -15,7 +15,7 @@ $Configuration
 	$Compiler
 	{
 		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus;$SRCDIR\thirdparty\luajit\src;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\angelscript\include;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on"
-		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;CROSS_PLATFORM_VERSION=1"
+		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT"
 		$WarningLevel					"Level 3 (/W3)"
 	}
 }
@@ -193,7 +193,6 @@ $Project "VScript"
             $Folder "Source Files"
             {
                 $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\contextmgr\contextmgr.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\datetime\datetime.cpp" \
                       "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\debugger\debugger.cpp" \
                       "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptany\scriptany.cpp" \
                       "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptarray\scriptarray.cpp" \
@@ -222,7 +221,6 @@ $Project "VScript"
             $Folder "Header Files"
             {
                 $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\contextmgr\contextmgr.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\datetime\datetime.h"
                 $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\debugger\debugger.h"
                 $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptany\scriptany.h"
                 $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptarray\scriptarray.h"
