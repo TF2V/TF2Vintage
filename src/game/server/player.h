@@ -337,14 +337,10 @@ public:
 
 	virtual Vector			EyePosition( void );			// position of eyes
 	const QAngle&			EyeAngles( void );
-	const Vector&			ScriptEyeAngles( void ) { static QAngle angEyes; angEyes = EyeAngles(); return (Vector &)angEyes; }
 	void					EyePositionAndVectors( Vector *pPosition, Vector *pForward, Vector *pRight, Vector *pUp );
 	virtual const QAngle&	LocalEyeAngles( void );		// Direction of eyes
 	void					EyeVectors( Vector *pForward, Vector *pRight = NULL, Vector *pUp = NULL );
 	void					CacheVehicleView( void );	// Calculate and cache the position of the player in the vehicle
-	const Vector&			ScriptEyeForward( void );
-	const Vector&			ScriptEyeRight( void );
-	const Vector&			ScriptEyeUp( void );
 
 	// Sets the view angles
 	void					SnapEyeAngles( const QAngle &viewAngles );
@@ -388,7 +384,6 @@ public:
 	void					ShowViewModel( bool bShow );
 	void					ShowCrosshair( bool bShow );
 
-	bool					ScriptIsPlayerNoclipping( void ) { return ( GetMoveType() == MOVETYPE_NOCLIP ); }
 	virtual void			NoClipStateChanged( void ) {};
 
 	// View model prediction setup
@@ -1232,6 +1227,16 @@ private:
 public:
 	virtual unsigned int PlayerSolidMask( bool brushOnly = false ) const;	// returns the solid mask for the given player, so bots can have a more-restrictive set
 
+	// ----------------------------------------------------------------------------
+	// VScript accessors
+	// ----------------------------------------------------------------------------
+	const QAngle&		ScriptEyeAngles( void );
+	const Vector&		ScriptEyeForward( void );
+	const Vector&		ScriptEyeRight( void );
+	const Vector&		ScriptEyeUp( void );
+
+	const Vector&		ScriptGetPunchAngle();
+	void				ScriptSetPunchAngle( const Vector &punchAngle );
 };
 
 typedef CHandle<CBasePlayer> CBasePlayerHandle;
@@ -1365,23 +1370,39 @@ inline bool CBasePlayer::IsFiringWeapon( void ) const
 
 inline const Vector &CBasePlayer::ScriptEyeForward( void )
 {
-	static Vector fwd;
-	EyeVectors( &fwd );
-	return fwd;
+	static Vector vecFwd;
+	EyeVectors( &vecFwd, NULL, NULL );
+	return vecFwd;
 }
 
 inline const Vector &CBasePlayer::ScriptEyeRight( void )
 {
-	static Vector right;
-	EyeVectors( NULL, &right );
-	return right;
+	static Vector vecRight;
+	EyeVectors( NULL, &vecRight, NULL );
+	return vecRight;
 }
 
 inline const Vector &CBasePlayer::ScriptEyeUp( void )
 {
-	static Vector up;
-	EyeVectors( NULL, NULL, &up );
-	return up;
+	static Vector vecUp;
+	EyeVectors( NULL, NULL, &vecUp );
+	return vecUp;
+}
+
+inline const Vector &CBasePlayer::ScriptGetPunchAngle( void )
+{
+	static Vector vecPunch;
+
+	QAngle ang = GetPunchAngle();
+	vecPunch.Init( ang.x, ang.y, ang.z );
+
+	return vecPunch;
+}
+
+inline void CBasePlayer::ScriptSetPunchAngle( Vector const &punchAngles )
+{
+	QAngle angles( punchAngles.x, punchAngles.y, punchAngles.z );
+	SetPunchAngle( angles );
 }
 
 

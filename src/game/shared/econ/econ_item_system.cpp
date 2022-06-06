@@ -3,7 +3,6 @@
 #include "econ_item_system.h"
 #include "script_parser.h"
 #include "activitylist.h"
-#include "attribute_types.h"
 #include "vscript_shared.h"
 #include "tier0/icommandline.h"
 
@@ -20,15 +19,6 @@ const char *g_TeamVisualSections[TF_TEAM_VISUALS_COUNT] =
 	"visuals_grn",		// TEAM_GREEN
 	"visuals_ylw",		// TEAM_YELLOW
 	"visuals_mvm_boss"	// ???
-};
-
-const char *g_WearableAnimTypeStrings[NUM_WEARABLEANIM_TYPES] =
-{
-	"on_spawn",
-	"start_building",
-	"stop_building",
-	"start_taunting",
-	"stop_taunting",
 };
 
 const char *g_WearableAnimTypeStrings[NUM_WEARABLEANIM_TYPES] =
@@ -442,10 +432,20 @@ bool CEconItemDefinition::LoadFromKV( KeyValues *pDefinition )
 				if ( !attribute.BInitFromKV_SingleLine( pAttribData ) )
 					continue;
 
+				attributes.AddToTail( attribute );
+			}
+		}
+		else if (!V_strnicmp(pSubData->GetName(), "visuals", 7))
+		{
+			// Figure out what team is this meant for.
+			int iVisuals = UTIL_StringFieldToInt(pSubData->GetName(), g_TeamVisualSections, TF_TEAM_VISUALS_COUNT);
+			if (iVisuals == TEAM_UNASSIGNED)
+			{
 				// Hacky: for standard visuals block, assign it to all teams at once.
 				for (int team = 0; team < TF_TEAM_VISUALS_COUNT; team++)
 				{
 					if (team == TEAM_SPECTATOR)
+						continue;
 
 					ParseVisuals(pSubData, team);
 				}
@@ -802,12 +802,13 @@ CEconItemSchema::CEconItemSchema() :
 
 CEconItemSchema::~CEconItemSchema()
 {
+	m_pSchema->deleteThis();
+
 	m_Items.PurgeAndDeleteElements();
 	m_Attributes.PurgeAndDeleteElements();
 
 	FOR_EACH_DICT_FAST( m_PrefabsValues, i )
 	{
-		m_PrefabsValues[i]->deleteThis();
 		m_PrefabsValues[i]->deleteThis();
 	}
 
@@ -819,6 +820,7 @@ CEconItemSchema::~CEconItemSchema()
 
 //-----------------------------------------------------------------------------
 // Purpose: Initializer
+//-----------------------------------------------------------------------------
 bool CEconItemSchema::Init( void )
 {
 	Reset();

@@ -15,7 +15,7 @@ $Configuration
 	$Compiler
 	{
 		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus;$SRCDIR\thirdparty\luajit\src;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\angelscript\include;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on"
-		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT"
+		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;CROSS_PLATFORM_VERSION=1"
 		$WarningLevel					"Level 3 (/W3)"
 	}
 }
@@ -163,10 +163,18 @@ $Project "VScript"
 	{
 		$Folder "Source Files"
 		{
-			$File	"languages\angelscript\as_jit.cpp"
 			$File	"languages\angelscript\virtual_asm_linux.cpp"		[$POSIX]
 			$File	"languages\angelscript\virtual_asm_windows.cpp"		[$WINDOWS]
 			$File	"languages\angelscript\virtual_asm_x86.cpp"
+			{
+				$Configuration
+				{
+					$Compiler
+					{
+						$AdditionalOptions		"$BASE /EHa"
+					}
+				}
+			}
 		}
 
 		$Folder "Header Files"
@@ -174,6 +182,62 @@ $Project "VScript"
 			$File 	"languages\angelscript\as_jit.h"
 			$File	"languages\angelscript\virtual_asm.h"
 		}
+
+		$Folder "Public Header Files"
+        {
+            $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\angelscript\include\angelscript.h"
+        }
+
+        $Folder "Add-Ons"
+        {
+            $Folder "Source Files"
+            {
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\contextmgr\contextmgr.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\datetime\datetime.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\debugger\debugger.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptany\scriptany.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptarray\scriptarray.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptbuilder\scriptbuilder.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptdictionary\scriptdictionary.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptgrid\scriptgrid.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthandle\scripthandle.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthelper\scripthelper.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmath.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmathcomplex.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptstdstring\scriptstdstring.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptstdstring\scriptstdstring_utils.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\serializer\serializer.cpp" \
+                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\weakref\weakref.cpp"
+                {
+                    $Configuration
+                    {
+                        $Compiler
+                        {
+                            $AdditionalOptions				"$BASE /EHa"
+                        }
+                    }
+                }
+            }
+
+            $Folder "Header Files"
+            {
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\contextmgr\contextmgr.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\datetime\datetime.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\debugger\debugger.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptany\scriptany.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptarray\scriptarray.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptbuilder\scriptbuilder.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptdictionary\scriptdictionary.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptgrid\scriptgrid.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthandle\scripthandle.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthelper\scripthelper.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmath.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmathcomplex.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptstdstring\scriptstdstring.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\serializer\serializer.h"
+                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\weakref\weakref.h"
+            }
+        }
 	}
 
 	$Folder	"Link Libraries" 
