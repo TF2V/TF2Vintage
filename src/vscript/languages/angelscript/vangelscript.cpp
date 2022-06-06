@@ -466,7 +466,6 @@ bool CAngelScriptVM::RegisterClass( ScriptClassDesc_t *pClassDesc )
 {
 	char const *pszClassName = pClassDesc->m_pszScriptName;
 
-	// TODO: Inheritance?
 	if ( pClassDesc->m_pBaseDesc )
 	{
 		RegisterClass( pClassDesc->m_pBaseDesc );
