@@ -149,7 +149,11 @@ void RegisterVector3( asIScriptEngine *engine )
 {
 	int r = 0;
 
+#ifdef AS_CAN_USE_CPP11
 	r = engine->RegisterObjectType( "Vector3", sizeof( Vector ), asOBJ_VALUE | asGetTypeTraits<Vector>() ); Assert( r >= 0 );
+#else
+	r = engine->RegisterObjectType( "Vector3", sizeof( Vector ), asOBJ_VALUE | asOBJ_APP_CLASS_CDAK ); Assert( r >= 0 );
+#endif
 
 	// Construction
 	r = engine->RegisterObjectBehaviour( "Vector3", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR( VectorConstruct, (Vector *), void ), asCALL_CDECL_OBJLAST ); Assert( r >= 0 );
@@ -249,7 +253,11 @@ void RegisterQuaternion( asIScriptEngine *engine )
 {
 	int r = 0;
 
+#ifdef AS_CAN_USE_CPP11
 	r = engine->RegisterObjectType( "Quaternion", sizeof( Quaternion ), asOBJ_VALUE | asGetTypeTraits<Quaternion>() ); Assert( r >= 0 );
+#else
+	r = engine->RegisterObjectType( "Quaternion", sizeof( Quaternion ), asOBJ_VALUE | asOBJ_APP_CLASS_CDK ); Assert( r >= 0 );
+#endif
 
 	// Construction
 	r = engine->RegisterObjectBehaviour( "Quaternion", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR( QuaternionConstruct, (Quaternion *), void ), asCALL_CDECL_OBJLAST );
@@ -319,7 +327,11 @@ void RegisterMatrix( asIScriptEngine *engine )
 {
 	int r = 0;
 
+#ifdef AS_CAN_USE_CPP11
 	r = engine->RegisterObjectType( "Matrix", sizeof( matrix3x4_t ), asOBJ_VALUE | asGetTypeTraits<matrix3x4_t>() ); Assert( r >= 0 );
+#else
+	r = engine->RegisterObjectType( "Matrix", sizeof( matrix3x4_t ), asOBJ_VALUE | asOBJ_APP_CLASS_CDK ); Assert( r >= 0 );
+#endif
 
 	// Construction
 	r = engine->RegisterObjectBehaviour( "Matrix", asBEHAVE_CONSTRUCT, "void f()", asFUNCTIONPR( MatrixConstruct, (matrix3x4_t *), void ), asCALL_CDECL_OBJLAST ); Assert( r >= 0 );
