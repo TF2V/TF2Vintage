@@ -1451,7 +1451,7 @@ public:
     {
         Lex(); Expect(_SC('('));
         SQObjectPtr _null;
-        CreateFunction(SQObjectPtr(),lambda);
+        CreateFunction(_null,lambda);
         _fs->AddInstruction(_OP_CLOSURE, _fs->PushTarget(), _fs->_functions.size() - 1, ftype == TK_FUNCTION?0:1);
     }
     void ClassExp()
