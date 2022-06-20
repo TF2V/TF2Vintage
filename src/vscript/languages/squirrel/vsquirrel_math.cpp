@@ -271,7 +271,7 @@ SQInteger VectorFromKeyValue( HSQUIRRELVM pVM )
 		return sq_throwerror( pVM, "Expected a string input" );
 
 	float x, y, z;
-	if ( sscanf_s( pInput, "%f %f %f", &x, &y, &z ) < 3 )
+	if ( sscanf( pInput, "%f %f %f", &x, &y, &z ) < 3 )
 		return sq_throwerror( pVM, "Expected format: 'float float float'" );
 
 	pVector->Init( x, y, z );
@@ -640,7 +640,7 @@ SQInteger QuaternionFromKeyValue( HSQUIRRELVM pVM )
 		return sq_throwerror( pVM, "Expected a string input" );
 
 	float x, y, z, w;
-	if ( sscanf_s( pInput, "%f %f %f %f", &x, &y, &z, &w ) < 4 )
+	if ( sscanf( pInput, "%f %f %f %f", &x, &y, &z, &w ) < 4 )
 		return sq_throwerror( pVM, "Expected format: 'float float float float'" );
 
 	pQuat->Init( x, y, z, w );

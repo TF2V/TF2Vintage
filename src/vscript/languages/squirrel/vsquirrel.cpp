@@ -29,7 +29,9 @@
 #include "sqclass.h"
 #include "sqstring.h"
 #include "squtils.h"
+#ifdef _WIN32
 #include "sqdbgserver.h"
+#endif
 
 #include "vscript/ivscript.h"
 #include "vscript_init_nut.h"
@@ -54,7 +56,7 @@ extern "C"
 	}
 }
 
-static SQObjectPtr const _null_;
+static SQObjectPtr const _null_{};
 
 typedef struct
 {
@@ -1013,6 +1015,7 @@ void CSquirrelVM::DumpState()
 
 bool CSquirrelVM::ConnectDebugger()
 {
+#ifdef _WIN32
 	if( developer.GetInt() == 0 )
 		return false;
 
@@ -1028,15 +1031,20 @@ bool CSquirrelVM::ConnectDebugger()
 	// !WARN!
 	// This will hold up the main thread until connection is established
 	return SQ_SUCCEEDED( sq_rdbg_waitforconnections( m_hDbgSrv ) );
+#else
+	return false;
+#endif
 }
 
 void CSquirrelVM::DisconnectDebugger()
 {
+#ifdef _WIN32
 	if ( m_hDbgSrv )
 	{
 		sq_rdbg_shutdown( m_hDbgSrv );
 		m_hDbgSrv = NULL;
 	}
+#endif
 }
 
 bool CSquirrelVM::RaiseException( const char *pszExceptionText )
