@@ -243,7 +243,7 @@ $Project "VScript"
 		$Lib 	mathlib
 		$Lib 	tier1
 		$Lib	"$LIBCOMMON\lua51"			[$WINDOWS]
-		$Lib	"$LIBCOMMON$PLATSUBDIR\libluajit"		[$POSIX]
+		$Lib	"$LIBCOMMON\libluajit"		[$POSIX]
 		$Lib	"$LIBCOMMON\angelscript"
 	}
 }
