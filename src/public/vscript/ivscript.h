@@ -1330,7 +1330,7 @@ public:
 					}
 					case FIELD_CSTRING:
 					{
-						string_t iNewString = ::AllocPooledString( res.m_pszString );
+						string_t iNewString = AllocPooledString( res.m_pszString );
 						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), STRING( iNewString ), binding.m_unMemberSize );
 						break;
 					}
