@@ -15,7 +15,7 @@ $Configuration
 	$Compiler
 	{
 		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus;$SRCDIR\thirdparty\luajit\src;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\angelscript\include;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on"
-		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT"
+		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;CROSS_PLATFORM_VERSION=1"
 		$WarningLevel					"Level 3 (/W3)"
 	}
 }
@@ -163,6 +163,7 @@ $Project "VScript"
 	{
 		$Folder "Source Files"
 		{
+			$File	"languages\angelscript\as_jit.cpp"
 			$File	"languages\angelscript\virtual_asm_linux.cpp"		[$POSIX]
 			$File	"languages\angelscript\virtual_asm_windows.cpp"		[$WINDOWS]
 			$File	"languages\angelscript\virtual_asm_x86.cpp"

@@ -56,7 +56,7 @@ extern "C"
 	}
 }
 
-static SQObjectPtr const _null_{};
+static SQObjectPtr const _null_;
 
 typedef struct
 {
@@ -66,7 +66,7 @@ typedef struct
 } ScriptInstance_t;
 
 
-static SQObject const INVALID_HSQOBJECT = { (SQObjectType)-1, (SQTable *)-1 };
+static SQObject const INVALID_HSQOBJECT = { (SQObjectType)-1, {(SQTable *)-1} };
 inline bool operator==( SQObject const &lhs, SQObject const &rhs ) { return lhs._type == rhs._type && _table( lhs ) == _table( rhs ); }
 inline bool operator!=( SQObject const &lhs, SQObject const &rhs ) { return lhs._type != rhs._type || _table( lhs ) != _table( rhs ); }
 
