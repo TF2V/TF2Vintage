@@ -163,10 +163,10 @@ $Project "VScript"
 	{
 		$Folder "Source Files"
 		{
-			$File	"languages\angelscript\as_jit.cpp"
 			$File	"languages\angelscript\virtual_asm_linux.cpp"		[$POSIX]
 			$File	"languages\angelscript\virtual_asm_windows.cpp"		[$WINDOWS]
-			$File	"languages\angelscript\virtual_asm_x86.cpp"
+			$File	"languages\angelscript\virtual_asm_x86.cpp"		\
+					"languages\angelscript\as_jit.cpp"
 			{
 				$Configuration
 				{
