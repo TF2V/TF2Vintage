@@ -31,6 +31,10 @@ public:
 	CScriptedWeaponScope();
 	~CScriptedWeaponScope();
 
+	IScriptVM *GetVM() {
+		return CDefScriptScopeBase::GetVM();
+	}
+
 	template<class Arg>
 	void PushArg( Arg const &arg )
 	{
