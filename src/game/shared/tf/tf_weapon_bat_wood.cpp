@@ -347,13 +347,6 @@ void C_TFBat_Wood::CreateMove( float flInputSampleTime, CUserCmd *pCmd, const QA
 IMPLEMENT_NETWORKCLASS_ALIASED( TFBat_Giftwrap, DT_TFWeaponBat_Giftwrap )
 
 BEGIN_NETWORK_TABLE( CTFBat_Giftwrap, DT_TFWeaponBat_Giftwrap )
-#ifdef CLIENT_DLL
-	RecvPropTime( RECVINFO( m_flNextFireTime ) ),
-	RecvPropBool( RECVINFO( m_bFiring ) ),
-#else
-	SendPropTime( SENDINFO( m_flNextFireTime ) ),
-	SendPropBool( SENDINFO( m_bFiring ) ),
-#endif
 END_NETWORK_TABLE()
 
 BEGIN_PREDICTION_DATA( CTFBat_Giftwrap )

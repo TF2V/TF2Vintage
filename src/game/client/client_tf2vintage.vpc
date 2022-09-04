@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------------
 
 $Macro SRCDIR		"..\.."
-$Macro GAMENAME 	"tf2vintage" [!$SOURCESDK]
-$Macro GAMENAME 	"tf2vintage" [$SOURCESDK]
+$Macro GAMENAME 	"tf2vintage"
 
 $Include "$SRCDIR\game\client\client_base.vpc"
+$Include "$SRCDIR\game\shared\econ_protobuf_include.vpc"
 
 $Configuration
 {
@@ -83,6 +83,10 @@ $Project "Client (TF)"
 			$File	"$SRCDIR\game\shared\econ\econ_wearable.h"
 			$File	"$SRCDIR\game\shared\econ\econ_item_view.cpp"
 			$File	"$SRCDIR\game\shared\econ\econ_item_view.h"
+			$File	"$SRCDIR\game\shared\econ\econ_networking.cpp"
+			$File	"$SRCDIR\game\shared\econ\econ_networking.h"
+			$File	"$SRCDIR\game\shared\econ\econ_networking_messages.cpp"
+			$File	"$SRCDIR\game\shared\econ\econ_networking_messages.h"
 			$File	"$SRCDIR\game\shared\econ\econ_item_interface.h"
 			$File	"$SRCDIR\game\shared\econ\game_item_schema.h"
 			$File	"$SRCDIR\game\shared\econ\ihasattributes.h"
@@ -205,6 +209,8 @@ $Project "Client (TF)"
 			$File	"tf\tf_hud_weaponselection.cpp"
 			$File	"tf\tf_hud_winpanel.cpp"
 			$File	"tf\tf_hud_winpanel.h"	
+			$File	"tf\tf_hud_pve_winpanel.cpp"
+			$File	"tf\tf_hud_pve_winpanel.h"	
 			$File	"tf\tf_hud_damageaccount_panel.cpp"
 			$File	"tf\tf_input_main.cpp"
 			$File	"tf\tf_notificationmanager.cpp"
@@ -323,6 +329,8 @@ $Project "Client (TF)"
 					$File	"tf\vgui\panels\tf_optionsvideopanel.h"
 					$File	"tf\vgui\panels\tf_pausemenupanel.cpp"
 					$File	"tf\vgui\panels\tf_pausemenupanel.h"
+					$File	"tf\player_vs_environment\c_tf_upgrades.cpp"
+					$File	"tf\player_vs_environment\c_tf_upgrades.h"
 					$File	"tf\vgui\panels\tf_tooltippanel.cpp"
 					$File	"tf\vgui\panels\tf_tooltippanel.h"
 					$File	"tf\vgui\panels\tf_quitdialogpanel.cpp"

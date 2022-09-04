@@ -1270,7 +1270,7 @@ void CPopulationManager::LoadLastKnownMission( void )
 	pCatagory = m_pMvMMapCycle->FindKey( UTIL_VarArgs( "%d", 1 ) );
 	if ( pCatagory )
 	{
-		KeyValues *pMission = pCatagory->FindKey( UTIL_VarArgs( "%d" ), 1 );
+		KeyValues *pMission = pCatagory->FindKey( UTIL_VarArgs( "%d", 1 ) );
 		if ( pMission )
 		{
 			if ( !LoadMvMMission( pMission ) )

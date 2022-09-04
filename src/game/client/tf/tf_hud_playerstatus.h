@@ -137,15 +137,18 @@ protected:
 	float				m_flNextThink;
 
 private:
+	void	UpdateHalloweenStatus( void );
+
 	CTFHealthPanel		*m_pHealthImage;
 	vgui::ImagePanel	*m_pHealthBonusImage;
 	vgui::ImagePanel	*m_pHealthImageBG;
 	vgui::ImagePanel	*m_pHealthImageBuildingBG;
-	vgui::ImagePanel		*m_pSoldierOffenseBuff;
-	vgui::ImagePanel		*m_pSoldierDefenseBuff;
-	vgui::ImagePanel		*m_pSoldierHealOnHitBuff;
-	vgui::ImagePanel		*m_pSoldierMarkedBuff;
-	vgui::ImagePanel		*m_pParachutingBuff;
+	vgui::ImagePanel	*m_pSoldierOffenseBuff;
+	vgui::ImagePanel	*m_pSoldierDefenseBuff;
+	vgui::ImagePanel	*m_pSoldierHealOnHitBuff;
+	vgui::ImagePanel	*m_pSoldierMarkedBuff;
+	vgui::ImagePanel	*m_pParachutingBuff;
+	vgui::ImagePanel	*m_pWheelOfDoomImage;
 
 	CUtlVector<CTFBuffInfo *> m_hBuffImages;
 

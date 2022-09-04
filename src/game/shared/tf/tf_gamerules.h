@@ -427,6 +427,7 @@ public:
 	virtual bool	IsFourTeamGame( void ){ return m_bFourTeamMode; };
 	bool			IsMannVsMachineMode( void ) { return m_bPlayingMannVsMachine; };
 	char const*		GetCustomUpgradesFile( void ) const { return m_pszCustomUpgradesFile; }
+	bool			IsAttackDefenseMode( void );
 	virtual bool	IsInArenaMode( void ) { return m_nGameType == TF_GAMETYPE_ARENA; }
 	virtual bool    IsInEscortMode( void ) { return m_nGameType == TF_GAMETYPE_ESCORT; }
 	virtual bool	IsInMedievalMode( void ) { return m_nGameType == TF_GAMETYPE_MEDIEVAL; }

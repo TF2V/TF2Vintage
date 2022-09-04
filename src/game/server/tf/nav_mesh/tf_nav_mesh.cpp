@@ -506,8 +506,8 @@ void CTFNavMesh::CollectControlPointAreas()
 					Extent captureExtent;
 					captureExtent.Init( pCaptureArea );
 
-					captureExtent.lo -= 35.5f;
-					captureExtent.hi += 35.5f;
+					captureExtent.lo.z -= HalfHumanHeight;
+					captureExtent.hi.z += HalfHumanHeight;
 
 					int iIndex = pPoint->GetPointIndex();
 
@@ -664,6 +664,8 @@ void CTFNavMesh::ComputeIncursionDistances()
 						bFoundRedSpawn = true;
 					else
 						bFoundBluSpawn = true;
+
+					break;
 				}
 			}
 		}
@@ -703,7 +705,7 @@ void CTFNavMesh::ComputeIncursionDistances()
 void CTFNavMesh::ComputeIncursionDistances( CTFNavArea *startArea, int teamNum )
 {
 	VPROF_SCOPE_BEGIN( __FUNCTION__ );
-	Assert( teamNum >= 0 && teamNum <= 3 );
+	Assert( teamNum >= 0 && teamNum < TF_TEAM_COUNT );
 	
 	if ( startArea )
 	{
@@ -716,14 +718,18 @@ void CTFNavMesh::ComputeIncursionDistances( CTFNavArea *startArea, int teamNum )
 		startArea->Mark();
 
 		CUtlVectorFixedGrowable<const NavConnect *, 64u> adjCons;
+		TFNavAttributeType teamSpawnRoom = ( teamNum == TF_TEAM_RED ) ? TF_NAV_RED_SPAWN_ROOM : TF_NAV_BLUE_SPAWN_ROOM;
 		while ( !CNavArea::IsOpenListEmpty() )
 		{
 			CTFNavArea *area = static_cast<CTFNavArea *>( CNavArea::PopOpenList() );
 
 			adjCons.RemoveAll();
 
-			if ( !TFGameRules()->IsMannVsMachineMode() && !area->HasTFAttributes( TF_NAV_RED_SETUP_GATE|TF_NAV_BLUE_SETUP_GATE|TF_NAV_SPAWN_ROOM_EXIT ) && area->IsBlocked( teamNum ) )
-				continue;
+			if ( !TFGameRules()->IsMannVsMachineMode() )
+			{
+				if ( !area->HasTFAttributes( TF_NAV_RED_SETUP_GATE|TF_NAV_BLUE_SETUP_GATE|TF_NAV_SPAWN_ROOM_EXIT ) && area->IsBlocked( teamNum ) )
+					continue;
+			}
 
 			for ( int dir = 0; dir < NUM_DIRECTIONS; ++dir )
 			{
@@ -746,6 +752,9 @@ void CTFNavMesh::ComputeIncursionDistances( CTFNavArea *startArea, int teamNum )
 					continue;
 
 				float flIncursionDist = area->GetIncursionDistance( teamNum ) + connect->length;
+				if ( adjArea->HasTFAttributes( teamSpawnRoom ) )
+					flIncursionDist = 0.0;
+
 				if ( adjArea->GetIncursionDistance( teamNum ) < 0.0f || flIncursionDist < adjArea->GetIncursionDistance( teamNum ) )
 				{
 					adjArea->SetIncursionDistance( teamNum, flIncursionDist );

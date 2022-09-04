@@ -407,13 +407,39 @@ void CTFNavArea::CustomAnalysis( bool isIncremental )
 void CTFNavArea::CollectNextIncursionAreas( int teamNum, CUtlVector<CTFNavArea *> *areas )
 {
 	areas->RemoveAll();
-	// TODO
+	
+	for ( int dir=0; dir < NUM_DIRECTIONS; ++dir )
+	{
+		const NavConnectVector *adjVector = GetAdjacentAreas( (NavDirType)dir );
+		FOR_EACH_VEC( ( *adjVector ), bit )
+		{
+			CTFNavArea *adjArea = static_cast<CTFNavArea *>( ( *adjVector )[bit].area );
+
+			if ( adjArea->GetIncursionDistance( teamNum ) > GetIncursionDistance( teamNum ) )
+			{
+				areas->AddToTail( adjArea );
+			}
+		}
+	}
 }
 
 void CTFNavArea::CollectPriorIncursionAreas( int teamNum, CUtlVector<CTFNavArea *> *areas )
 {
 	areas->RemoveAll();
-	// TODO
+	
+	for ( int dir=0; dir < NUM_DIRECTIONS; ++dir )
+	{
+		const NavConnectVector *adjVector = GetAdjacentAreas( (NavDirType)dir );
+		FOR_EACH_VEC( ( *adjVector ), bit )
+		{
+			CTFNavArea *adjArea = static_cast<CTFNavArea *>( ( *adjVector )[bit].area );
+
+			if ( adjArea->GetIncursionDistance( teamNum ) < GetIncursionDistance( teamNum ) )
+			{
+				areas->AddToTail( adjArea );
+			}
+		}
+	}
 }
 
 CTFNavArea *CTFNavArea::GetNextIncursionArea( int teamNum ) const

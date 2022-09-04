@@ -59,9 +59,9 @@ CFLAGS = $(BASE_CFLAGS) $(ENV_CFLAGS)
 # In -std=gnu++0x mode we get lots of errors about "error: narrowing conversion". -fpermissive
 # turns these into warnings in gcc, and -Wno-c++11-narrowing suppresses them entirely in clang 3.1+.
 ifeq ($(CLANG_BUILD),1)
-	CXXFLAGS = $(BASE_CFLAGS) -std=gnu++0x -Wno-c++11-narrowing -Wno-dangling-else $(ENV_CXXFLAGS)
+	CXXFLAGS = $(BASE_CFLAGS) -std=c++17 -Wno-c++11-narrowing -Wno-dangling-else $(ENV_CXXFLAGS)
 else
-	CXXFLAGS = $(BASE_CFLAGS) -std=gnu++0x -fpermissive $(ENV_CXXFLAGS)
+	CXXFLAGS = $(BASE_CFLAGS) -std=c++17 -fpermissive $(ENV_CXXFLAGS)
 endif
 DEFINES += -DVPROF_LEVEL=1 -DGNUC -DNO_HOOK_MALLOC -DNO_MALLOC_OVERRIDE
 
@@ -69,6 +69,8 @@ DEFINES += -DVPROF_LEVEL=1 -DGNUC -DNO_HOOK_MALLOC -DNO_MALLOC_OVERRIDE
 # This causes all filesystem interfaces to default to their 64bit versions on
 # 32bit systems, which means we don't break on filesystems with inodes > 32bit.
 # DEFINES += -D_FILE_OFFSET_BITS=64
+
+DEFINES += -D_GLIBCXX_USE_CXX11_ABI=0
 
 LDFLAGS = $(CFLAGS) $(GCC_ExtraLinkerFlags) $(OptimizerLevel)
 GENDEP_CXXFLAGS = -MMD -MP -MF $(@:.o=.P) 
@@ -170,7 +172,7 @@ else ifeq ($(GCC_VER),-4.8)
 	# WARN_FLAGS += -Wno-unused-function
 endif
 
-WARN_FLAGS += -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-value -Wno-missing-field-initializers
+WARN_FLAGS += -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-value -Wno-missing-field-initializers -Wno-unused-local-typedefs
 WARN_FLAGS += -Wno-sign-compare -Wno-reorder -Wno-invalid-offsetof -Wno-float-equal -Werror=return-type
 WARN_FLAGS += -fdiagnostics-show-option -Wformat -Wformat-security
 

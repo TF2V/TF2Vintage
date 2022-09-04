@@ -48,7 +48,7 @@ ConVar hl2_episodic( "hl2_episodic", "0", FCVAR_REPLICATED );
 	#include "prop_portal_shared.h"
 #endif
 
-#ifdef TF_DLL
+#if defined TF_DLL || TF_VINTAGE
 #include "tf_gamerules.h"
 #include "tf_weaponbase.h"
 #endif // TF_DLL
@@ -1758,9 +1758,9 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 			{
 				pShootThroughPortal = NULL;
 			}
-#elif TF_DLL
+#elif TF_DLL || TF_VINTAGE
 			CTraceFilterIgnoreFriendlyCombatItems traceFilterCombatItem( this, COLLISION_GROUP_NONE, GetTeamNumber() );
-			if ( TFGameRules() && TFGameRules()->GameModeUsesUpgrades() )
+			if ( TFGameRules() && TFGameRules()->IsMannVsMachineMode() )
 			{
 				CTraceFilterChain traceFilterChain( &traceFilter, &traceFilterCombatItem );
 				AI_TraceLine(info.m_vecSrc, vecEnd, MASK_SHOT, &traceFilterChain, &tr);

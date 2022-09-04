@@ -20,8 +20,10 @@
 #include "hud_numericdisplay.h"
 #include "c_team.h"
 #include "tf_shareddefs.h"
+#include "tf_gamerules.h"
 #include "tf_hud_playerstatus.h"
 #include "tf_hud_target_id.h"
+
 
 using namespace vgui;
 
@@ -350,6 +352,8 @@ CTFHudPlayerHealth::CTFHudPlayerHealth( Panel *parent, const char *name ) : Edit
 
 	m_pHealthImageBuildingBG = new ImagePanel( this, "BuildingStatusHealthImageBG" );
 
+	m_pWheelOfDoomImage = new ImagePanel( this, "PlayerStatus_WheelOfDoom" );
+
 	// Buff Images
 	m_pSoldierOffenseBuff = new ImagePanel( this, "PlayerStatus_SoldierOffenseBuff" );
 	m_pSoldierDefenseBuff = new ImagePanel( this, "PlayerStatus_SoldierDefenseBuff" );
@@ -389,7 +393,8 @@ void CTFHudPlayerHealth::ApplySchemeSettings( IScheme *pScheme )
 	// load control settings...
 	LoadControlSettings( GetResFilename() );
 
-	m_pHealthBonusImage->GetBounds( m_nBonusHealthOrigX, m_nBonusHealthOrigY, m_nBonusHealthOrigW, m_nBonusHealthOrigH );
+	if ( m_pHealthBonusImage )
+		m_pHealthBonusImage->GetBounds( m_nBonusHealthOrigX, m_nBonusHealthOrigY, m_nBonusHealthOrigW, m_nBonusHealthOrigH );
 
 	m_flNextThink = 0.0f;
 
@@ -632,6 +637,39 @@ void CTFHudPlayerHealth::SetPlayerHealthImagePanelVisibility( int iCond, CTFBuff
 
 			info->m_nOffset -= m_nOffset;
 		}
+	}
+}
+
+void CTFHudPlayerHealth::UpdateHalloweenStatus( void )
+{
+	if ( TFGameRules()->GetActiveHalloweenEffect() >= 0 )
+	{
+		int status = TFGameRules()->GetActiveHalloweenEffect();
+		if ( status == 1 )
+		{
+			m_pWheelOfDoomImage->SetImage( "..\\HUD\\death_wheel_whammy" );
+		}
+		else
+		{
+			m_pWheelOfDoomImage->SetImage( VarArgs( "..\\HUD\\death_wheel_%d", status - 1 ) );
+
+		}
+
+		float flTimeLeft = TFGameRules()->GetTimeHalloweenEffectStarted() + TFGameRules()->GetHalloweenEffectDuration() - gpGlobals->curtime;
+		if ( flTimeLeft < 3.0f )
+		{
+			int blink = (int)( flTimeLeft / 0.25f );
+
+			m_pWheelOfDoomImage->SetVisible( blink & 0x1 );
+		}
+		else
+		{
+			m_pWheelOfDoomImage->SetVisible( true );
+		}
+	}
+	else
+	{
+		m_pWheelOfDoomImage->SetVisible( false );
 	}
 }
 

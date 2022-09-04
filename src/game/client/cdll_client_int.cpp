@@ -16,7 +16,6 @@
 #include "prediction.h"
 #include "clientsideeffects.h"
 #include "particlemgr.h"
-#include "steam/steam_api.h"
 #include "initializer.h"
 #include "smoke_fog_overlay.h"
 #include "view.h"
@@ -106,6 +105,9 @@
 #endif
 #include "vgui/ILocalize.h"
 #include "vgui/IVGui.h"
+#ifndef NO_STEAM
+#include "steam/steam_api.h"
+#endif
 #include "ixboxsystem.h"
 #include "ipresence.h"
 #include "engine/imatchmaking.h"
@@ -134,6 +136,10 @@
 #include "client_virtualreality.h"
 #include "mumble.h"
 #include "bannedwords.h"
+
+#ifdef USES_ECON_ITEMS
+#include "econ_networking.h"
+#endif
 
 // NVNT includes
 #include "hud_macros.h"
@@ -947,6 +953,11 @@ static void MountAdditionalContent()
 	int appid = abs( pAdditionaContentId->GetInt() );
 	if ( appid )
 	{
+		if ( !steamapicontext->SteamApps() )
+		{
+			Warning( "Unable to mount extra content, unkown error\n" );
+			return;
+		}
 		if ( !steamapicontext->SteamApps()->BIsAppInstalled( appid ) )
 		{
 			Warning( "Unable to mount extra content with AppId: %i\nApp not installed.\n", appid );
@@ -1311,16 +1322,15 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 		cl_cloud_settings->SetMax( 0 );
 	}
 
-	//if ( !CommandLine()->CheckParm( "-noscripting" ) )
-	if ( CommandLine()->CheckParm( "-vscript" ) )
+	if ( !CommandLine()->CheckParm( "-noscripting" ) )
 	{
 	#if defined( TF_VINTAGE_CLIENT )
 		char szCwd[1024];
 		_getcwd( szCwd, sizeof( szCwd ) );
 
-		static CDllDemandLoader s_VScript( CFmtStr( "%s/tf2vintage/bin/vscript.dll", szCwd ) );
+		static CDllDemandLoader s_VScript( CFmtStr( "%s/tf2vintage/bin/vscript%s", szCwd, DLL_EXT_STRING ) );
 	#else
-		static CDllDemandLoader s_VScript( "vscript.dll" );
+		static CDllDemandLoader s_VScript( "vscript" DLL_EXT_STRING );
 	#endif
 
 		CreateInterfaceFn pAppFactory = s_VScript.GetFactory();
@@ -1423,6 +1433,10 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 	if ( !IGameSystem::InitAllSystems() )
 		return false;
 
+#ifdef USES_ECON_ITEMS
+	g_pNetworking->Init();
+#endif
+
 	g_pClientMode->Enable();
 
 	if ( !view )
@@ -1470,19 +1484,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CreateInterfaceFn physi
 #ifndef _X360
 	HookHapticMessages(); // Always hook the messages
 #endif
-	
-	// Discord RPC
-	if (!g_bTextMode)
-	{
-		/*discord::Core *core{};
-		auto result = discord::Core::Create( V_atoi64( cl_discord_appid.GetString() ), DiscordCreateFlags_NoRequireDiscord, &core );
-		if ( result != discord::Result::Ok )
-			return true;
-
-		char command[512];
-		V_snprintf( command, sizeof( command ), "%s -game \"%s\" -novid -steam", CommandLine()->GetParm( 0 ), CommandLine()->ParmValue( "-game" ) );
-		core->ActivityManager().RegisterCommand( command );*/
-	}
 	
 	// Swear list.
 	g_BannedWords.InitFromFile( "bannedwords.txt" );
@@ -1594,6 +1595,10 @@ void CHLClient::Shutdown( void )
 	UncacheAllMaterials();
 
 	IGameSystem::ShutdownAllSystems();
+
+#ifdef USES_ECON_ITEMS
+	g_pNetworking->Shutdown();
+#endif
 	
 	gHUD.Shutdown();
 	VGui_Shutdown();
@@ -1663,6 +1668,10 @@ void CHLClient::HudUpdate( bool bActive )
 	CRTime::UpdateRealTime();
 
 	GetClientVoiceMgr()->Frame( frametime );
+
+#ifdef USES_ECON_ITEMS
+	g_pNetworking->Update( frametime );
+#endif
 
 	gHUD.UpdateHud( bActive );
 
@@ -2996,8 +3005,11 @@ bool CHLClient::DisconnectAttempt( void )
 {
 	bool bRet = false;
 
-#if defined( TF_CLIENT_DLL )
-	bRet = HandleDisconnectAttempt();
+#if defined( TF_CLIENT_DLL ) || defined( TF_VINTAGE_CLIENT )
+	//bRet = HandleDisconnectAttempt();
+
+	// Revert back from the server version to our local copy
+	GetItemSchema()->LoadFromFile();
 #endif
 
 	return bRet;

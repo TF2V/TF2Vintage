@@ -38,6 +38,8 @@ public:
 			szEffectName = NULL;
 		}
 
+		virtual ~WOD_BaseEffect() {}
+
 		virtual void InitEffect( float flDuration );
 		virtual void ActivateEffect( EffectData_t &data ) {}
 		virtual void UpdateEffect( EffectData_t &data ) {}

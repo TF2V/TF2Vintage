@@ -38,6 +38,9 @@ obj*/
 game/bin
 game/*/bin
 
+# generated protobuf sources
+generated_proto*/
+
 # library files
 src/lib/public/mathlib.lib
 src/lib/public/mathlib.pdb
@@ -60,6 +63,7 @@ src/Output-Build.txt
 src/utils/vvis_launcher/vvis_launcher.vpc.sentinel
 *.vpc.sentinel
 *_nut.h
+src/public/steam/*
 
 # Files to ignore when considering what GIT should commit.
 .DS_Store
@@ -147,7 +151,7 @@ game/*/expressions/*
 *.ain
 
 # caches
-src/.vs/*
+*/.vs/*
 src/materialsystem/stdshaders/fxctmp9_tmp/*
 src/materialsystem/stdshaders/vshtmp9_tmp/*
 src/materialsystem/stdshaders/pshtmp9_tmp/*

@@ -68,6 +68,21 @@ public:
 
 #define TF_BOT_TYPE		1337
 
+// From tf.fgd, bot_generator spawn flags
+#define TF_BOT_IGNORE_ENEMY_SCOUTS		0x0001
+#define TF_BOT_IGNORE_ENEMY_SOLDIERS	0x0002
+#define TF_BOT_IGNORE_ENEMY_PYROS		0x0004
+#define TF_BOT_IGNORE_ENEMY_DEMOMEN		0x0008
+#define TF_BOT_IGNORE_ENEMY_HEAVIES		0x0010
+#define TF_BOT_IGNORE_ENEMY_MEDICS		0x0020
+#define TF_BOT_IGNORE_ENEMY_ENGINEERS	0x0040
+#define TF_BOT_IGNORE_ENEMY_SNIPERS		0x0080
+#define TF_BOT_IGNORE_ENEMY_SPIES		0x0100
+#define TF_BOT_IGNORE_ENEMY_SENTRY_GUNS	0x0200
+#define TF_BOT_IGNORE_SCENARIO_GOALS	0x0400
+
+#define TF_BOT_ALL_BEHAVIOR_FLAGS		0xFFFF
+
 class CTFBot : public NextBotPlayer<CTFPlayer>, public CGameEventListener
 {
 	DECLARE_CLASS( CTFBot, NextBotPlayer<CTFPlayer> )
@@ -550,7 +565,7 @@ inline void CTFBot::SetWeaponRestriction( CTFBot::WeaponRestrictionType restrict
 //-----------------------------------------------------------------------------
 inline bool CTFBot::HasWeaponRestriction( CTFBot::WeaponRestrictionType restrictionFlags ) const
 {
-	return (m_nWeaponRestrictions & restrictionFlags) != (CTFBot::WeaponRestrictionType)0;
+	return (m_nWeaponRestrictions & restrictionFlags) != CTFBot::WeaponRestrictionType::UNRESTRICTED;
 }
 
 //-----------------------------------------------------------------------------
@@ -582,7 +597,7 @@ inline void CTFBot::ClearAttribute( CTFBot::AttributeType attribute )
 //-----------------------------------------------------------------------------
 inline bool CTFBot::HasAttribute( CTFBot::AttributeType attribute ) const
 {
-	return (m_nBotAttributes & attribute) != (CTFBot::AttributeType)0;
+	return (m_nBotAttributes & attribute) != CTFBot::AttributeType::NONE;
 }
 
 //-----------------------------------------------------------------------------

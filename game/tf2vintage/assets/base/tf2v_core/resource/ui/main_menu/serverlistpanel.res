@@ -82,7 +82,7 @@
 		"maxvalue" 			"100"
 		"labelwidth" 		"1"
 		"bordervisible"		"0"
-		"command"			""
+		"command"			"tf2v_serverlist_scroll"
 		"vertical"			"1"
 		"value_visible"		"0"
 		

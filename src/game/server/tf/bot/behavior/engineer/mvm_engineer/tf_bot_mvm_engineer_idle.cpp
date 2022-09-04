@@ -543,6 +543,9 @@ bool GetBombInfo( BombInfo_t *info )
 
 	CCaptureFlag *closest_flag = nullptr;
 	Vector closest_flag_pos;
+	closest_flag_pos.x = 0;
+	closest_flag_pos.y = 0;
+	closest_flag_pos.z = 0;
 
 	for ( int i = 0; i < ICaptureFlagAutoList::AutoList().Count(); ++i )
 	{

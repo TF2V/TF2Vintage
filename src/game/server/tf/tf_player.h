@@ -113,6 +113,8 @@ public:
 
 	virtual void		Spawn();
 	virtual int			ShouldTransmit( const CCheckTransmitInfo *pInfo );
+	bool				CheckInstantLoadoutRespawn( void );
+	void				ForceRegenerateAndRespawn( void );
 	virtual void		ForceRespawn();
 	virtual CBaseEntity *EntSelectSpawnPoint( void );
 	virtual void		InitialSpawn();
@@ -632,6 +634,15 @@ public:
 	float				GetAccumulatedSentryGunDamageDealt( void ) const { return m_nAccumulatedSentryGunDamageDealt; }
 	int					m_nAccumulatedSentryGunKillCount;	// for Sentry Buster missions in MvM
 	float				GetAccumulatedSentryGunKillCount( void ) const { return m_nAccumulatedSentryGunKillCount; }
+
+	enum { DPS_Period = 90 };
+	int					m_rgDamageArray[DPS_Period];
+	float				m_flDPSMax;
+	int					m_iLastDamageIndex;
+	void				OnDealtDamage( CBaseCombatCharacter *pVictim, const CTakeDamageInfo &info );
+	int					GetDamagePerSecond( void ) const { return m_flDPSMax; }
+	void				ResetDamagePerSecond( void );
+
 
 	CWaveSpawnPopulator *m_pWaveSpawnPopulator;
 	bool				m_bLimitedSupport;

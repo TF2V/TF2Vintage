@@ -469,6 +469,11 @@ bool CTFSniperRifle::IsZoomed( void )
 	return false;
 }
 
+bool CTFSniperRifle::IsFullyCharged( void ) const
+{
+	return m_flChargedDamage >= TF_WEAPON_SNIPERRIFLE_DAMAGE_MAX;
+}
+
 void CTFSniperRifle::DoFireEffects(void)
 {
 	CTFPlayer *pPlayer = GetTFPlayerOwner();

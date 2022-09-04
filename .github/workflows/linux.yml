@@ -5,13 +5,13 @@ on:
 
 env:
   STEAM_RUNTIME_PATH: /valve/steam-runtime
-  CCACHE_VERSION: 4.2.1
+  CCACHE_VERSION: 3.7.7
   CCACHE_DIR: ${{ github.workspace }}/src/ccache
 
 jobs:
   build:
     runs-on:
-      ubuntu-20.04
+      ubuntu-18.04
     
     steps:
       - name: Checkout
@@ -54,7 +54,14 @@ jobs:
         run: sudo bash .github/gh-cache.sh restore
       
       - name: Configure dependencies
-        run: sudo apt update && sudo apt install -y build-essential gcc-multilib g++-multilib
+        run: sudo apt update && sudo apt install -y zip build-essential gcc-multilib g++-multilib gcc-5 g++-5 g++-5-multilib
+      
+      - name: Download Steamworks SDK
+        run: |
+          sudo wget https://deathreus.github.io/download/steamworks_sdk_150.zip
+          unzip steamworks_sdk_150.zip
+          sudo rm -rf src/public/steam
+          sudo mv sdk/public/steam src/public/steam
 
       - name: Create project
         run: cd src && sudo devtools/bin/vpc /tf2vintage +game /mksln TF2vintage
@@ -70,10 +77,13 @@ jobs:
           sudo bash $STEAM_RUNTIME_PATH/setup.sh --release --target="i386 amd64" --auto-upgrade
 
       - name: Build project
-        run: cd src && sudo make -f TF2vintage.mak
+        run: cd src && sudo make -f TF2vintage.mak CC="$(pwd)/devtools/bin/linux/ccache gcc-5" CXX="$(pwd)/devtools/bin/linux/ccache g++-5"
 
       - name: Upload product
         uses: actions/upload-artifact@v2
         with:
           name: tf2vintage-linux
           path: game/tf2vintage/bin/
+      
+      - name: Move to cache
+        run: sudo bash .github/gh-cache.sh

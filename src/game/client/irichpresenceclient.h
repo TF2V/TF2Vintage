@@ -17,7 +17,7 @@ public:
 	virtual char const *GetMatchSecret( void ) const = 0; // Return NULL if a request isn't allowed
 	virtual char const *GetJoinSecret( void ) const = 0; // Return NULL if a request isn't allowed
 	virtual char const *GetSpectateSecret( void ) const = 0; // Return NULL if a request isn't allowed
-	virtual char const *GetEncryptionKey( void ) const = 0;
+	virtual unsigned char const *GetEncryptionKey( void ) const = 0;
 };
 
 extern IRichPresenceClient *rpc;

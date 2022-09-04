@@ -340,16 +340,25 @@ Activity CEconItemView::GetActivityOverride( int iTeamNumber, Activity actOrigin
 
 	if ( pStatic )
 	{
-		int iOverridenActivity = ACT_INVALID;
-
 		PerTeamVisuals_t *pVisuals = pStatic->GetVisuals( iTeamNumber );
 		if( pVisuals )
 		{
-			FIND_ELEMENT( pVisuals->animation_replacement, actOriginalActivity, iOverridenActivity );
-		}
+			FOR_EACH_VEC( pVisuals->animation_replacement, i )
+			{
+				ActivityReplacement_t *override = pVisuals->animation_replacement[i];
+				if ( override->iActivity == kActivityLookup_Unknown )
+					override->iActivity = ActivityList_IndexForName( override->pszActivity );
 
-		if ( iOverridenActivity != ACT_INVALID )
-			return (Activity)iOverridenActivity;
+				if ( override->iActivity == actOriginalActivity )
+				{
+					if ( override->iReplacement == kActivityLookup_Unknown )
+						override->iReplacement = ActivityList_IndexForName( override->pszReplacement );
+
+					if ( override->iReplacement > ACT_INVALID )
+						return (Activity)override->iReplacement;
+				}
+			}
+		}
 	}
 
 	return actOriginalActivity;
@@ -364,17 +373,15 @@ const char *CEconItemView::GetActivityOverride( int iTeamNumber, const char *nam
 
 	if ( pStatic )
 	{
-		int iOriginalAct = ActivityList_IndexForName( name );
-		int iOverridenAct = ACT_INVALID;
-
 		PerTeamVisuals_t *pVisuals = pStatic->GetVisuals( iTeamNumber );
 		if( pVisuals )
 		{
-			FIND_ELEMENT( pVisuals->animation_replacement, iOriginalAct, iOverridenAct );
+			FOR_EACH_VEC( pVisuals->animation_replacement, i )
+			{
+				if ( FStrEq( name, pVisuals->animation_replacement[i]->pszActivity ) )
+					return pVisuals->animation_replacement[i]->pszReplacement;
+			}
 		}
-
-		if ( iOverridenAct != ACT_INVALID )
-			return ActivityList_NameForIndex( iOverridenAct );
 	}
 
 	return name;

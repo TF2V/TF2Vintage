@@ -27,7 +27,7 @@
 			
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_grenadelauncher.mdl"
+				"modelname" "models/weapons/c_models/c_grenadelauncher/c_grenadelauncher.mdl"
 				"skin"		"1"
 			}
 		}

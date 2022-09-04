@@ -121,6 +121,7 @@ private:
 
 private:
 	virtual void PlayWeaponShootSound( void ) {}	// override base class call to play shoot sound; we handle that ourselves separately
+	void			SetWeaponState( MinigunState_t nState );
 
 	CNetworkVar( MinigunState_t, m_iWeaponState );
 	CNetworkVar( bool, m_bCritShot );
@@ -130,12 +131,13 @@ private:
 	float			m_flStartedWindingAt;
 	float			m_flDrainTime;
 	float			m_flNextFireAttack;
-	float	m_flBarrelCurrentVelocity;
-	float	m_flBarrelTargetVelocity;
-	int		m_iBarrelBone;
-	float	m_flBarrelAngle;
+	float			m_flBarrelCurrentVelocity;
+	float			m_flBarrelTargetVelocity;
+	int				m_iBarrelBone;
+	float			m_flBarrelAngle;
 	CSoundPatch		*m_pSoundCur;				// the weapon sound currently being played
 	int				m_iMinigunSoundCur;			// the enum value of the weapon sound currently being played
+	float			m_flAccumulatedAmmoDrain;
 
 #ifdef CLIENT_DLL
 	void StartBrassEffect();

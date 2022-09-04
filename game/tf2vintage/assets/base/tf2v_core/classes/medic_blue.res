@@ -29,7 +29,7 @@
 			
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_medigun.mdl"
+				"modelname" "models/weapons/c_models/c_medigun/c_medigun.mdl"
 				"skin"		"1"
 			}
 		}

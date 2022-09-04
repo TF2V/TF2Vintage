@@ -1,4 +1,4 @@
-//========= Copyright © Valve LLC, All rights reserved. =======================
+//========= Copyright ï¿½ Valve LLC, All rights reserved. =======================
 //
 // Purpose:		
 //
@@ -225,7 +225,7 @@ ETimeUnit CRTime::FindTimeBoundaryCrossings( RTime32 nTime1, RTime32 nTime2, boo
 //-----------------------------------------------------------------------------
 const char *CRTime::Render( RTime32 nTime, char( &buf )[k_ERTimeRenderBufSize] )
 {
-	if ( !buf )
+	if ( !buf[0] )
 		return nullptr;
 
 	char szTime[32];
@@ -485,7 +485,7 @@ RTime32 CRTime::RTime32FromString( const char *pszValue )
 //-----------------------------------------------------------------------------
 const char *CRTime::RTime32ToDayString( RTime32 nTime, char( &buf )[k_ERTimeRenderBufSize], bool bUseGMT )
 {
-	if ( !buf )
+	if ( !buf[0] )
 		return nullptr;
 
 	time_t nCurTime = nTime;
@@ -501,7 +501,7 @@ const char *CRTime::RTime32ToDayString( RTime32 nTime, char( &buf )[k_ERTimeRend
 //-----------------------------------------------------------------------------
 const char *CRTime::RTime32ToRFC3339UTCString( RTime32 nTime, char( &buf )[k_ERTimeRenderBufSize] )
 {
-	if ( !buf )
+	if ( !buf[0] )
 		return nullptr;
 
 	time_t nCurTime = nTime;
@@ -529,7 +529,7 @@ const char *CRTime::RTime32ToRFC3339UTCString( RTime32 nTime, char( &buf )[k_ERT
 //-----------------------------------------------------------------------------
 const char *CRTime::RTime32ToString( RTime32 nTime, char( &buf )[k_ERTimeRenderBufSize], bool bNoPunct, bool bNoTime )
 {
-	if ( !buf )
+	if ( !buf[0] )
 		return nullptr;
 
 	time_t nCurTime = nTime;

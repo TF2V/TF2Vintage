@@ -36,7 +36,7 @@
 								
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_knife.mdl"
+				"modelname" "models/weapons/c_models/c_knife/c_knife.mdl"
 			}
 		}
 	}

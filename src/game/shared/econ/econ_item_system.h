@@ -38,7 +38,7 @@ public:
 	bool Init( void );
 	void InitAttributeTypes( void );
 	bool LoadFromFile( void );
-	bool LoadFromBuffer( CUtlBuffer &buf );
+	bool LoadFromBuffer( CUtlBuffer &buf, bool bAsText=false );
 	bool SaveToBuffer( CUtlBuffer &buf );
 	void Precache( void );
 	void Reset( void );

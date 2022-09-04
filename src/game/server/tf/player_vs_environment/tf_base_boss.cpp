@@ -220,6 +220,8 @@ int CTFBaseBoss::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 	CTFPlayer *pAttacker = ToTFPlayer( newInfo.GetAttacker() );
 	if ( pAttacker )
 	{
+		pAttacker->OnDealtDamage( this, info );
+
 		CTF_GameStats.Event_BossDamage( pAttacker, newInfo.GetDamage() );
 	}
 

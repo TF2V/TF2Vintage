@@ -134,6 +134,7 @@ public:
 #endif
 
 	bool IsZoomed( void );
+	bool IsFullyCharged( void ) const;
 	void DenySniperShot( void );
 	
 private:

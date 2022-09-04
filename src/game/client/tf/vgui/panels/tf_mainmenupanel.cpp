@@ -15,6 +15,7 @@ using namespace vgui;
 #include "tier0/memdbgon.h"
 
 ConVar tf2v_mainmenu_music( "tf2v_mainmenu_music", "1", FCVAR_ARCHIVE, "Toggle music in the main menu" );
+ConVar tf2v_serverlist_scroll( "tf2v_serverlist_scroll", "0", FCVAR_ARCHIVE, "", true, 0.0, true, 100.0 );
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor

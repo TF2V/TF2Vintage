@@ -28,7 +28,7 @@ public:
 	virtual char const *GetMatchSecret( void ) const	{ return NULL; }
 	virtual char const *GetJoinSecret( void ) const		{ return NULL; }
 	virtual char const *GetSpectateSecret( void ) const { return NULL; }
-	virtual char const *GetEncryptionKey( void ) const	{ return ""; }
+	virtual unsigned char const *GetEncryptionKey( void ) const	{ return (unsigned char *)""; }
 
 private:
 	char m_szMapName[ MAX_MAP_NAME ];

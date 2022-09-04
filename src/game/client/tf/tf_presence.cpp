@@ -24,6 +24,7 @@
 #include "steam/isteamfriends.h"
 #include "steam/steam_api.h"
 #include "tier0/icommandline.h"
+#include "mathlib/IceKey.H"
 #include <inetchannelinfo.h>
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -584,9 +585,7 @@ discord::User CTFDiscordPresence::m_CurrentUser{};
 CTFDiscordPresence::CTFDiscordPresence()
 {
 	VCRHook_Time( &m_iCreationTimestamp );
-
-	// Setup early so we catch it
-	ListenForGameEvent( "server_spawn" );
+	m_flLastPlayerJoinTime = 0;
 
 	rpc = this;
 }
@@ -596,51 +595,39 @@ CTFDiscordPresence::CTFDiscordPresence()
 //-----------------------------------------------------------------------------
 void CTFDiscordPresence::FireGameEvent( IGameEvent *event )
 {
-	bool bForceUpdate = false;
 	bool bIsDead = false;
-	CUtlString name = event->GetName();
-
-	if ( name == "server_spawn" )
-	{
-		Q_strncpy( m_szHostName, event->GetString( "hostname" ), DISCORD_FIELD_MAXLEN );
-		Q_strncpy( m_szServerInfo, event->GetString( "address" ), DISCORD_FIELD_MAXLEN );
-		
-	}
+	const char *name = event->GetName();
 
 	if ( g_pDiscord == NULL )
 		return;
 
-	if ( C_BasePlayer::GetLocalPlayer() == nullptr )
-		return;
+	if ( FStrEq( name, "server_spawn" ) )
+	{
+		Q_strncpy( m_szHostName, event->GetString( "hostname" ), DISCORD_FIELD_MAXLEN );
+		Q_strncpy( m_szServerInfo, event->GetString( "address" ), DISCORD_FIELD_MAXLEN );
+
+		m_Activity.GetSecrets().SetJoin( GetJoinSecret() );
+		m_Activity.GetSecrets().SetSpectate( GetSpectateSecret() );
+
+		g_pDiscord->ActivityManager().UpdateActivity( m_Activity, &OnActivityUpdate );
+	}
 
 	if ( !engine->IsConnected() )
 		return;
 
-	if ( name == "player_connect_client" || name == "player_disconnect" )
+	if ( FStrEq( name, "player_connect" ) || FStrEq( name, "player_disconnect" ) )
 	{
-		if ( name == "player_connect_client" )
-		{
-			int userid = event->GetInt( "userid" );
-			if ( UTIL_PlayerByUserId( userid ) == C_BasePlayer::GetLocalPlayer() )
-			{
-				CSteamID steamID{};
-				if ( C_BasePlayer::GetLocalPlayer()->GetSteamID( &steamID ) )
-					V_sprintf_safe( m_szSteamID, "%llu", steamID.ConvertToUint64() );
-
-				m_Activity.GetSecrets().SetJoin( m_szServerInfo );
-				m_Activity.GetSecrets().SetMatch( m_szSteamID );
-
-				bForceUpdate = true;
-			}
-		}
-
 		if ( !TFPlayerResource() )
+			return;
+
+		// On map change *all* connected players are reconnected, prevent rate limits here
+		if ( (m_flLastPlayerJoinTime - gpGlobals->curtime) > 4.0f )
 			return;
 
 		const int maxPlayers = gpGlobals->maxClients;
 		int curPlayers = 0;
 
-		for ( int i = 0; i < maxPlayers; ++i )
+		for ( int i = 1; i <= maxPlayers; ++i )
 		{
 			if ( TFPlayerResource()->IsConnected( i ) )
 				curPlayers++;
@@ -648,8 +635,10 @@ void CTFDiscordPresence::FireGameEvent( IGameEvent *event )
 
 		m_Activity.GetParty().GetSize().SetCurrentSize( curPlayers );
 		m_Activity.GetParty().GetSize().SetMaxSize( maxPlayers );
+
+		m_flLastPlayerJoinTime = gpGlobals->curtime;
 	}
-	else if ( name == "player_death" )
+	else if ( FStrEq( name, "player_death" ) )
 	{
 		int userid = event->GetInt( "userid" );
 		if ( UTIL_PlayerByUserId( userid ) != C_BasePlayer::GetLocalPlayer() )
@@ -659,14 +648,9 @@ void CTFDiscordPresence::FireGameEvent( IGameEvent *event )
 			return;
 
 		bIsDead = true;
-		bForceUpdate = true;
-	}
-	else // localplayer_changeteam || localplayer_changeclass || localplayer_respawn
-	{
-		bForceUpdate = true;
 	}
 
-	UpdatePresence( bForceUpdate, bIsDead );
+	UpdatePresence( bIsDead );
 }
 
 //-----------------------------------------------------------------------------
@@ -674,14 +658,13 @@ void CTFDiscordPresence::FireGameEvent( IGameEvent *event )
 //-----------------------------------------------------------------------------
 bool CTFDiscordPresence::Init( void )
 {
+	ListenForGameEvent( "server_spawn" );
 	ListenForGameEvent( "localplayer_changeteam" );
 	ListenForGameEvent( "localplayer_changeclass" );
 	ListenForGameEvent( "localplayer_respawn" );
 	ListenForGameEvent( "player_death" );
-	ListenForGameEvent( "player_connect_client" );
+	ListenForGameEvent( "player_connect" );
 	ListenForGameEvent( "player_disconnect" );
-	ListenForGameEvent( "client_fullconnect" );
-	ListenForGameEvent( "client_disconnect" );
 
 	return BaseClass::Init();
 }
@@ -691,8 +674,6 @@ bool CTFDiscordPresence::Init( void )
 //-----------------------------------------------------------------------------
 bool CTFDiscordPresence::InitPresence( void )
 {
-	m_updateThrottle.Start( 30.0f );
-
 	if ( g_pDiscord == NULL )
 		return true;
 
@@ -707,19 +688,24 @@ bool CTFDiscordPresence::InitPresence( void )
 
 	Q_memset( &m_CurrentUser, 0, sizeof( discord::User ) );
 	g_pDiscord->UserManager().OnCurrentUserUpdate.Connect( &OnReady );
-	
-	Q_memset( &m_CurrentUser, 0, sizeof( discord::User ) );
-	g_pDiscord->UserManager().OnCurrentUserUpdate.Connect( &OnReady );
-	
 
 	char command[512];
 	V_snprintf( command, sizeof( command ), "%s -game \"%s\" -novid -steam", CommandLine()->GetParm( 0 ), CommandLine()->ParmValue( "-game" ) );
 	g_pDiscord->ActivityManager().RegisterCommand( command );
-	//discord->ActivityManager().RegisterSteam( engine->GetAppID() );
+	g_pDiscord->ActivityManager().RegisterSteam( engine->GetAppID() );
 
 	g_pDiscord->ActivityManager().OnActivityJoin.Connect( &OnJoinedGame );
 	g_pDiscord->ActivityManager().OnActivityJoinRequest.Connect( &OnJoinRequested );
 	g_pDiscord->ActivityManager().OnActivitySpectate.Connect( &OnSpectateGame );
+
+	CSteamID steamID{};
+	if ( steamapicontext && steamapicontext->SteamUser() )
+		steamID = steamapicontext->SteamUser()->GetSteamID();
+	if ( steamID.BIndividualAccount() )
+		V_sprintf_safe( m_szSteamID, "%llu", steamID.ConvertToUint64() );
+
+	m_Activity.GetSecrets().SetMatch( GetMatchSecret() );
+	g_pDiscord->ActivityManager().UpdateActivity( m_Activity, &OnActivityUpdate );
 
 	return true;
 }
@@ -736,9 +722,6 @@ void CTFDiscordPresence::Shutdown( void )
 
 	if ( steamapicontext->SteamFriends() )
 		steamapicontext->SteamFriends()->ClearRichPresence();
-
-	Assert( rpc == this );
-	rpc = NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -763,8 +746,8 @@ void CTFDiscordPresence::OnReady()
 
 	g_pDiscord->UserManager().GetCurrentUser( &m_CurrentUser );
 
-	ConColorMsg( DISCORD_COLOR, "[DRP] Ready!\n" );
-	ConColorMsg( DISCORD_COLOR, "[DRP] User %s#%s - %lld\n", m_CurrentUser.GetUsername(), m_CurrentUser.GetDiscriminator(), m_CurrentUser.GetId() );
+	ConDColorMsg( DISCORD_COLOR, "[DRP] Ready!\n" );
+	ConDColorMsg( DISCORD_COLOR, "[DRP] User %s#%s - %lld\n", m_CurrentUser.GetUsername(), m_CurrentUser.GetDiscriminator(), m_CurrentUser.GetId() );
 
 	rpc->ResetPresence();
 }
@@ -774,9 +757,13 @@ void CTFDiscordPresence::OnReady()
 //-----------------------------------------------------------------------------
 void CTFDiscordPresence::OnJoinedGame( const char *joinSecret )
 {
-	ConColorMsg( DISCORD_COLOR, "[DRP] Join Game: %s\n", joinSecret );
+	char szJoinString[64];
+	V_strcpy_safe( szJoinString, joinSecret );
+	UTIL_DecodeICE( (unsigned char *)szJoinString, sizeof( szJoinString ), rpc->GetEncryptionKey() );
+	ConDColorMsg( DISCORD_COLOR, "[DRP] Join Game: %s\n", szJoinString );
+
 	char szCommand[128];
-	Q_snprintf( szCommand, sizeof( szCommand ), "connect %s\n", joinSecret );
+	Q_snprintf( szCommand, sizeof( szCommand ), "connect %s\n", szJoinString );
 	engine->ExecuteClientCmd( szCommand );
 }
 
@@ -785,9 +772,13 @@ void CTFDiscordPresence::OnJoinedGame( const char *joinSecret )
 //-----------------------------------------------------------------------------
 void CTFDiscordPresence::OnSpectateGame( const char *spectateSecret )
 {
-	ConColorMsg( DISCORD_COLOR, "[DRP] Spectate Game: %s\n", spectateSecret );
+	char szSpectateString[64];
+	V_strcpy_safe( szSpectateString, spectateSecret );
+	UTIL_DecodeICE( (unsigned char *)szSpectateString, sizeof( szSpectateString ), rpc->GetEncryptionKey() );
+	ConDColorMsg( DISCORD_COLOR, "[DRP] Spectate Game: %s\n", szSpectateString );
+
 	char szCommand[128];
-	Q_snprintf( szCommand, sizeof( szCommand ), "connect %s:27020\n", spectateSecret ); // We append this with port 27020, for STV.
+	Q_snprintf( szCommand, sizeof( szCommand ), "connect %s:27020\n", szSpectateString ); // We append this with port 27020, for STV.
 	engine->ExecuteClientCmd( szCommand );
 }
 
@@ -797,9 +788,18 @@ void CTFDiscordPresence::OnSpectateGame( const char *spectateSecret )
 void CTFDiscordPresence::OnJoinRequested( discord::User const &joinRequester )
 {
 	// TODO: Popup dialog
-	ConColorMsg( DISCORD_COLOR, "[DRP] Join Request: %s#%s\n", joinRequester.GetUsername(), joinRequester.GetDiscriminator() );
-	ConColorMsg(DISCORD_COLOR, "[DRP] Join Request Accepted\n" );
-	//Discord_Respond( joinRequester.GetId(), DISCORD_REPLY_YES );
+	ConDColorMsg( DISCORD_COLOR, "[DRP] Join Request: %s#%s\n", joinRequester.GetUsername(), joinRequester.GetDiscriminator() );
+	ConDColorMsg( DISCORD_COLOR, "[DRP] Join Request Accepted\n" );
+	
+	g_pDiscord->ActivityManager().SendRequestReply( joinRequester.GetId(), discord::ActivityJoinRequestReply::Yes, &OnJoinRequestReply );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFDiscordPresence::OnJoinRequestReply( discord::Result result )
+{
+	ConDColorMsg( DISCORD_COLOR, "[DRP] Join Request result: %d", result );
 }
 
 //-----------------------------------------------------------------------------
@@ -814,7 +814,7 @@ void CTFDiscordPresence::OnLogMessage( discord::LogLevel logLevel, char const *p
 			Warning( "[DRP] %s\n", pszMessage );
 			break;
 		default:
-			ConColorMsg( DISCORD_COLOR, "[DRP] %s\n", pszMessage );
+			ConDColorMsg( DISCORD_COLOR, "[DRP] %s\n", pszMessage );
 			break;
 	}
 }
@@ -824,9 +824,7 @@ void CTFDiscordPresence::OnLogMessage( discord::LogLevel logLevel, char const *p
 //-----------------------------------------------------------------------------
 void CTFDiscordPresence::OnActivityUpdate( discord::Result result )
 {
-#ifdef DEBUG
-	ConColorMsg( DISCORD_COLOR, "[DRP] Activity update: %s\n", ( ( result == discord::Result::Ok ) ? "Succeeded" : "Failed" ) );
-#endif
+	ConDColorMsg( DISCORD_COLOR, "[DRP] Activity update: %s\n", ( ( result == discord::Result::Ok ) ? "Succeeded" : "Failed" ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -866,26 +864,10 @@ void CTFDiscordPresence::LevelInitPostEntity( void )
 	m_Activity.SetState( szGameState );
 	m_Activity.GetAssets().SetSmallImage( "tf2v_drp_logo" );
 	m_Activity.GetTimestamps().SetStart( m_iCreationTimestamp );
-		
-	// From DMC:R
-	if ( engine->IsConnected() )
-	{
-		INetChannelInfo *ni = engine->GetNetChannelInfo();
-		if ( ni && ni->GetAddress() && ni->GetName() )
-		{
-			char partyId[128];
-			sprintf( partyId, "Server: %s", ni->GetName() ); // adding -party here because secrets cannot match the party id
-			m_Activity.GetParty().SetId(partyId);
-			m_Activity.GetSecrets().SetJoin((ni->GetAddress()));
-			m_Activity.GetSecrets().SetSpectate((ni->GetAddress()));
-		}
-	}
 
 	if ( steamapicontext->SteamFriends() )
 	{
-		steamapicontext->SteamFriends()->SetRichPresence( "connect", NULL );
-		steamapicontext->SteamFriends()->SetRichPresence( "steam_player_group", NULL );
-		steamapicontext->SteamFriends()->SetRichPresence( "steam_player_group_size", NULL );
+		steamapicontext->SteamFriends()->SetRichPresence( "connect", VarArgs( "steam://connect/%s", m_szServerInfo ) );
 		steamapicontext->SteamFriends()->SetRichPresence( "status", m_szHostName );
 		steamapicontext->SteamFriends()->SetRichPresence( "steam_display", GetLevelName() );
 	}
@@ -915,10 +897,8 @@ void CTFDiscordPresence::ResetPresence( void )
 	if ( steamapicontext->SteamFriends() )
 	{
 		steamapicontext->SteamFriends()->SetRichPresence( "status", "Main Menu" );
-		steamapicontext->SteamFriends()->SetRichPresence( "connect", NULL );
+		steamapicontext->SteamFriends()->SetRichPresence( "connect", VarArgs( "steam://connect/%s", m_szServerInfo ) );
 		steamapicontext->SteamFriends()->SetRichPresence( "steam_display", "Main Menu" );
-		steamapicontext->SteamFriends()->SetRichPresence( "steam_player_group", NULL );
-		steamapicontext->SteamFriends()->SetRichPresence( "steam_player_group_size", NULL );
 	}
 
 	m_Activity.SetDetails( "Main Menu" );
@@ -936,7 +916,26 @@ void CTFDiscordPresence::ResetPresence( void )
 //-----------------------------------------------------------------------------
 char const *CTFDiscordPresence::GetMatchSecret( void ) const
 {
-	return nullptr;
+	IceKey ice(0);
+	ice.set( GetEncryptionKey() );
+	int nBlockSize = ice.blockSize();
+
+	int nLength = V_strlen( m_szSteamID );
+	unsigned char *cypher = (unsigned char *)_alloca( PAD_NUMBER( nLength, nBlockSize ) );
+	unsigned char *temp = (unsigned char *)m_szSteamID;
+
+	int nBytesLeft = nLength;
+	for( ; nBytesLeft >= nBlockSize; nBytesLeft -= nBlockSize )
+	{
+		ice.encrypt( temp, cypher );
+
+		cypher += nBlockSize;
+		temp += nBlockSize;
+	}
+	
+	Q_memcpy( cypher, temp, nLength - nBytesLeft );
+	cypher -= nLength - nBytesLeft;
+	return (char *)cypher;
 }
 
 //-----------------------------------------------------------------------------
@@ -944,7 +943,26 @@ char const *CTFDiscordPresence::GetMatchSecret( void ) const
 //-----------------------------------------------------------------------------
 char const *CTFDiscordPresence::GetJoinSecret( void ) const
 {
-	return nullptr;
+	IceKey ice( 0 );
+	ice.set( GetEncryptionKey() );
+	int nBlockSize = ice.blockSize();
+
+	int nLength = V_strlen( m_szServerInfo );
+	unsigned char *cypher = (unsigned char *)_alloca( PAD_NUMBER( nLength, nBlockSize ) );
+	unsigned char *temp = (unsigned char *)m_szServerInfo;
+
+	int nBytesLeft = nLength;
+	for ( ; nBytesLeft >= nBlockSize; nBytesLeft -= nBlockSize )
+	{
+		ice.encrypt( temp, cypher );
+
+		cypher += nBlockSize;
+		temp += nBlockSize;
+	}
+
+	Q_memcpy( cypher, temp, nLength - nBytesLeft );
+	cypher -= nLength - nBytesLeft;
+	return (char *)cypher;
 }
 
 //-----------------------------------------------------------------------------
@@ -952,19 +970,33 @@ char const *CTFDiscordPresence::GetJoinSecret( void ) const
 //-----------------------------------------------------------------------------
 char const *CTFDiscordPresence::GetSpectateSecret( void ) const
 {
-	return nullptr;
+	IceKey ice( 0 );
+	ice.set( GetEncryptionKey() );
+	int nBlockSize = ice.blockSize();
+
+	int nLength = V_strlen( m_szServerInfo );
+	unsigned char *cypher = (unsigned char *)_alloca( PAD_NUMBER( nLength, nBlockSize ) );
+	unsigned char *temp = (unsigned char *)m_szServerInfo;
+
+	int nBytesLeft = nLength;
+	for ( ; nBytesLeft >= nBlockSize; nBytesLeft -= nBlockSize )
+	{
+		ice.encrypt( temp, cypher );
+
+		cypher += nBlockSize;
+		temp += nBlockSize;
+	}
+
+	Q_memcpy( cypher, temp, nLength - nBytesLeft );
+	cypher -= nLength - nBytesLeft;
+	return (char *)cypher;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CTFDiscordPresence::UpdatePresence( bool bForce, bool bIsDead )
+void CTFDiscordPresence::UpdatePresence( bool bIsDead )
 {
-	if ( !m_updateThrottle.IsElapsed() && !bForce )
-		return;
-
-	m_updateThrottle.Start( RandomFloat( 15.0, 20.0 ) );
-
 	C_TFPlayer *pLocalPlayer = C_TFPlayer::GetLocalTFPlayer();
 	if ( !pLocalPlayer )
 		return;

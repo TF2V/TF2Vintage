@@ -714,6 +714,7 @@ $Project
 				"$SRCDIR\public\server_class.cpp"					\
 				"$SRCDIR\game\shared\sheetsimulator.cpp"			\
 				"$SRCDIR\public\simple_physics.cpp"					\
+				"$SRCDIR\common\steamid.cpp"						\
 				"$SRCDIR\public\stringregistry.cpp"					\
 				"$SRCDIR\public\studio.cpp"							\
 				"GameStats_BasicStatsFunctions.cpp"					\
@@ -1038,5 +1039,7 @@ $Project
 		$Lib	tier2
 		$Lib	tier3
 		$ImpLibexternal steam_api
+
+		$Lib	"$LIBCOMMON\lzma"
 	}
 }

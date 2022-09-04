@@ -50,8 +50,17 @@ CTFGenericBomb::CTFGenericBomb()
 
 void CTFGenericBomb::Precache()
 {
+	bool allowPrecache = CBaseEntity::IsPrecacheAllowed();
+	CBaseEntity::SetAllowPrecache( true );
+
+	int iModel = PrecacheModel( STRING( GetModelName() ) );
+	PrecacheGibsForModel( iModel );
+
 	PrecacheParticleSystem( STRING( m_iszParticleName ) );
 	PrecacheScriptSound( STRING( m_iszExplodeSound ) );
+
+	CBaseEntity::SetAllowPrecache( allowPrecache );
+
 	BaseClass::Precache();
 }
 

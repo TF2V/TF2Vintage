@@ -9,6 +9,7 @@ $Macro GAMENAME 	"tf2vintage"
 
 $Include "$SRCDIR\game\server\server_base.vpc"
 $Include "$SRCDIR\game\server\nav_mesh.vpc"
+$Include "$SRCDIR\game\shared\econ_protobuf_include.vpc"
 
 $Configuration
 {
@@ -85,6 +86,10 @@ $Project "Server (TF)"
 			$File	"$SRCDIR\game\shared\econ\econ_wearable.h"
 			$File	"$SRCDIR\game\shared\econ\econ_item_view.cpp"
 			$File	"$SRCDIR\game\shared\econ\econ_item_view.h"
+			$File	"$SRCDIR\game\shared\econ\econ_networking.cpp"
+			$File	"$SRCDIR\game\shared\econ\econ_networking.h"
+			$File	"$SRCDIR\game\shared\econ\econ_networking_messages.cpp"
+			$File	"$SRCDIR\game\shared\econ\econ_networking_messages.h"
 			$File	"$SRCDIR\game\shared\econ\econ_item_interface.h"
 			$File	"$SRCDIR\game\shared\econ\game_item_schema.h"
 			$File	"$SRCDIR\game\shared\econ\ihasattributes.h"

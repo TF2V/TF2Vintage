@@ -187,10 +187,10 @@ static void __MsgFunc_MVMWaveChange( bf_read &msg )
 {
 	uint16 nWave = msg.ReadWord();
 	CMannVsMachinePlayerStats stats ={
-		msg.ReadByte(),
-		msg.ReadLong(),
-		msg.ReadLong(),
-		msg.ReadLong()
+		msg.ReadUBitLong( sizeof( unsigned char ) << 3 ),
+		msg.ReadUBitLong( sizeof( long ) << 3 ),
+		msg.ReadUBitLong( sizeof( long ) << 3 ),
+		msg.ReadUBitLong( sizeof( long ) << 3 )
 	};
 
 	if ( g_pMVMStats )

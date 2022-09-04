@@ -1188,8 +1188,7 @@ void CTFRobotDestructionLogic::PlaySoundInPlayersEars( CTFPlayer *pPlayer, EmitS
 		pSound->m_NextAvailableTime[nPlayerIndex] = gpGlobals->curtime + m_RateLimitedSounds[nIndex]->m_flDelay;
 	}
 
-	CSingleUserRecipientFilter filter( pPlayer );
-	filter.MakeReliable();
+	CSingleUserReliableRecipientFilter filter( pPlayer );
 	if ( params.m_nFlags & SND_CHANGE_PITCH )
 	{
 		pPlayer->StopSound( params.m_pSoundName );

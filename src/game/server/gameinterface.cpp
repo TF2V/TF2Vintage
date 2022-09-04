@@ -125,6 +125,7 @@ extern ConVar tf_mm_servermode;
 
 #ifdef USES_ECON_ITEMS
 #include "econ_item_system.h"
+#include "econ_networking.h"
 #include "tf_inventory.h"
 #endif // USES_ECON_ITEMS
 
@@ -958,16 +959,15 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	if ( IsX360() && (matchmaking = (IMatchmaking *)appSystemFactory( VENGINE_MATCHMAKING_VERSION, NULL )) == NULL )
 		return false;
 
-	//if ( !CommandLine()->CheckParm( "-noscripting" ) )
-	if ( CommandLine()->CheckParm( "-vscript" ) )
+	if ( !CommandLine()->CheckParm( "-noscripting" ) )
 	{
 	#if defined( TF_VINTAGE )
-		char szCwd[1024];
+		char szCwd[MAX_PATH];
 		engine->GetGameDir( szCwd, MAX_PATH );
 
-		static CDllDemandLoader s_VScript( CFmtStr( "%s/bin/vscript.dll", szCwd ) );
+		static CDllDemandLoader s_VScript( CFmtStr( "%s/bin/vscript%s", szCwd, DLL_EXT_STRING ) );
 	#else
-		static CDllDemandLoader s_VScript( "vscript.dll" );
+		static CDllDemandLoader s_VScript( "vscript" DLL_EXT_STRING );
 	#endif
 
 		CreateInterfaceFn pAppFactory = s_VScript.GetFactory();
@@ -1108,6 +1108,10 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 void CServerGameDLL::PostInit()
 {
 	IGameSystem::PostInitAllSystems();
+
+#ifdef USES_ECON_ITEMS
+	g_pNetworking->Init();
+#endif
 }
 
 void CServerGameDLL::DLLShutdown( void )
@@ -1147,6 +1151,10 @@ void CServerGameDLL::DLLShutdown( void )
 		delete TheNavMesh;
 		TheNavMesh = NULL;
 	}
+#endif
+
+#ifdef USES_ECON_ITEMS
+	g_pNetworking->Shutdown();
 #endif
 	// reset (shutdown) the gamestatsupload connection
 	gamestatsuploader->InitConnection();
@@ -1584,6 +1592,10 @@ void CServerGameDLL::GameFrame( bool simulating )
 #ifndef _XBOX
 #ifdef USE_NAV_MESH
 	TheNavMesh->Update();
+#endif
+
+#ifdef USES_ECON_ITEMS
+	g_pNetworking->Update( oldframetime );
 #endif
 
 #ifdef NEXT_BOT

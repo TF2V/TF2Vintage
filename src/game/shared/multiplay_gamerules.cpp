@@ -44,6 +44,9 @@
 
 #ifdef USES_ECON_ITEMS
 	#include "econ_item_system.h"
+#ifdef TF_VINTAGE
+	#include "econ_networking.h"
+#endif
 #endif
 
 #endif
@@ -1672,6 +1675,20 @@ ConVarRef suitcharger( "sk_suitcharger" );
 					pPlayer->OnAchievementEarned( nAchievementID );
 				}
 			}
+
+		#if defined( USES_ECON_ITEMS )
+			if ( FStrEq( pszCommand, "NetworkMessage" ) )
+			{
+				MsgType_t eMsg = (MsgType_t)pKeyValues->GetInt( "MsgType" );
+				uint32 cubData = pKeyValues->GetInt( "Length" );
+				void *pubData = pKeyValues->GetPtr( "Data" );
+
+				CSteamID steamID;
+				pPlayer->GetSteamID( &steamID );
+
+				g_pNetworking->RecvMessage( steamID, eMsg, pubData, cubData );
+			}
+		#endif
 		}
 	}
 

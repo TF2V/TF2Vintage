@@ -393,57 +393,6 @@ bool CTFWeaponBase::IsWeapon( int iWeapon ) const
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CTFWeaponBase::TranslateViewmodelHandActivity( int iActivity )
-{	
-	CTFPlayer *pTFPlayer = ToTFPlayer( GetOwner() );
-	if ( pTFPlayer == NULL )
-	{
-		Assert( false ); // This shouldn't be possible
-		return iActivity;
-	}
-
-	CTFViewModel *vm = dynamic_cast<CTFViewModel*>( pTFPlayer->GetViewModel( m_nViewModelIndex, false ) );
-	if ( vm == NULL )
-	{
-		return iActivity;
-	}
-
-	// This is only used by TF2 VM type.
-	if ( vm->GetViewModelType() != VMTYPE_TF2 )
-		return iActivity;
-
-	int iWeaponRole = GetTFWpnData().m_iWeaponType;
-
-	if ( HasItemDefinition() )
-	{
-		int iSchemaRole = GetItem()->GetAnimationSlot();
-		if ( iSchemaRole >= 0 )
-		{
-			iWeaponRole = iSchemaRole;
-		}
-
-		Activity actActivityOverride = GetItem()->GetActivityOverride( GetTeamNumber(), (Activity)iActivity );
-		if ( actActivityOverride != iActivity )
-		{
-			return actActivityOverride;
-		}
-	}
-
-	for ( int i = 0; i <= 160; i++ )
-	{
-		const viewmodel_acttable_t& act = s_viewmodelacttable[i];
-		if ( iActivity == act.actBaseAct && iWeaponRole == act.iWeaponRole )
-		{
-			return act.actTargetAct;
-		}
-	}
-
-	return iActivity;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CTFWeaponBase::SetViewModel()
 {
 	CTFPlayer *pTFPlayer = ToTFPlayer( GetOwner() );
@@ -3416,7 +3365,7 @@ void CTFWeaponBase::Redraw()
 
 #endif
 
-acttable_t CTFWeaponBase::s_acttablePrimary[] = 
+acttable_t s_acttablePrimary[] = 
 {
 	{ ACT_MP_STAND_IDLE,		ACT_MP_STAND_PRIMARY,				false },
 	{ ACT_MP_CROUCH_IDLE,		ACT_MP_CROUCH_PRIMARY,				false },
@@ -3477,7 +3426,7 @@ acttable_t CTFWeaponBase::s_acttablePrimary[] =
 	{ ACT_MP_GESTURE_VC_NODNO,			ACT_MP_GESTURE_VC_NODNO_PRIMARY,	false },
 };
 
-acttable_t CTFWeaponBase::s_acttableSecondary[] = 
+acttable_t s_acttableSecondary[] = 
 {
 	{ ACT_MP_STAND_IDLE,		ACT_MP_STAND_SECONDARY,				false },
 	{ ACT_MP_CROUCH_IDLE,		ACT_MP_CROUCH_SECONDARY,			false },
@@ -3532,7 +3481,7 @@ acttable_t CTFWeaponBase::s_acttableSecondary[] =
 	{ ACT_MP_GESTURE_VC_NODNO,			ACT_MP_GESTURE_VC_NODNO_SECONDARY,			false },
 };
 
-acttable_t CTFWeaponBase::s_acttableMelee[] = 
+acttable_t s_acttableMelee[] = 
 {
 	{ ACT_MP_STAND_IDLE,		ACT_MP_STAND_MELEE,				false },
 	{ ACT_MP_CROUCH_IDLE,		ACT_MP_CROUCH_MELEE,			false },
@@ -3574,7 +3523,7 @@ acttable_t CTFWeaponBase::s_acttableMelee[] =
 	{ ACT_MP_GESTURE_VC_NODNO,			ACT_MP_GESTURE_VC_NODNO_MELEE,		false },
 };
 
-acttable_t CTFWeaponBase::s_acttableBuilding[] =
+acttable_t s_acttableBuilding[] =
 {
 	{ ACT_MP_STAND_IDLE,	ACT_MP_STAND_BUILDING,		false },
 	{ ACT_MP_CROUCH_IDLE,	ACT_MP_CROUCH_BUILDING,		false },
@@ -3607,7 +3556,7 @@ acttable_t CTFWeaponBase::s_acttableBuilding[] =
 };
 
 
-acttable_t CTFWeaponBase::s_acttablePDA[] = 
+acttable_t s_acttablePDA[] = 
 {
 	{ ACT_MP_STAND_IDLE,		ACT_MP_STAND_PDA,			false },
 	{ ACT_MP_CROUCH_IDLE,		ACT_MP_CROUCH_PDA,			false },
@@ -3632,7 +3581,7 @@ acttable_t CTFWeaponBase::s_acttablePDA[] =
 	{ ACT_MP_GESTURE_VC_NODNO,			ACT_MP_GESTURE_VC_NODNO_PDA,	false },
 };
 
-acttable_t CTFWeaponBase::s_acttableItem1[] =
+acttable_t s_acttableItem1[] =
 {
 	{ ACT_MP_STAND_IDLE,		ACT_MP_STAND_ITEM1,			false },
 	{ ACT_MP_CROUCH_IDLE,		ACT_MP_CROUCH_ITEM1,		false },
@@ -3678,7 +3627,7 @@ acttable_t CTFWeaponBase::s_acttableItem1[] =
 	{ ACT_MP_GESTURE_VC_NODNO,			ACT_MP_GESTURE_VC_NODNO_ITEM1,		false },
 };
 
-acttable_t CTFWeaponBase::s_acttableItem2[] =
+acttable_t s_acttableItem2[] =
 {
 	{ ACT_MP_STAND_IDLE,		ACT_MP_STAND_ITEM2,				false },
 	{ ACT_MP_CROUCH_IDLE,		ACT_MP_CROUCH_ITEM2,			false },
@@ -3748,7 +3697,7 @@ acttable_t CTFWeaponBase::s_acttableItem2[] =
 
 };
 
-acttable_t CTFWeaponBase::s_acttableMeleeAllClass[] = 
+acttable_t s_acttableMeleeAllClass[] = 
 {
 	{ ACT_MP_STAND_IDLE,		ACT_MP_STAND_MELEE_ALLCLASS,	false },
 	{ ACT_MP_CROUCH_IDLE,		ACT_MP_CROUCH_MELEE_ALLCLASS,	false },
@@ -3790,7 +3739,7 @@ acttable_t CTFWeaponBase::s_acttableMeleeAllClass[] =
 	{ ACT_MP_GESTURE_VC_NODNO,			ACT_MP_GESTURE_VC_NODNO_MELEE,			false },
 };
 
-acttable_t CTFWeaponBase::s_acttableSecondary2[] =
+acttable_t s_acttableSecondary2[] =
 {
 	{ ACT_MP_STAND_IDLE,	ACT_MP_STAND_SECONDARY2, false },
 	{ ACT_MP_CROUCH_IDLE,	ACT_MP_CROUCH_SECONDARY2, false },
@@ -3836,7 +3785,7 @@ acttable_t CTFWeaponBase::s_acttableSecondary2[] =
 
 };
 
-acttable_t CTFWeaponBase::s_acttablePrimary2[] = 
+acttable_t s_acttablePrimary2[] = 
 {
 	{ ACT_MP_STAND_IDLE,					ACT_MP_STAND_PRIMARY,				false },
 	{ ACT_MP_CROUCH_IDLE,					ACT_MP_CROUCH_PRIMARY,				false },
@@ -3889,7 +3838,7 @@ acttable_t CTFWeaponBase::s_acttablePrimary2[] =
 	{ ACT_MP_GESTURE_VC_NODNO,			ACT_MP_GESTURE_VC_NODNO_PRIMARY,		false },
 };
 
-acttable_t CTFWeaponBase::s_acttableItem3[] =
+acttable_t s_acttableItem3[] =
 {
 	{ ACT_MP_STAND_IDLE,	ACT_MP_STAND_ITEM3,		false },
 	{ ACT_MP_CROUCH_IDLE,	ACT_MP_CROUCH_ITEM3,	false },
@@ -3937,7 +3886,7 @@ acttable_t CTFWeaponBase::s_acttableItem3[] =
 	{ ACT_MP_ATTACK_CROUCH_PRIMARYFIRE_DEPLOYED,	ACT_MP_ATTACK_CROUCH_PRIMARY_DEPLOYED_ITEM3,	false },
 };
 
-acttable_t CTFWeaponBase::s_acttableItem4[] =
+acttable_t s_acttableItem4[] =
 {
 	{ ACT_MP_STAND_IDLE,	ACT_MP_STAND_ITEM4,		false },
 	{ ACT_MP_CROUCH_IDLE,	ACT_MP_CROUCH_ITEM4,	false },
@@ -3985,7 +3934,7 @@ acttable_t CTFWeaponBase::s_acttableItem4[] =
 	{ ACT_MP_ATTACK_CROUCH_PRIMARYFIRE_DEPLOYED,	ACT_MP_ATTACK_CROUCH_PRIMARY_DEPLOYED_ITEM4,	false },
 };
 
-acttable_t CTFWeaponBase::s_acttableLoserState[] =
+acttable_t s_acttableLoserState[] =
 {
 	{ ACT_MP_STAND_IDLE,	ACT_MP_STAND_LOSERSTATE,      false },
 	{ ACT_MP_CROUCH_IDLE,	ACT_MP_CROUCH_LOSERSTATE,     false },
@@ -4001,7 +3950,7 @@ acttable_t CTFWeaponBase::s_acttableLoserState[] =
 	{ ACT_MP_JUMP_LAND_LOSERSTATE, ACT_MP_DOUBLEJUMP_CROUCH_MELEE, false },
 };
 
-acttable_t CTFWeaponBase::s_acttableBuildingDeployed[] =
+acttable_t s_acttableBuildingDeployed[] =
 {
 	{ ACT_MP_STAND_IDLE,	ACT_MP_STAND_BUILDING_DEPLOYED,		 false },
 	{ ACT_MP_CROUCH_IDLE,	ACT_MP_CROUCH_BUILDING_DEPLOYED,	 false },
@@ -4026,7 +3975,13 @@ acttable_t CTFWeaponBase::s_acttableBuildingDeployed[] =
 	{ ACT_MP_ATTACK_AIRWALK_GRENADE,	ACT_MP_ATTACK_STAND_GRENADE_BUILDING_DEPLOYED, false },
 };
 
-viewmodel_acttable_t CTFWeaponBase::s_viewmodelacttable[] = 
+typedef struct
+{
+	Activity actBaseAct;
+	Activity actTargetAct;
+	int		iWeaponRole;
+} viewmodel_acttable_t;
+viewmodel_acttable_t s_viewmodelacttable[] = 
 {
 	{ ACT_VM_DRAW,		ACT_PRIMARY_VM_DRAW,		TF_WPN_TYPE_PRIMARY },
 	{ ACT_VM_HOLSTER,	ACT_PRIMARY_VM_HOLSTER,		TF_WPN_TYPE_PRIMARY },
@@ -4316,6 +4271,57 @@ acttable_t *CTFWeaponBase::ActivityList( int &iActivityCount )
 #endif
 
 	return pTable;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+int CTFWeaponBase::TranslateViewmodelHandActivity( int iActivity )
+{
+	CTFPlayer *pTFPlayer = ToTFPlayer( GetOwner() );
+	if ( pTFPlayer == NULL )
+	{
+		Assert( false ); // This shouldn't be possible
+		return iActivity;
+	}
+
+	CTFViewModel *vm = dynamic_cast<CTFViewModel *>( pTFPlayer->GetViewModel( m_nViewModelIndex, false ) );
+	if ( vm == NULL )
+	{
+		return iActivity;
+	}
+
+	// This is only used by TF2 VM type.
+	if ( vm->GetViewModelType() != VMTYPE_TF2 )
+		return iActivity;
+
+	int iWeaponRole = GetTFWpnData().m_iWeaponType;
+
+	if ( HasItemDefinition() )
+	{
+		int iSchemaRole = GetItem()->GetAnimationSlot();
+		if ( iSchemaRole >= 0 )
+		{
+			iWeaponRole = iSchemaRole;
+		}
+
+		Activity actActivityOverride = GetItem()->GetActivityOverride( GetTeamNumber(), (Activity)iActivity );
+		if ( actActivityOverride != iActivity )
+		{
+			return actActivityOverride;
+		}
+	}
+
+	for ( int i = 0; i < ARRAYSIZE( s_viewmodelacttable ); i++ )
+	{
+		const viewmodel_acttable_t &act = s_viewmodelacttable[i];
+		if ( iActivity == act.actBaseAct && iWeaponRole == act.iWeaponRole )
+		{
+			return act.actTargetAct;
+		}
+	}
+
+	return iActivity;
 }
 
 // -----------------------------------------------------------------------------

@@ -14,7 +14,7 @@ class CTFAdvItemButton;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-class CTFLoadoutPanel : public CTFMenuPanelBase
+class CTFLoadoutPanel : public CTFMenuPanelBase, public CGameEventListener
 {
 	DECLARE_CLASS_SIMPLE(CTFLoadoutPanel, CTFMenuPanelBase);
 
@@ -22,6 +22,7 @@ public:
 	CTFLoadoutPanel(vgui::Panel* parent, const char *panelName);
 	virtual ~CTFLoadoutPanel();
 	bool Init();
+	void FireGameEvent( IGameEvent *event ) OVERRIDE;
 	void PerformLayout();
 	void ApplySchemeSettings(vgui::IScheme *pScheme);
 	void OnThink();
@@ -54,6 +55,8 @@ private:
 	int m_iCurrentSkin;
 	CTFItemPanel *m_pItemPanel;
 	CTFAdvButton *m_pPresetButtons[TF_MAX_PRESETS];
+	bool m_bLoadoutChanged;
+	char *m_pszServerID;
 };
 
 //-----------------------------------------------------------------------------

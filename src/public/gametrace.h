@@ -110,7 +110,7 @@ public:
 		m_aEntityList.SetSize( nEntityMax );
 	}
 
-	~CTraceListData()
+	virtual ~CTraceListData()
 	{
 		m_nLeafCount = 0;
 		m_aLeafList.RemoveAll();

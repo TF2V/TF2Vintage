@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2003, Valve LLC, All rights reserved. ============
+//========= Copyright ï¿½ 1996-2003, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -88,6 +88,8 @@ void RegisterUserMessages()
 
 	usermessages->Register("PlayerLoadoutUpdated", -1);
 
+	usermessages->Register("ResetInventory", 0);
+	
 	usermessages->Register("MVMStatsReset", -1);
 	usermessages->Register("MVMPlayerEvent", -1);
 	usermessages->Register("MVMResetPlayerStats", -1);

@@ -562,6 +562,7 @@ $Project
 				"$SRCDIR\public\sentence.cpp"						\
 				"$SRCDIR\game\shared\sheetsimulator.cpp"			\
 				"$SRCDIR\public\simple_physics.cpp"					\
+				"$SRCDIR\common\steamid.cpp"						\
 				"$SRCDIR\public\stringregistry.cpp"					\
 				"$SRCDIR\public\studio.cpp"							\
 				"$SRCDIR\public\vallocator.cpp"						\
@@ -1351,6 +1352,8 @@ $Project
 		$Libexternal "$LIBCOMMON/libcurl" [$LINUXALL]
 		$Libexternal "$LIBCOMMON/libcurlssl" [$LINUXALL]
 		$Libexternal "$SRCDIR\lib\common\$(CRYPTOPPDIR)\libssl" [$LINUXALL]
+
+		$Lib	"$LIBCOMMON\lzma"
  	}
 
 }

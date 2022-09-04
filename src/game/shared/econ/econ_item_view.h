@@ -87,6 +87,7 @@ public:
 	CEconItemView();
 	CEconItemView( CEconItemView const &other );
 	CEconItemView( int iItemID );
+	virtual ~CEconItemView() {}
 
 	void Init( int iItemID );
 

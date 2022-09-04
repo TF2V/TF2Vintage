@@ -542,7 +542,7 @@ PRECACHE_WEAPON_REGISTER( tf_projectile_ball_ornament );
 //-----------------------------------------------------------------------------
 CTFBauble *CTFBauble::Create( CBaseEntity *pWeapon, const Vector &vecOrigin, const QAngle &vecAngles, const Vector &vecVelocity, CBaseCombatCharacter *pOwner, CBaseEntity *pScorer, const AngularImpulse &angVelocity, const CTFWeaponInfo &weaponInfo )
 {
-	CTFBauble *pBauble = static_cast<CTFBauble *>( CBaseEntity::CreateNoSpawn( "tf_projectile_bauble", vecOrigin, vecAngles, pOwner ) );
+	CTFBauble *pBauble = static_cast<CTFBauble *>( CBaseEntity::CreateNoSpawn( "tf_projectile_ball_ornament", vecOrigin, vecAngles, pOwner ) );
 
 	if ( pBauble )
 	{

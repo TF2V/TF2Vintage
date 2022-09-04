@@ -160,7 +160,7 @@
 			
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_scattergun.mdl"
+				"modelname" "models/weapons/c_models/c_scattergun.mdl"
 				"skin"		"0"
 			}
 		}

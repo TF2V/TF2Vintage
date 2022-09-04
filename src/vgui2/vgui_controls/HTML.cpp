@@ -106,6 +106,7 @@ private:
 	PopupHTML *m_pHTML;
 };
 
+#pragma warning(disable:4355)
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor

@@ -742,6 +742,7 @@ protected:
 	{
 	public:
 		explicit Handler( CBaseEntity *pEntity ) : m_pEntity(pEntity) { }
+		virtual ~Handler() { }
 		virtual void OnModelLoadComplete( const model_t *pModel );
 		CBaseEntity* m_pEntity;
 	};

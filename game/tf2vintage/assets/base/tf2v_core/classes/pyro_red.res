@@ -29,7 +29,7 @@
 			
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_flamethrower.mdl"
+				"modelname" "models/weapons/c_models/c_flamethrower/c_flamethrower.mdl"
 			}
 		}
 	}

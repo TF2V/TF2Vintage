@@ -113,6 +113,7 @@ enum
 #define PANEL_MAPINFO			"mapinfo"
 #define PANEL_ROUNDINFO			"roundinfo"
 #define PANEL_ARENATEAMSELECT 	"arenateamselect"
+#define PANEL_PVE_WIN			"pvewinpanel"
 
 #define PANEL_FOURTEAMSCOREBOARD "fourteamscoreboard"
 #define PANEL_FOURTEAMSELECT	"fourteamselect"
@@ -1244,7 +1245,7 @@ extern const char *g_pszHintMessages[];
 #define DMG_NOCLOSEDISTANCEMOD	(DMG_POISON)
 #define DMG_MELEE				(DMG_BLAST_SURFACE) // Identifier for melee attributes
 
-#define TF_DMG_SENTINEL_VALUE	0xFFFFFFFF
+#define TF_DMG_SENTINEL_VALUE	(1<<31)
 
 // This can only ever be used on a TakeHealth call, since it re-uses a dmg flag that means something else
 #define DMG_IGNORE_MAXHEALTH	(DMG_BULLET)

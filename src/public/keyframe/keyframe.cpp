@@ -280,6 +280,7 @@ class CPositionInterpolator_Rope : public IPositionInterpolator
 {
 public:
 						CPositionInterpolator_Rope();
+	virtual				~CPositionInterpolator_Rope() {}
 
 	virtual void		Release();
 	virtual void		GetDetails( char **outName, int *outMinKeyReq, int *outMaxKeyReq );

@@ -17,6 +17,7 @@
 class CHudMenuEngyBuild;
 class CHudMenuEngyDestroy;
 class CHudMenuSpyDisguise;
+class CHudUpgradePanel;
 class CHudInspectPanel;
 class CTFFreezePanel;
 
@@ -81,6 +82,7 @@ private:
 	CHudMenuEngyBuild	*m_pMenuEngyBuild;
 	CHudMenuEngyDestroy *m_pMenuEngyDestroy;
 	CHudMenuSpyDisguise *m_pMenuSpyDisguise;
+	CHudUpgradePanel	*m_pMenuUpgradePanel;
 	CTFFreezePanel		*m_pFreezePanel;
 	CHudInspectPanel	*m_pInspectPanel;
 	IGameUI				*m_pGameUI;

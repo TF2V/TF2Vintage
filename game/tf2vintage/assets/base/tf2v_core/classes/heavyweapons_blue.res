@@ -31,7 +31,7 @@
 
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_minigun.mdl"
+				"modelname" "models/weapons/c_models/c_minigun/c_minigun.mdl"
 				"skin"		"1"
 			}
 		}

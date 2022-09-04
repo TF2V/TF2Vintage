@@ -83,6 +83,7 @@ CTeamControlPoint::CTeamControlPoint()
 
 	m_bLocked = false;
 	m_flUnlockTime = -1;
+	m_bBotsIgnore = false;
 
 #if defined ( TF_DLL ) || defined ( TF_VINTAGE )
 	UseClientSideAnimation();
@@ -142,6 +143,8 @@ void CTeamControlPoint::Spawn( void )
 	{
 		AddEffects( EF_NOSHADOW );
 	}
+
+	m_bBotsIgnore = FBitSet( m_spawnflags, SF_CAP_POINT_BOTS_IGNORE ) > 0;
 
 	m_flLastContestedAt = -1;
 
@@ -238,11 +241,11 @@ void CTeamControlPoint::Precache( void )
 			PrecacheMaterial( STRING( m_TeamData[i].iszIcon ) );
 			m_TeamData[i].iIcon = GetMaterialIndex( STRING( m_TeamData[i].iszIcon ) );
 			Assert( m_TeamData[i].iIcon != 0 );
-		}
 
-		if ( !m_TeamData[i].iIcon )
-		{
-			Warning( "Invalid hud icon material for team %d in control point '%s' ( point index %d )\n", i, GetDebugName(), GetPointIndex() );
+			if ( !m_TeamData[i].iIcon )
+			{
+				Warning( "Invalid hud icon material for team %d in control point '%s' ( point index %d )\n", i, GetDebugName(), GetPointIndex() );
+			}
 		}
 
 		if ( m_TeamData[i].iszOverlay != NULL_STRING )

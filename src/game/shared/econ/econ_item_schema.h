@@ -266,12 +266,28 @@ public:
 	friend class CEconItemDefinition;
 } ItemStyle_t;
 
+struct ActivityReplacement_t
+{
+	ActivityReplacement_t()
+	{
+		CLEAR_STR( pszActivity );
+		CLEAR_STR( pszReplacement );
+
+		iActivity = kActivityLookup_Unknown;
+		iReplacement = kActivityLookup_Unknown;
+	}
+
+	int iActivity;
+	const char *pszActivity;
+	int iReplacement;
+	const char *pszReplacement;
+};
+
 #define MAX_CUSTOM_WEAPON_SOUNDS   10
 typedef struct EconPerTeamVisuals
 {
 	EconPerTeamVisuals()
 	{
-		animation_replacement.SetLessFunc( DefLessFunc( int ) );
 		player_bodygroups.SetLessFunc( StringLessThan );
 		V_memset( aCustomWeaponSounds, 0, sizeof( aCustomWeaponSounds ) );
 		V_memset( aWeaponSounds, 0, sizeof( aWeaponSounds ) );
@@ -289,6 +305,7 @@ typedef struct EconPerTeamVisuals
 	~EconPerTeamVisuals()
 	{
 		styles.PurgeAndDeleteElements();
+		animation_replacement.PurgeAndDeleteElements();
 	}
 
 	char const *GetWeaponShootSound( int sound )
@@ -348,7 +365,7 @@ private:
 
 public:
 	CUtlMap< const char*, int > player_bodygroups;
-	CUtlMap< int, int > animation_replacement;
+	CUtlVector< ActivityReplacement_t* > animation_replacement;
 	CUtlVector< activity_on_wearable_t > playback_activity;
 	CUtlVector< AttachedModel_t > attached_models;
 	CUtlVector< ItemStyle_t* > styles;

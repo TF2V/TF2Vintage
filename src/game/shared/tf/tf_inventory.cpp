@@ -13,6 +13,7 @@
 #include "econ_item_system.h"
 #include "utlbuffer.h"
 #ifdef CLIENT_DLL
+#include "hud_macros.h"
 #include "tier0/icommandline.h"
 #include "steam/isteamutils.h"
 #include "steam/isteamuserstats.h"
@@ -21,8 +22,9 @@
 #include "steam/isteamremotestorage.h"
 #endif
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 static CTFInventory g_TFInventory;
-
 CTFInventory *GetTFInventory()
 {
 	return &g_TFInventory;
@@ -53,6 +55,7 @@ CTFInventory::~CTFInventory()
 
 bool CTFInventory::Init( void )
 {
+	ListenForGameEvent( "inventory_updated" );
 	return true;
 }
 
@@ -74,6 +77,28 @@ void CTFInventory::PostInit( void )
 void CTFInventory::LevelInitPreEntity( void )
 {
 	GetItemSchema()->Precache();
+}
+
+void CTFInventory::FireGameEvent( IGameEvent *event )
+{
+	if ( FStrEq( event->GetName(), "inventory_updated" ) )
+	{
+		for ( int iClass = 0; iClass < TF_CLASS_COUNT_ALL; iClass++ )
+		{
+			for ( int iSlot = 0; iSlot < TF_LOADOUT_SLOT_COUNT; iSlot++ )
+			{
+				FOR_EACH_VEC( m_Items[iClass][iSlot], iItem )
+				{
+					delete m_Items[iClass][iSlot][iItem];
+					m_Items[iClass][iSlot][iItem] = NULL;
+				}
+
+				m_Items[iClass][iSlot].RemoveMultipleFromTail( m_Items[iClass][iSlot].Count() - 1 );
+			}
+		}
+
+		LoadInventory();
+	}
 }
 
 int CTFInventory::GetNumPresets(int iClass, int iSlot)
@@ -367,8 +392,7 @@ void CTFInventory::ChangeLoadoutSlot(int iClass, int iLoadoutSlot)
 	pClass->SetInt( "activeslot", iLoadoutSlot );
 	SaveInventory();
 }
-
-#endif // CLIENT_DLL
+#endif
 
 // Legacy array, used when we're forced to use old method of giving out weapons.
 const int CTFInventory::Weapons[TF_CLASS_COUNT_ALL][TF_PLAYER_WEAPON_COUNT] =

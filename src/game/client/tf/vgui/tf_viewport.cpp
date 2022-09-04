@@ -51,6 +51,8 @@
 #include "tf_mapinfomenu.h"
 #include "tf_roundinfo.h"
 
+#include "tf_hud_pve_winpanel.h"
+
 #include "tf_overview.h"
 #include "tf_fourteamscoreboard.h"
 
@@ -102,6 +104,7 @@ CON_COMMAND( showmapinfo, "Show map info panel" )
 			gViewPortInterface->ShowPanel( PANEL_INTRO, false );
 			gViewPortInterface->ShowPanel( PANEL_ROUNDINFO, false );
 			gViewPortInterface->ShowPanel( PANEL_ARENATEAMSELECT, false );
+			gViewPortInterface->ShowPanel( PANEL_PVE_WIN, false );
 
 			gViewPortInterface->ShowPanel( PANEL_MAPINFO, true );
 		}
@@ -318,9 +321,13 @@ IViewPortPanel* TFViewport::CreatePanelByName(const char *szPanelName)
 	{
 		newpanel = new CTFIntroMenu( this );
 	}
-	else if (Q_strcmp(PANEL_ARENATEAMSELECT, szPanelName) == 0)
+	else if ( Q_strcmp( PANEL_ARENATEAMSELECT, szPanelName ) == 0 )
 	{
-		newpanel = new CTFArenaTeamMenu(this);
+		newpanel = new CTFArenaTeamMenu( this );
+	}
+	else if ( Q_strcmp( PANEL_PVE_WIN, szPanelName ) == 0 )
+	{
+		newpanel = new CTFPVEWinPanel( this );
 	}
 	else
 	{
@@ -342,6 +349,7 @@ void TFViewport::CreateDefaultPanels( void )
 	AddNewPanel( CreatePanelByName( PANEL_INTRO ), "PANEL_INTRO" );
 	AddNewPanel( CreatePanelByName( PANEL_ROUNDINFO ), "PANEL_ROUNDINFO" );
 	AddNewPanel( CreatePanelByName( PANEL_ARENATEAMSELECT ), "PANEL_ARENATEAMSELECT" );
+	AddNewPanel( CreatePanelByName( PANEL_PVE_WIN ), "PANEL_PVEWIN" );
 
 	BaseClass::CreateDefaultPanels();
 }

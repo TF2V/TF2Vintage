@@ -22,6 +22,7 @@
 #undef offsetof
 #define offsetof(s,m)	(size_t)&(((s *)0)->m)
 #endif
+#define dt_offsetof(s,m)	((size_t)&(((s *)0)->m))		// Dumb, stupid, why is this needed
 
 // Max number of properties in a datatable and its children.
 #define MAX_DATATABLES		1024	// must be a power of 2.

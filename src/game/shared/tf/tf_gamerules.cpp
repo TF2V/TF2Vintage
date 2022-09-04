@@ -301,6 +301,7 @@ ConVar tf_gamemode_vsh( "tf_gamemode_vsh", "0", FCVAR_NOTIFY | FCVAR_REPLICATED 
 ConVar tf_gamemode_dr( "tf_gamemode_dr", "0", FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
 ConVar tf_gamemode_pd( "tf_gamemode_pd", "0", FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
 ConVar tf_gamemode_misc( "tf_gamemode_misc", "0", FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
+ConVar tf_attack_defend_map( "tf_attack_defend_map", "0", FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
 
 ConVar tf_teamtalk( "tf_teamtalk", "1", FCVAR_NOTIFY, "Teammates can always chat with each other whether alive or dead." );
 ConVar tf_gravetalk( "tf_gravetalk", "1", FCVAR_NOTIFY, "Allows living players to hear dead players using text/voice chat.", true, 0, true, 1 );
@@ -2916,6 +2917,10 @@ void CTFGameRules::ClientCommandKeyValues( edict_t *pEntity, KeyValues *pKeyValu
 	else if ( FStrEq( pcmd, "MVM_Respec" ) )
 	{
 
+	}
+	else
+	{
+		BaseClass::ClientCommandKeyValues( pEntity, pKeyValues );
 	}
 }
 
@@ -6730,6 +6735,34 @@ void CTFGameRules::LevelShutdownPostEntity( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+bool CTFGameRules::IsAttackDefenseMode( void )
+{
+#if defined( GAME_DLL )
+	CTeamControlPointMaster *pMaster = NULL;
+	if ( !g_hControlPointMasters.IsEmpty() )
+		pMaster = g_hControlPointMasters[0];
+
+	if ( tf_gamemode_payload.GetBool() )
+	{
+		tf_attack_defend_map.SetValue( 1 );
+		return true;
+	}
+
+	if ( pMaster && pMaster->GetNumPoints() > 0 && pMaster->IsActive() )
+	{
+		tf_attack_defend_map.SetValue( 1 );
+		return true;
+	}
+
+	tf_attack_defend_map.SetValue( 0 );
+#endif
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 int CTFGameRules::GetFarthestOwnedControlPoint( int iTeam, bool bWithSpawnpoints )
 {
 	int iOwnedEnd = ObjectiveResource()->GetBaseControlPointForTeam( iTeam );
@@ -6917,6 +6950,9 @@ void CTFGameRules::CollectCapturePoints( CBasePlayer *pPlayer, CUtlVector<CTeamC
 		if ( !pMaster->IsInRound( pPoint ) )
 			continue;
 
+		if ( pPlayer && pPlayer->IsBot() && pPoint->ShouldBotsIgnore() )
+			continue;
+
 		if ( ObjectiveResource()->GetOwningTeam( pPoint->GetPointIndex() ) == pPlayer->GetTeamNumber() )
 			continue;
 
@@ -6955,6 +6991,9 @@ void CTFGameRules::CollectDefendPoints( CBasePlayer *pPlayer, CUtlVector<CTeamCo
 	{
 		CTeamControlPoint *pPoint = pMaster->GetControlPoint( i );
 		if ( !pMaster->IsInRound( pPoint ) )
+			continue;
+
+		if ( pPlayer && pPlayer->IsBot() && pPoint->ShouldBotsIgnore() )
 			continue;
 
 		if ( ObjectiveResource()->GetOwningTeam( pPoint->GetPointIndex() ) != pPlayer->GetTeamNumber() )

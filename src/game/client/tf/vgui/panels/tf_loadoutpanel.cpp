@@ -8,6 +8,7 @@
 #include "script_parser.h"
 #include "econ_item_view.h"
 #include "tier0/icommandline.h"
+#include "econ_networking.h"
 
 using namespace vgui;
 // memdbgon must be the last include file in a .cpp file!!!
@@ -29,6 +30,8 @@ static char* pszClassModels[TF_CLASS_COUNT_ALL] =
 	"models/player/hwm/engineer.mdl",
 	"models/player/saxton_hale_jungle_inferno/saxton_hale.mdl",
 };
+
+ConVar tf_respawn_on_loadoutchanges( "tf_respawn_on_loadoutchanges", "1", FCVAR_ARCHIVE, "When set to 1, you will automatically respawn whenever you change loadouts inside a respawn zone." );
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -103,12 +106,16 @@ CTFLoadoutPanel::CTFLoadoutPanel(vgui::Panel* parent, const char *panelName) : C
 CTFLoadoutPanel::~CTFLoadoutPanel()
 {
 	m_pWeaponIcons.RemoveAll();
-	
+	if ( m_pszServerID )
+	{
+		free( m_pszServerID );
+	}
 }
 
 bool CTFLoadoutPanel::Init()
 {
 	BaseClass::Init();
+	ListenForGameEvent( "server_spawn" );
 
 	m_iCurrentClass = TF_CLASS_SCOUT;
 	m_iCurrentSlot = TF_LOADOUT_SLOT_PRIMARY;
@@ -116,6 +123,8 @@ bool CTFLoadoutPanel::Init()
 	m_pGameModelPanel = new CModelPanel( this, "gamemodelpanel" );
 	m_pItemPanel = NULL;
 	g_TFWeaponScriptParser.InitParser( "scripts/tf_weapon_*.txt", true, false );
+	m_bLoadoutChanged = false;
+	m_pszServerID = NULL;
 
 	char chEmptyLoc[32];
 	wchar_t* wcLoc = g_pVGuiLocalize->Find("SelectNoItemSlot");
@@ -141,6 +150,14 @@ bool CTFLoadoutPanel::Init()
 	}
 	
 	return true;
+}
+
+void CTFLoadoutPanel::FireGameEvent( IGameEvent *event )
+{
+	if ( FStrEq( event->GetName(), "server_spawn" ) )
+	{
+		m_pszServerID = strdup( event->GetString( "steamid" ) );
+	}
 }
 
 void CTFLoadoutPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
@@ -195,6 +212,14 @@ void CTFLoadoutPanel::OnCommand ( const char* command )
 	if ( !Q_strcmp ( command, "back" ) || (!Q_strcmp ( command, "vguicancel" )) )
 	{
 		Hide();
+
+		if ( m_bLoadoutChanged )
+		{
+			m_bLoadoutChanged = false;
+
+			if( tf_respawn_on_loadoutchanges.GetBool() && m_pszServerID && m_pszServerID[0] )
+				g_pNetworking->SendMessage( CSteamID( m_pszServerID ), k_ELoadoutChangedMsg, NULL, 0 );
+		}
 	}
 	else if ( !Q_strcmp ( command, "select_scout" ) )
 	{
@@ -287,6 +312,7 @@ void CTFLoadoutPanel::SetSlotAndPreset( int iSlot, int iPreset )
 {
 	SetCurrentSlot( iSlot );
 	SetWeaponPreset( m_iCurrentClass, m_iCurrentSlot, iPreset );
+	m_bLoadoutChanged = true;
 }
 
 int CTFLoadoutPanel::GetAnimSlot( CEconItemDefinition *pItemDef, int iClass )

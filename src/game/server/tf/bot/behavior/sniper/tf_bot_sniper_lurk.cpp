@@ -12,6 +12,7 @@ ConVar tf_bot_debug_sniper( "tf_bot_debug_sniper", "0", FCVAR_CHEAT );
 ConVar tf_bot_sniper_patience_duration( "tf_bot_sniper_patience_duration", "10", FCVAR_CHEAT, "How long a Sniper bot will wait without seeing an enemy before picking a new spot" );
 ConVar tf_bot_sniper_target_linger_duration( "tf_bot_sniper_target_linger_duration", "2", FCVAR_CHEAT, "How long a Sniper bot will keep toward at a target it just lost sight of" );
 ConVar tf_bot_sniper_allow_opportunistic( "tf_bot_sniper_allow_opportunistic", "1", FCVAR_NONE, "If set, Snipers will stop on their way to their preferred lurking spot to snipe at opportunistic targets" );
+ConVar tf_mvm_bot_sniper_target_by_dps( "tf_mvm_bot_sniper_target_by_dps", "1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "If set, Snipers in MvM mode target the victim that has the highest DPS" );
 extern ConVar tf_bot_sniper_melee_range;
 
 
@@ -37,7 +38,7 @@ ActionResult<CTFBot> CTFBotSniperLurk::OnStart( CTFBot *me, Action<CTFBot> *prio
 	m_vecHome = me->GetAbsOrigin();
 	m_bHasHome = false;
 	m_bNearHome = false;
-	unused = 0;
+	m_nAttempts = 0;
 	m_bOpportunistic = tf_bot_sniper_allow_opportunistic.GetBool();
 
 	CBaseEntity *pEntity = nullptr;
@@ -56,6 +57,9 @@ ActionResult<CTFBot> CTFBotSniperLurk::OnStart( CTFBot *me, Action<CTFBot> *prio
 
 	m_hHint = nullptr;
 
+	if ( TFGameRules()->IsMannVsMachineMode() && me->GetTeamNumber() == TF_TEAM_MVM_BOTS )
+		me->SetMission( CTFBot::MissionType::SNIPER, false );
+
 	return Action<CTFBot>::Continue();
 }
 
@@ -73,7 +77,7 @@ ActionResult<CTFBot> CTFBotSniperLurk::Update( CTFBot *me, float dt )
 	{
 		if ( threat->IsVisibleInFOVNow() )
 		{
-			unused = 0;
+			m_nAttempts = 0;
 
 			if ( threat->GetLastKnownPosition().DistToSqr( me->GetAbsOrigin() ) < Square( tf_bot_sniper_melee_range.GetFloat() ) )
 				return Action<CTFBot>::SuspendFor( new CTFBotMeleeAttack( 1.25f * tf_bot_sniper_melee_range.GetFloat() ), "Melee attacking nearby threat" );
@@ -83,7 +87,7 @@ ActionResult<CTFBot> CTFBotSniperLurk::Update( CTFBot *me, float dt )
 		{
 			if ( m_bOpportunistic )
 			{
-				CBaseCombatWeapon *pPrimary = me->Weapon_GetSlot( 0 );
+				CBaseCombatWeapon *pPrimary = me->Weapon_GetSlot( TF_WPN_TYPE_PRIMARY );
 				if ( pPrimary != nullptr )
 				{
 					me->Weapon_Switch( pPrimary );
@@ -102,7 +106,7 @@ ActionResult<CTFBot> CTFBotSniperLurk::Update( CTFBot *me, float dt )
 			}
 			else
 			{
-				CBaseCombatWeapon *pSecondary = me->Weapon_GetSlot( 1 );
+				CBaseCombatWeapon *pSecondary = me->Weapon_GetSlot( TF_WPN_TYPE_SECONDARY );
 				if ( pSecondary != nullptr )
 				{
 					me->Weapon_Switch( pSecondary );
@@ -121,7 +125,7 @@ ActionResult<CTFBot> CTFBotSniperLurk::Update( CTFBot *me, float dt )
 
 		if ( m_patienceDuration.IsElapsed() )
 		{
-			++unused;
+			++m_nAttempts;
 
 			if ( FindNewHome( me ) )
 			{
@@ -138,37 +142,37 @@ ActionResult<CTFBot> CTFBotSniperLurk::Update( CTFBot *me, float dt )
 	else
 	{
 		m_patienceDuration.Reset();
+	}
 
-		if ( !bWantsToZoom )
+	if ( !bWantsToZoom )
+	{
+		if ( m_recomputePathTimer.IsElapsed() )
 		{
-			if ( m_recomputePathTimer.IsElapsed() )
-			{
-				m_recomputePathTimer.Start( RandomFloat( 1.0f, 2.0f ) );
+			m_recomputePathTimer.Start( RandomFloat( 1.0f, 2.0f ) );
 
-				CTFBotPathCost cost( me, SAFEST_ROUTE );
-				m_PathFollower.Compute( me, m_vecHome, cost );
-			}
+			CTFBotPathCost cost( me, SAFEST_ROUTE );
+			m_PathFollower.Compute( me, m_vecHome, cost );
+		}
 
-			m_PathFollower.Update( me );
+		m_PathFollower.Update( me );
 
-			if ( me->m_Shared.InCond( TF_COND_ZOOMED ) )
+		if ( me->m_Shared.InCond( TF_COND_ZOOMED ) )
+		{
+			me->PressAltFireButton();
+		}
+	}
+	else
+	{
+		CBaseCombatWeapon *pPrimary = me->Weapon_GetSlot( 0 );
+		if ( pPrimary != nullptr )
+		{
+			me->Weapon_Switch( pPrimary );
+
+			CTFWeaponBase *pWeapon = static_cast<CTFWeaponBase *>( pPrimary );
+			if ( !me->m_Shared.InCond( TF_COND_ZOOMED ) && !pWeapon->IsWeapon( TF_WEAPON_COMPOUND_BOW ) )
 			{
 				me->PressAltFireButton();
 			}
-
-			return Action<CTFBot>::Continue();
-		}
-	}
-
-	CBaseCombatWeapon *pPrimary = me->Weapon_GetSlot( 0 );
-	if ( pPrimary != nullptr )
-	{
-		me->Weapon_Switch( pPrimary );
-
-		CTFWeaponBase *pWeapon = static_cast<CTFWeaponBase *>( pPrimary );
-		if ( !me->m_Shared.InCond( TF_COND_ZOOMED ) && !pWeapon->IsWeapon( TF_WEAPON_COMPOUND_BOW ) )
-		{
-			me->PressAltFireButton();
 		}
 	}
 
@@ -226,12 +230,75 @@ ActionResult<CTFBot> CTFBotSniperLurk::OnResume( CTFBot *me, Action<CTFBot> *pri
 
 QueryResultType CTFBotSniperLurk::ShouldRetreat( const INextBot *me ) const
 {
+	if ( TFGameRules()->IsMannVsMachineMode() && me->GetEntity()->GetTeamNumber() == TF_TEAM_MVM_BOTS )
+		return ANSWER_NO;
+
 	return ANSWER_UNDEFINED;
 }
 
 QueryResultType CTFBotSniperLurk::ShouldAttack( const INextBot *me, const CKnownEntity *threat ) const
 {
+	CTFBot *pMe = ToTFBot( me->GetEntity() );
+	CTFNavArea *pNavArea = pMe->GetLastKnownArea();
+	if ( TFGameRules()->IsMannVsMachineMode() && pNavArea && pNavArea->HasTFAttributes( TF_NAV_BLUE_SPAWN_ROOM ) )
+		return ANSWER_NO;
+
 	return ANSWER_YES;
+}
+
+const CKnownEntity *CTFBotSniperLurk::SelectMoreDangerousThreat( const INextBot *nextbot, const CBaseCombatCharacter *them, const CKnownEntity *threat1, const CKnownEntity *threat2 ) const
+{
+	if ( TFGameRules()->IsMannVsMachineMode() && tf_mvm_bot_sniper_target_by_dps.GetBool() )
+	{
+		CTFBot *pMe = ToTFBot( nextbot->GetEntity() );
+
+		if ( !threat1->IsVisibleRecently() )
+		{
+			if ( threat2->IsVisibleRecently() )
+				return threat2;
+		}
+		else if ( !threat2->IsVisibleRecently() )
+		{
+			return threat1;
+		}
+
+		CTFPlayer *pTFThreat1 = ToTFPlayer( threat1->GetEntity() );
+		CTFPlayer *pTFThreat2 = ToTFPlayer( threat2->GetEntity() );
+		if ( !pTFThreat1 || !pTFThreat2 )
+			return nullptr;
+
+		float flRangeSq1 = pMe->GetRangeSquaredTo( pTFThreat1 );
+		float flRangeSq2 = pMe->GetRangeSquaredTo( pTFThreat2 );
+
+		if ( pMe->HasWeaponRestriction( CTFBot::WeaponRestrictionType::MELEEONLY ) )
+		{
+			if ( flRangeSq1 > flRangeSq2 )
+				return threat2;
+			else
+				return threat1;
+		}
+
+		if ( flRangeSq1 < Sqr( 500.0f ) )
+		{
+			if ( flRangeSq2 > Sqr( 500.0f ) )
+				return threat1;
+		}
+		else if ( flRangeSq2 < Sqr( 500.0f ) )
+		{
+			return threat2;
+		}
+
+		if ( pTFThreat1->GetDamagePerSecond() > ( pTFThreat2->GetDamagePerSecond() + 50 ) )
+			return threat1;
+		else if ( pTFThreat2->GetDamagePerSecond() > ( pTFThreat1->GetDamagePerSecond() + 50 ) )
+			return threat2;
+		else if ( flRangeSq1 < flRangeSq2 )
+			return threat1;
+		else
+			return threat2;
+	}
+
+	return nullptr;
 }
 
 
@@ -257,7 +324,7 @@ bool CTFBotSniperLurk::FindHint( CTFBot *actor )
 		return false;
 
 	CTFBotHint *pSelected = nullptr;
-	if ( !m_hHint || m_Hints.Count() > 1 )
+	if ( !m_hHint || m_nAttempts > 1 )
 	{
 		CUtlVector<CTFPlayer *> enemies;
 		CollectPlayers( &enemies, GetEnemyTeam( actor ), COLLECT_ONLY_LIVING_PLAYERS );
@@ -325,7 +392,7 @@ bool CTFBotSniperLurk::FindHint( CTFBot *actor )
 	CUtlVector<CTFBotHint *> backupHints;
 	if ( hints.IsEmpty() )
 	{
-		++unused;
+		++m_nAttempts;
 		return false;
 	}
 

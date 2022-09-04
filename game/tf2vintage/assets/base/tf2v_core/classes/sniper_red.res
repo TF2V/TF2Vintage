@@ -28,7 +28,7 @@
 
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_sniperrifle.mdl"
+				"modelname" "models/weapons/c_models/c_sniperrifle/c_sniperrifle.mdl"
 			}
 		}
 	}

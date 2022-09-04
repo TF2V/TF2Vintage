@@ -12,6 +12,7 @@
 
 #include "cbase.h"
 #include "igamesystem.h"
+#include "GameEventListener.h"
 #ifndef NO_STEAM
 #include "steam/steam_api.h"
 #endif
@@ -33,7 +34,7 @@
 #define INVENTORY_ROWNUM_SELECTION		1
 #define INVENTORY_VECTOR_NUM_SELECTION	INVENTORY_COLNUM_SELECTION * INVENTORY_ROWNUM_SELECTION
 
-class CTFInventory : public CAutoGameSystem
+class CTFInventory : public CAutoGameSystem, public CGameEventListener
 {
 	DECLARE_CLASS_GAMEROOT( CTFInventory, CAutoGameSystem )
 public:
@@ -46,6 +47,7 @@ public:
 	virtual bool Init( void );
 	void PostInit( void ) OVERRIDE;
 	virtual void LevelInitPreEntity( void );
+	void FireGameEvent( IGameEvent *event ) OVERRIDE;
 
 	int GetNumPresets( int iClass, int iSlot );
 	int GetWeapon( int iClass, int iSlot );
@@ -62,7 +64,6 @@ public:
 	// Presets.
 	int GetCurrentLoadoutSlot(int iClass);
 	void ChangeLoadoutSlot(int iClass, int iLoadoutSlot);
-
 #endif
 
 private:

@@ -1180,6 +1180,9 @@ public:
 template <class BASE_CLASS = CDefScriptScopeBase>
 class CScriptScopeT : public BASE_CLASS
 {
+#if defined( GNUC )
+	using BASE_CLASS::GetVM;
+#endif
 public:
 	CScriptScopeT() :
 		m_hScope( INVALID_HSCRIPT ),

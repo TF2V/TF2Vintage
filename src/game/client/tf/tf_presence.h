@@ -15,6 +15,10 @@
 #include "hl2orange.spa.h"
 #include "basediscordpresence.h"
 
+#ifndef POSIX
+#include "basediscordpresence.h"
+#endif
+
 //-----------------------------------------------------------------------------
 // Purpose: TF implementation for setting user contexts and properties.
 //-----------------------------------------------------------------------------
@@ -63,21 +67,20 @@ public:
 
 	bool				InitPresence( void ) OVERRIDE;
 	void				ResetPresence( void ) OVERRIDE;
-	void				UpdatePresence( void ) OVERRIDE { UpdatePresence( false, false ); }
 	char const*			GetMatchSecret( void ) const OVERRIDE;
 	char const*			GetJoinSecret( void ) const OVERRIDE;
 	char const*			GetSpectateSecret( void ) const OVERRIDE;
 
 private:
-	void				UpdatePresence( bool bForce, bool bIsDead );
-	char const*			GetEncryptionKey( void ) const OVERRIDE { return "XwRJxjCc"; }
+	void				UpdatePresence( bool bIsDead );
+	unsigned char const* GetEncryptionKey( void ) const OVERRIDE { return (unsigned char *)"XwRJxjCc"; }
 
 	char m_szHostName[ DISCORD_FIELD_MAXLEN ];
 	char m_szServerInfo[ DISCORD_FIELD_MAXLEN ];
 	char m_szSteamID[ DISCORD_FIELD_MAXLEN ];
 
-	RealTimeCountdownTimer m_updateThrottle;
 	long m_iCreationTimestamp;
+	float m_flLastPlayerJoinTime;
 
 	static discord::Activity m_Activity;
 	static discord::User m_CurrentUser;
@@ -86,6 +89,7 @@ private:
 	static void OnJoinedGame( char const *joinSecret );
 	static void OnSpectateGame( char const *joinSecret );
 	static void OnJoinRequested( discord::User const &joinRequester );
+	static void OnJoinRequestReply( discord::Result result );
 	static void OnLogMessage( discord::LogLevel logLevel, char const *pszMessage );
 	static void OnActivityUpdate( discord::Result result );
 };

@@ -342,8 +342,10 @@ CAttribute_String &CAttribute_String::operator=( char const *src )
 //-----------------------------------------------------------------------------
 void EconPerTeamVisuals::operator=( EconPerTeamVisuals const &src )
 {
-	DeepCopyMap( src.animation_replacement, &animation_replacement );
 	DeepCopyMap( src.player_bodygroups, &player_bodygroups );
+
+	animation_replacement.PurgeAndDeleteElements();
+	animation_replacement = src.animation_replacement;
 
 	playback_activity.Purge();
 	playback_activity = src.playback_activity;

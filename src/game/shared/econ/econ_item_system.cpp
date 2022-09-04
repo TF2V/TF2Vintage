@@ -1,12 +1,17 @@
 #include "cbase.h"
 #include "filesystem.h"
+#include "inetchannel.h"
+#include "econ_networking.h"
 #include "econ_item_system.h"
 #include "script_parser.h"
 #include "activitylist.h"
 #include "vscript_shared.h"
 #include "tier0/icommandline.h"
+#include "econ_networking_messages.h"
+#include "lzma/lzma.h"
 
 #if defined(CLIENT_DLL)
+#include "hud_macros.h"
 #define UTIL_VarArgs  VarArgs
 #endif
 
@@ -517,13 +522,11 @@ void CEconItemDefinition::ParseVisuals( KeyValues *pKVData, int iIndex )
 		{
 			FOR_EACH_SUBKEY( pVisualData, pAnimData )
 			{
-				int key = ActivityList_IndexForName( pAnimData->GetName() );
-				int value = ActivityList_IndexForName( pAnimData->GetString() );
+				ActivityReplacement_t *override = new ActivityReplacement_t;
+				override->pszActivity = pAnimData->GetName();
+				override->pszReplacement = pAnimData->GetString();
 
-				if ( key != kActivityLookup_Missing && value != kActivityLookup_Missing )
-				{
-					pVisuals->animation_replacement.Insert( key, value );
-				}
+				pVisuals->animation_replacement.AddToTail( override );
 			}
 		}
 		else if ( !V_stricmp( pVisualData->GetName(), "playback_activity" ) )
@@ -575,7 +578,7 @@ void CEconItemDefinition::ParseVisuals( KeyValues *pKVData, int iIndex )
 				GET_INT( style, pStyleData, skin_red );
 				GET_INT( style, pStyleData, skin_blu );
 
-				for ( KeyValues *pStyleModelData = pStyleData->GetFirstSubKey(); pStyleModelData != NULL; pStyleModelData = pStyleModelData->GetNextKey() )
+				FOR_EACH_SUBKEY( pStyleData, pStyleModelData )
 				{
 					if ( !V_stricmp( pStyleModelData->GetName(), "model_player_per_class" ) )
 					{
@@ -911,25 +914,36 @@ bool CEconItemSchema::LoadFromFile( void )
 	Reset();
 	ParseSchema( schema );
 
+	IGameEvent *event = gameeventmanager->CreateEvent( "inventory_updated" );
+	if ( event )
+	{
+		gameeventmanager->FireEventClientSide( event );
+	}
+
 	return true;
 }
 
-bool CEconItemSchema::LoadFromBuffer( CUtlBuffer &buf )
+bool CEconItemSchema::LoadFromBuffer( CUtlBuffer &buf, bool bAsText )
 {
 	KeyValuesAD schema("KVDataFile");
-	if ( !schema->ReadAsBinary( buf ) )
-		return false;
+	bool bDidInit = bAsText ? schema->LoadFromBuffer( ITEMS_GAME, buf ) : schema->ReadAsBinary( buf );
+	if ( !bDidInit ) return false;
 
 	Reset();
 	ParseSchema( schema );
+
+	IGameEvent *event = gameeventmanager->CreateEvent( "inventory_updated" );
+	if ( event )
+	{
+		gameeventmanager->FireEventClientSide( event );
+	}
 
 	return true;
 }
 
 bool CEconItemSchema::SaveToBuffer( CUtlBuffer &buf )
 {
-	m_pSchema->RecursiveSaveToFile( buf, 0 );
-	return true;
+	return m_pSchema->WriteAsBinary( buf );
 }
 
 void CEconItemSchema::Reset( void )
@@ -1239,10 +1253,51 @@ void CEconItemSchema::ParseAttributes( KeyValues *pKVData )
 
 void CEconItemSchema::ClientConnected( edict_t *pClient )
 {
+#if defined( GAME_DLL )
+	if ( !pClient || pClient->IsFree() )
+		return;
+
+	CSteamID const *playerID = engine->GetClientSteamID( pClient );
+	if ( playerID == NULL )
+		return;
+
+	INetChannel *pNetChan = dynamic_cast<INetChannel *>( engine->GetPlayerNetInfo( ENTINDEX( pClient ) ) );
+	if( pNetChan )
+		pNetChan->RegisterMessage( new CEconNetMsg() ); // This is safe to do multiple times
+
+	g_pNetworking->OnClientConnected( *playerID );
+
+	CUtlBuffer buf;
+	SaveToBuffer( buf );
+
+	size_t nCompressedLength = 0;
+	byte *pCompressedSchema = LZMA_Compress( (byte *)buf.Base(), buf.TellPut(), &nCompressedLength );
+	uint32 unSchemaCRC32 = CRC32_ProcessSingleBuffer( pCompressedSchema, nCompressedLength );
+
+	CProtobufMsg<CUpdateItemSchemaMsg> msg;
+	msg->set_items_data( pCompressedSchema, nCompressedLength );
+	msg->set_items_game_hash( UTIL_VarArgs( "%ud", unSchemaCRC32 ) );
+	msg->set_items_game_url( "https://raw.githubusercontent.com/TF2V/TF2Vintage/3.6/game/tf2vintage/assets/base/tf2v_core/scripts/items/items_game.txt" );
+
+	free( pCompressedSchema );
+
+	const int nLength = msg->ByteSize();
+	CArrayAutoPtr<byte> array( new byte[ nLength ]() );
+	msg->SerializeWithCachedSizesToArray( array.Get() );
+
+	g_pNetworking->SendMessage( *playerID, k_EUpdateItemSchemaMsg, array.Get(), nLength );
+#endif
 }
 
 void CEconItemSchema::ClientDisconnected( edict_t *pClient )
 {
+#if defined( GAME_DLL )
+	CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pClient );
+
+	CSteamID playerID{};
+	pPlayer->GetSteamID( &playerID );
+	g_pNetworking->OnClientDisconnected( playerID );
+#endif
 }
 
 CEconItemDefinition *CEconItemSchema::GetItemDefinition( int id )
@@ -1316,3 +1371,116 @@ bool CEconItemSchema::RegisterScriptFunctions( void )
 
 	return true;
 }
+
+#if defined( CLIENT_DLL )
+class CUpdateEconItemSchema : public IMessageHandler
+{
+public:
+	bool ProcessMessage( CNetPacket *pPacket ) OVERRIDE
+	{
+		CProtobufMsg<CUpdateItemSchemaMsg> msg( pPacket );
+
+		std::string data = msg->items_data();
+		size_t nUncompressedSize = LZMA_GetActualSize( const_cast<byte *>( reinterpret_cast<const byte *>( data.data() ) ) );
+		byte *pUncompressedSchema = reinterpret_cast<byte *>( calloc( nUncompressedSize, sizeof( byte ) ) );
+		LZMA_Uncompress( const_cast<byte *>( reinterpret_cast<const byte *>( data.data() ) ), &pUncompressedSchema, &nUncompressedSize );
+
+		CUtlBuffer buf( pUncompressedSchema, nUncompressedSize, CUtlBuffer::READ_ONLY );
+
+		// Ensure consistency
+		uint32 unSchemaCRC = CRC32_ProcessSingleBuffer( reinterpret_cast<const void *>( data.data() ), data.length() );
+		uint32 unRecvSchemaCRC = V_atoi64( msg->items_game_hash().c_str() );
+		if ( unSchemaCRC != unRecvSchemaCRC )
+		{
+			Assert( unSchemaCRC == unRecvSchemaCRC );
+			free( pUncompressedSchema );
+
+			if ( !msg->use_online_backup() )
+				return true;
+
+			std::string url = msg->items_game_url();
+			ISteamHTTP *pHTTP = SteamHTTP();
+			if ( pHTTP )
+			{
+				m_bHTTPRequestComplete = false;
+				HTTPRequestHandle hndl = pHTTP->CreateHTTPRequest( k_EHTTPMethodGET, url.c_str() );
+				if ( hndl == INVALID_HTTPREQUEST_HANDLE )
+					return true;
+
+				pHTTP->SetHTTPRequestNetworkActivityTimeout( hndl, 10 );
+
+				SteamAPICall_t call;
+				pHTTP->SendHTTPRequest( hndl, &call );
+				m_callback.Set( call, this, &CUpdateEconItemSchema::OnHTTPRequestCompleted );
+
+				while ( !m_bHTTPRequestComplete )
+					ThreadSleep( 15 );
+			}
+
+			return true;
+		}
+
+		if ( !GetItemSchema()->LoadFromBuffer( buf ) )
+		{
+			ConColorMsg( COLOR_RED, "****************************************************************\n" );
+			ConColorMsg( COLOR_RED, "Unable to load Econ Item Schema from server, loading local file.\n" );
+			ConColorMsg( COLOR_RED, "****************************************************************\n" );
+
+			GetItemSchema()->LoadFromFile();
+		}
+
+		free( pUncompressedSchema );
+		return true;
+	}
+
+private:
+	CCallResult<CUpdateEconItemSchema, HTTPRequestCompleted_t> m_callback;
+	bool m_bHTTPRequestComplete;
+
+	void OnHTTPRequestCompleted( HTTPRequestCompleted_t *pRequest, bool bFailed )
+	{
+		m_bHTTPRequestComplete = true;
+
+		ISteamHTTP *pHTTP = SteamHTTP();
+		if ( !pHTTP )
+		{
+			Assert( false );
+			return;
+		}
+
+		if ( pRequest->m_eStatusCode != k_EHTTPStatusCode200OK )
+		{
+			Warning( "Failed to update item schema: HTTP status %d\n", pRequest->m_eStatusCode );
+		}
+		else
+		{
+			if ( !pRequest->m_bRequestSuccessful )
+				bFailed = true;
+
+			if ( !bFailed )
+			{
+				KeyValuesAD pKeyValues( "items_game" );
+
+				CUtlBuffer buf( 0, pRequest->m_unBodySize, CUtlBuffer::TEXT_BUFFER | CUtlBuffer::CONTAINS_CRLF );
+				bFailed = pHTTP->GetHTTPResponseBodyData( pRequest->m_hRequest, (uint8 *)buf.Base(), buf.TellPut() );
+				if ( !bFailed )
+				{
+					bFailed = GetItemSchema()->LoadFromBuffer( buf, true );
+				}
+			}
+			
+			if( bFailed )
+			{
+				ConColorMsg( COLOR_RED, "****************************************************************\n" );
+				ConColorMsg( COLOR_RED, "Unable to load Econ Item Schema from server, loading local file.\n" );
+				ConColorMsg( COLOR_RED, "****************************************************************\n" );
+
+				GetItemSchema()->LoadFromFile();
+			}
+		}
+
+		pHTTP->ReleaseHTTPRequest( pRequest->m_hRequest );
+	}
+};
+REG_ECON_MSG_HANDLER( CUpdateEconItemSchema, k_EUpdateItemSchemaMsg, UpdateItemSchemaMsg );
+#endif

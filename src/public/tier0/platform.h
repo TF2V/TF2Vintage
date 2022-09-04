@@ -318,15 +318,13 @@ typedef void * HINSTANCE;
 #endif
 
 
-#ifdef GNUC
-#undef offsetof
-//#define offsetof( type, var ) __builtin_offsetof( type, var ) 
-#define offsetof(s,m)	(size_t)&(((s *)0)->m)
-#else
-#include <stddef.h>
-#undef offsetof
-#define offsetof(s,m)	(size_t)&(((s *)0)->m)
-#endif
+#if !defined( offsetof )
+	#ifdef __GNUC__
+		#define offsetof( type, var ) __builtin_offsetof( type, var )
+	#else
+		#define offsetof(s,m)	(size_t)&(((s *)0)->m)
+	#endif
+#endif // !defined( offsetof )
 
 
 #define  FLOAT32_MIN		FLT_MIN
@@ -773,6 +771,7 @@ FIXME: Enable this when we no longer fear change =)
 #pragma GCC diagnostic ignored "-Wconversion-null"	// passing NULL to non-pointer argument 1
 #pragma GCC diagnostic ignored "-Wpointer-arith"	// NULL used in arithmetic. Ie, vpanel == NULL where VPANEL is uint.
 #pragma GCC diagnostic ignored "-Wswitch"				// enumeration values not handled in switch
+#pragma GCC diagnostic ignored "-Wattributes"		// declared with greater visibility than the type of its field
 #endif
 
 #ifdef OSX

@@ -149,7 +149,7 @@ class CountClassMembers
 {
 public:
 	CountClassMembers( CTFBot *bot, int teamNum )
-		: m_pBot( bot ), m_iTeam( teamNum )
+		: m_pBot( bot ), m_iTeam( teamNum ), m_iTotal( 0 )
 	{
 		Q_memset( &m_aClassCounts, 0, sizeof( m_aClassCounts ) );
 	}
@@ -186,6 +186,13 @@ CTFBot::CTFBot( CTFPlayer *player )
 	m_locomotor = new CTFBotLocomotion( this );
 	m_intention = new CTFBotIntention( this );
 
+	m_pSquad = NULL;
+	m_iSkill = (DifficultyType)tf_bot_difficulty.GetInt();
+	m_nBotAttributes = AttributeType::NONE;
+
+	SetMission( MissionType::NONE, false );
+	SetMissionTarget( NULL );
+
 	ListenForGameEvent( "teamplay_point_startcapture" );
 	ListenForGameEvent( "teamplay_point_captured" );
 	ListenForGameEvent( "teamplay_round_win" );
@@ -202,6 +209,8 @@ CTFBot::~CTFBot()
 		delete m_locomotor;
 	if ( m_intention )
 		delete m_intention;
+
+	m_suspectedSpies.PurgeAndDeleteElements();
 }
 
 //-----------------------------------------------------------------------------
@@ -213,9 +222,6 @@ void CTFBot::Spawn( void )
 	ManageRandomWeapons();
 
 	BaseClass::Spawn();
-
-	m_iSkill = (DifficultyType)tf_bot_difficulty.GetInt();
-	m_nBotAttributes = AttributeType::NONE;
 
 	m_useWeaponAbilityTimer.Start( 5.0f );
 	m_bLookingAroundForEnemies = true;
@@ -792,7 +798,8 @@ CTeamControlPoint *CTFBot::GetMyControlPoint( void )
 		TFGameRules()->CollectDefendPoints( this, &defensePoints );
 		TFGameRules()->CollectCapturePoints( this, &attackPoints );
 
-		if ( ( IsPlayerClass( TF_CLASS_SNIPER ) || IsPlayerClass( TF_CLASS_ENGINEER ) ) 
+		bool bShouldAssault = TFGameRules()->IsAttackDefenseMode() && GetTeamNumber() == TF_TEAM_BLUE;
+		if ( ( ( IsPlayerClass( TF_CLASS_SNIPER ) || IsPlayerClass( TF_CLASS_ENGINEER ) ) && !bShouldAssault )
 			 || HasAttribute( CTFBot::AttributeType::PRIORITIZEDEFENSE ) )
 		{
 			if ( !defensePoints.IsEmpty() )
@@ -805,28 +812,22 @@ CTeamControlPoint *CTFBot::GetMyControlPoint( void )
 				}
 			}
 		}
+		
+		CTeamControlPoint *pPoint = SelectPointToCapture( attackPoints );
+		if ( pPoint )
+		{
+			m_hMyControlPoint = pPoint;
+			return pPoint;
+		}
 		else
 		{
-			CTeamControlPoint *pPoint = SelectPointToCapture( attackPoints );
+			pPoint = SelectPointToDefend( defensePoints );
 			if ( pPoint )
 			{
 				m_hMyControlPoint = pPoint;
 				return pPoint;
 			}
-			else
-			{
-				pPoint = SelectPointToDefend( defensePoints );
-				if ( pPoint )
-				{
-					m_hMyControlPoint = pPoint;
-					return pPoint;
-				}
-			}
 		}
-
-		m_myCPValidDuration.Invalidate();
-
-		return nullptr;
 	}
 
 	return m_hMyControlPoint;
@@ -1792,7 +1793,7 @@ void CTFBot::UpdateLookingForIncomingEnemies( bool enemy )
 
 	int iTeam = enemy ? GetTeamNumber() : GetEnemyTeam( this );
 	// really shouldn't happen
-	if ( iTeam < 0 || iTeam > 3 )
+	if ( iTeam < 0 || iTeam >= TF_TEAM_COUNT )
 		iTeam = 0;
 
 	float fRange = 150.0f;
@@ -1804,7 +1805,7 @@ void CTFBot::UpdateLookingForIncomingEnemies( bool enemy )
 	{
 		for ( int i = 0; i < 20; ++i )
 		{
-			const Vector vSpot = areas.Random()->GetRandomPoint();
+			const Vector vSpot = areas.Random()->GetRandomPoint() + Vector( 0, 0, 53.25f );
 			if ( this->IsRangeGreaterThan( vSpot, fRange ) )
 			{
 				if ( GetVisionInterface()->IsLineOfSightClear( vSpot ) )
@@ -2744,37 +2745,48 @@ float CTFBotPathCost::operator()( CNavArea *area, CNavArea *fromArea, const CNav
 
 	// consistently random pathing with huge cost modifier
 	float fMultiplier = 1.0f;
-	if ( m_iRouteType == DEFAULT_ROUTE )
+	if ( m_iRouteType == DEFAULT_ROUTE && !m_Actor->IsMiniBoss() )
 	{
 		const float rand = m_Actor->TransientlyConsistentRandomValue( 10.0f, 0 );
 		fMultiplier += ( rand + 1.0f ) * 50.0f;
 	}
 
-	const int iOtherTeam = GetEnemyTeam( m_Actor );
-
-	for ( int i=0; i < IBaseObjectAutoList::AutoList().Count(); ++i )
+	if ( m_iRouteType == SAFEST_ROUTE )
 	{
-		CBaseObject *obj = static_cast<CBaseObject *>( IBaseObjectAutoList::AutoList()[i] );
+		CTFNavArea *tfArea = assert_cast<CTFNavArea *>( area );
+		if ( tfArea->IsInCombat() )
+			fDist *= 4.0f * tfArea->GetCombatIntensity();
 
-		if ( obj->GetType() == OBJ_SENTRYGUN && obj->GetTeamNumber() == iOtherTeam )
+		if ( ( m_Actor->GetTeamNumber() == TF_TEAM_RED && tfArea->HasTFAttributes( TF_NAV_BLUE_SENTRY ) ) ||
+			 ( m_Actor->GetTeamNumber() == TF_TEAM_BLUE && tfArea->HasTFAttributes( TF_NAV_RED_SENTRY ) ) )
 		{
-			obj->UpdateLastKnownArea();
-			if ( area == obj->GetLastKnownArea() )
-			{
-				if ( m_iRouteType == SAFEST_ROUTE )
-					fDist *= 5.0f;
-				else if ( m_Actor->IsPlayerClass( TF_CLASS_SPY ) ) // spies always consider sentryguns to avoid
-					fDist *= 10.0f;
-			}
+			fDist *= 5.0f;
 		}
 	}
 
-	// we need to be sneaky, try to take routes where no players are
 	if ( m_Actor->IsPlayerClass( TF_CLASS_SPY ) )
+	{
+		const int iOtherTeam = GetEnemyTeam( m_Actor );
+
+		for ( int i=0; i < IBaseObjectAutoList::AutoList().Count(); ++i )
+		{
+			CBaseObject *obj = static_cast<CBaseObject *>( IBaseObjectAutoList::AutoList()[i] );
+
+			if ( obj->GetType() == OBJ_SENTRYGUN && obj->GetTeamNumber() == iOtherTeam )
+			{
+				obj->UpdateLastKnownArea();
+				if ( area == obj->GetLastKnownArea() )
+				{
+					fDist *= 10.0f; // spies always consider sentryguns to avoid
+				}
+			}
+		}
+
+		// we need to be sneaky, try to take routes where no players are
 		fDist += ( fDist * 10.0f * area->GetPlayerCount( m_Actor->GetTeamNumber() ) );
+	}
 
 	float fCost = fDist * fMultiplier;
-
 	if ( area->HasAttributes( NAV_MESH_FUNC_COST ) )
 		fCost *= area->ComputeFuncNavCost( m_Actor );
 
@@ -2901,6 +2913,9 @@ CON_COMMAND_EXTERN_F( tf_bot_add, cc_tf_bot_add, "Add a bot.", FCVAR_GAMEDLL )
 			if ( pBot == nullptr )
 				break;
 
+			if( !bNoQuota )
+				pBot->SetAttribute( CTFBot::AttributeType::QUOTAMANAGED );
+
 			pBot->HandleCommand_JoinTeam( pszTeamName );
 			pBot->HandleCommand_JoinClass( pszClassName );
 			pBot->SetDifficulty( (CTFBot::DifficultyType)nSkill );
@@ -2919,7 +2934,7 @@ CON_COMMAND_EXTERN_F( tf_bot_add, cc_tf_bot_add, "Add a bot.", FCVAR_GAMEDLL )
 class TFBotDestroyer
 {
 public:
-	TFBotDestroyer( int team=TEAM_ANY ) : m_team( team ) { }
+	TFBotDestroyer( int team=TEAM_ANY, bool bMoveToSpec=false ) : m_team( team ), m_bMoveToSpec( bMoveToSpec ) { }
 
 	bool operator()( CBaseCombatCharacter *bot )
 	{
@@ -2929,8 +2944,13 @@ public:
 			if ( pBot == nullptr )
 				return true;
 
-			engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", pBot->GetUserID() ) );
-			TheTFBots().OnForceKickedBots( 1 );
+			if ( m_bMoveToSpec )
+				pBot->ChangeTeam( TEAM_SPECTATOR, false, true );
+			else
+				engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", pBot->GetUserID() ) );
+
+			if ( pBot->HasAttribute( CTFBot::AttributeType::QUOTAMANAGED ) )
+				TheTFBots().OnForceKickedBots( 1 );
 		}
 
 		return true;
@@ -2938,39 +2958,61 @@ public:
 
 private:
 	int m_team;
+	bool m_bMoveToSpec;
 };
 
 CON_COMMAND_F( tf_bot_kick, "Remove a TFBot by name, or all bots (\"all\").", FCVAR_GAMEDLL )
 {
 	if ( UTIL_IsCommandIssuedByServerAdmin() )
 	{
-		const char *arg = args.Arg( 1 );
-		if ( !Q_strncmp( arg, "all", 3 ) )
+		if ( args.ArgC() < 2 )
 		{
-			TFBotDestroyer func;
-			TheNextBots().ForEachCombatCharacter( func );
+			DevMsg( "%s <bot name>, \"red\", \"blue\", or \"all\"> <optional: \"moveToSpectatorTeam\"> \n", args.Arg( 0 ) );
+			return;
+		}
+
+		int iTeamNum = TEAM_UNASSIGNED;
+		char const *pszBotName = NULL;
+		bool bMoveToSpectate = false;
+		for ( int i = 1; i <= args.ArgC(); ++i )
+		{
+			if ( FStrEq( args[i], "red" ) )
+				iTeamNum = TF_TEAM_RED;
+			else if ( FStrEq( args[i], "blue" ) )
+				iTeamNum = TF_TEAM_BLUE;
+			else if ( FStrEq( args[i], "all" ) )
+				iTeamNum = TEAM_ANY;
+			else if ( FStrEq( args[i], "moveToSpectatorTeam" ) )
+				bMoveToSpectate = true;
+			else
+				pszBotName = args[i];
+
+		}
+
+		if ( !FStrEq( pszBotName, "" ) )
+		{
+			CTFBot *pBot = ToTFBot( UTIL_PlayerByName( pszBotName ) );
+			if ( pBot )
+			{
+				if ( bMoveToSpectate )
+					pBot->ChangeTeam( TEAM_SPECTATOR, false, true );
+				else
+					engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", pBot->GetUserID() ) );
+
+				if ( pBot->HasAttribute( CTFBot::AttributeType::QUOTAMANAGED ) )
+					TheTFBots().OnForceKickedBots( 1 );
+			}
 		}
 		else
 		{
-			CBasePlayer *pBot = UTIL_PlayerByName( arg );
-			if ( pBot && pBot->IsFakeClient() )
+			if ( iTeamNum == TEAM_UNASSIGNED )
 			{
-				engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", pBot->GetUserID() ) );
-				TheTFBots().OnForceKickedBots( 1 );
-			}
-			else if ( IsTeamName( arg ) )
-			{
-				TFBotDestroyer func;
-				if ( !Q_stricmp( arg, "red" ) )
-					func = TFBotDestroyer( TF_TEAM_RED );
-				else if ( !Q_stricmp( arg, "blue" ) )
-					func = TFBotDestroyer( TF_TEAM_BLUE );
-
-				TheNextBots().ForEachCombatCharacter( func );
+				Msg( "No bot or team with that name\n" );
 			}
 			else
 			{
-				Msg( "No bot or team with that name\n" );
+				TFBotDestroyer func( iTeamNum, bMoveToSpectate );
+				TheTFBots().ForEachCombatCharacter( func );
 			}
 		}
 	}

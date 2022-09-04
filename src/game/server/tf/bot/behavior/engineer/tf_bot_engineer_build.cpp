@@ -32,7 +32,9 @@ ActionResult<CTFBot> CTFBotEngineerBuild::OnStart( CTFBot *me, Action<CTFBot> *p
 
 ActionResult<CTFBot> CTFBotEngineerBuild::Update( CTFBot *me, float dt )
 {
-	// if ( TFGameRules()->IsPVEModeActive() )
+	if ( TFGameRules()->IsMannVsMachineMode() && tf_raid_engineer_infinte_metal.GetBool() )
+		me->GiveAmmo( 1000, TF_AMMO_METAL, true );
+
 	return Action<CTFBot>::Continue();
 }
 
@@ -44,7 +46,9 @@ ActionResult<CTFBot> CTFBotEngineerBuild::OnResume( CTFBot *me, Action<CTFBot> *
 
 Action<CTFBot> *CTFBotEngineerBuild::InitialContainedAction( CTFBot *me )
 {
-	// if ( TFGameRules()->IsPVEModeActive() ) return new CTFBotEngineerMoveToBuild;
+	if ( TFGameRules()->IsMannVsMachineMode() ) 
+		return new CTFBotEngineerMoveToBuild;
+
 	return new CTFBotEngineerBuildTeleportEntrance;
 }
 

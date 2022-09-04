@@ -33,7 +33,7 @@
 			
 			"attached_model"
 			{
-				"modelname" "models/weapons/w_models/w_rocketlauncher.mdl"
+				"modelname" "models/weapons/c_models/c_rocketlauncher/c_rocketlauncher.mdl"
 				"skin"		"1"
 			}
 		}

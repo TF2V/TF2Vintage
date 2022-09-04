@@ -55,11 +55,11 @@ public:
 
 	virtual const char	*GetStunballViewmodel( void )				{ return ( m_bHasBall ? TF_STUNBALL_VIEWMODEL : NULL_STRING ); }
 
-private:
+protected:
 	bool m_bHasBall;
 #endif
 
-private:
+protected:
 	CTFBat_Wood( const CTFBat_Wood & ) {}
 
 	// prediction
@@ -85,13 +85,6 @@ public:
 
 	virtual const char	*GetStunballViewmodel( void )				{ return ( m_bHasBall ? TF_BAUBLE_VIEWMODEL : NULL_STRING ); }
 
-private:
-	bool m_bHasBall;
 #endif
-
-
-	// prediction
-	CNetworkVar( float, m_flNextFireTime );
-	CNetworkVar( bool, m_bFiring );
 };
 #endif // TF_WEAPON_BAT_WOOD_H

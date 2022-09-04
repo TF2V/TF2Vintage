@@ -23,8 +23,18 @@ jobs:
           REG ADD "HKLM\Software\Microsoft\VisualStudio\12.0\Projects\{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}" /v "DefaultProjectExtension" /t REG_SZ  /d "vcxproj" /f /reg:32
           REG ADD "HKLM\Software\Microsoft\VisualStudio\12.0\Projects\{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}" /v "PossibleProjectExtensions" /t REG_SZ /d "vcxproj;vcxitems;vcproj;mak" /f /reg:32
 
+      - name: Download Steamworks SDK
+        run: |
+          Invoke-WebRequest -Uri "https://deathreus.github.io/download/steamworks_sdk_150.zip" -Method "GET" -OutFile "steamworks_sdk_150.zip"
+          Expand-Archive steamworks_sdk_150.zip
+          Remove-Item src\public\steam -Recurse
+          Copy-Item steamworks_sdk_150\sdk\public\steam -Recurse -Destination src\public
+
       - name: Create project
-        run: cd src;devtools/bin/vpc.exe /tf2vintage /2015 +game /mksln TF2vintage.sln
+        run: |
+          cd src
+          devtools/bin/vpc.exe /tf2vintage /2015 +game /mksln TF2vintage.sln
+          devtools/bin/vpu.exe /2019 /cxx17 /sdk:18362 TF2vintage.sln
 
       - name: Build project
         run: cd src;devenv TF2vintage.sln /Build Release

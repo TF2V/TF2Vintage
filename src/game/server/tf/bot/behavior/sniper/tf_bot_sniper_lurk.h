@@ -24,6 +24,8 @@ public:
 	virtual QueryResultType ShouldRetreat( const INextBot *me ) const OVERRIDE;
 	virtual QueryResultType ShouldAttack( const INextBot *me, const CKnownEntity *threat ) const OVERRIDE;
 
+	virtual const CKnownEntity *SelectMoreDangerousThreat( const INextBot *nextbot, const CBaseCombatCharacter *them, const CKnownEntity *threat1, const CKnownEntity *threat2 ) const OVERRIDE;
+
 private:
 	bool FindHint( CTFBot *actor );
 	bool FindNewHome( CTFBot *actor );
@@ -31,7 +33,7 @@ private:
 	CountdownTimer m_patienceDuration;
 	CountdownTimer m_recomputePathTimer;
 	PathFollower m_PathFollower;
-	int unused;
+	int m_nAttempts;
 	Vector m_vecHome;
 	bool m_bHasHome;
 	bool m_bNearHome;

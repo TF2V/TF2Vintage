@@ -180,6 +180,7 @@ ActionResult<CTFBot> CTFBotEscortSquadLeader::Update( CTFBot *me, float dt )
 	Vector goal_dir;
 	goal_dir.x = m_vecLeaderGoalDirection.x * a_cos - m_vecLeaderGoalDirection.y * a_sin;
 	goal_dir.y = m_vecLeaderGoalDirection.y * a_cos + m_vecLeaderGoalDirection.x * a_sin;
+	goal_dir.z = 0;
 
 	Vector ideal_pos = leader->GetAbsOrigin() + ( formation_size * goal_dir );
 

@@ -401,7 +401,7 @@ bool CAI_ScriptConditions::EvalPlayerInVehicle( const EvalArgs_t &args )
 		return false;
 
 	// Desired states must match
-	return ( !!args.pPlayer->IsInAVehicle() == m_fPlayerInVehicle );
+	return ( (ThreeState_t)args.pPlayer->IsInAVehicle() == m_fPlayerInVehicle );
 }
 
 //-----------------------------------------------------------------------------
@@ -421,7 +421,7 @@ bool CAI_ScriptConditions::EvalActorInVehicle( const EvalArgs_t &args )
 		return false;
 
 	// Desired states must match
-	return ( !!pBCC->IsInAVehicle() == m_fActorInVehicle );
+	return ( (ThreeState_t)pBCC->IsInAVehicle() == m_fActorInVehicle );
 }
 
 //-----------------------------------------------------------------------------

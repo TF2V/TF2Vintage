@@ -54,7 +54,7 @@ class CScriptObject : public vgui::Panel
 public:
 	void AddItem(CScriptListItem *pItem);
 	CScriptObject(void);
-	~CScriptObject();
+	virtual ~CScriptObject();
 
 	bool ReadFromBuffer(const char **pBuffer, bool isNewObject);
 	void WriteToConfig();
@@ -90,7 +90,7 @@ abstract_class CDescription
 {
 public:
 	CDescription(CPanelListPanel *panel);
-	~CDescription();
+	virtual ~CDescription();
 
 	bool ReadFromBuffer(const char **pBuffer);
 	bool InitFromFile(char *pszFileName);

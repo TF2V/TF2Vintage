@@ -2600,7 +2600,7 @@ void CClientShadowMgr::BuildRenderToTextureShadow( IClientRenderable* pRenderabl
 	Vector boxSize;
 	VectorSubtract( maxs, mins, boxSize );
 	
-	Vector yvec;
+	Vector yvec(0);
 	float fProjMax = 0.0f;
 	for( int i = 0; i != 3; ++i )
 	{
@@ -2617,7 +2617,7 @@ void CClientShadowMgr::BuildRenderToTextureShadow( IClientRenderable* pRenderabl
 	VectorNormalize( yvec );
 
 	// Compute the x vector
-	Vector xvec;
+	Vector xvec(0);
 	CrossProduct( yvec, vecShadowDir, xvec );
 
 	// We project the two longest sides into the vectors perpendicular

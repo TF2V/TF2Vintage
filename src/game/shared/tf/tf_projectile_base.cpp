@@ -293,7 +293,7 @@ C_LocalTempEntity *ClientsideProjectileCallback( const CEffectData &data, float 
 
 	if ( !pEnt || pEnt->IsDormant() )
 	{
-		Assert( 0 );
+		//Assert( 0 );
 		return NULL;
 	}
 

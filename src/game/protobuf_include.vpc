@@ -12,6 +12,8 @@ $Project
 	{
 		$Libexternal $SRCDIR\lib\public\2010\libprotobuf [$VS2010]
 		$Libexternal 2012\libprotobuf [$VS2012]
-		$Libexternal libprotobuf [$VS2013 || !$WINDOWS]
+		$Libexternal libprotobuf [$VS2013&&!$VS2015]
+		$Libexternal $SRCDIR\lib\public\2015\libprotobuf [$VS2015]
+		$Libexternal $SRCDIR\lib\public\linux32\libprotobuf [$LINUX32]
 	}
 }
