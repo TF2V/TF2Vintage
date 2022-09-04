@@ -6,6 +6,10 @@
 #include "script_parser.h"
 #include "activitylist.h"
 #include "vscript_shared.h"
+#ifndef NO_STEAM
+#include "steam/steamtypes.h"
+#include "steam/isteamhttp.h"
+#endif
 #include "tier0/icommandline.h"
 #include "econ_networking_messages.h"
 #include "lzma/lzma.h"
