@@ -10,6 +10,9 @@
 #include "fmtstr.h"
 #include "ivscript.h"
 
+#undef offsetof
+#define offsetof(s,m) ((size_t)&(((s*)0)->m))
+
 // Since we aren't including these in the build, we
 // need to declare them with C-linkage
 extern "C" {
