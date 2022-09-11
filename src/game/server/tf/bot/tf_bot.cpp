@@ -798,7 +798,8 @@ CTeamControlPoint *CTFBot::GetMyControlPoint( void )
 		TFGameRules()->CollectDefendPoints( this, &defensePoints );
 		TFGameRules()->CollectCapturePoints( this, &attackPoints );
 
-		if ( ( IsPlayerClass( TF_CLASS_SNIPER ) || IsPlayerClass( TF_CLASS_ENGINEER ) ) 
+		bool bShouldAssault = TFGameRules()->IsAttackDefenseMode() && GetTeamNumber() == TF_TEAM_BLUE;
+		if ( ( ( IsPlayerClass( TF_CLASS_SNIPER ) || IsPlayerClass( TF_CLASS_ENGINEER ) ) && !bShouldAssault )
 			 || HasAttribute( CTFBot::AttributeType::PRIORITIZEDEFENSE ) )
 		{
 			if ( !defensePoints.IsEmpty() )
@@ -811,28 +812,22 @@ CTeamControlPoint *CTFBot::GetMyControlPoint( void )
 				}
 			}
 		}
+		
+		CTeamControlPoint *pPoint = SelectPointToCapture( attackPoints );
+		if ( pPoint )
+		{
+			m_hMyControlPoint = pPoint;
+			return pPoint;
+		}
 		else
 		{
-			CTeamControlPoint *pPoint = SelectPointToCapture( attackPoints );
+			pPoint = SelectPointToDefend( defensePoints );
 			if ( pPoint )
 			{
 				m_hMyControlPoint = pPoint;
 				return pPoint;
 			}
-			else
-			{
-				pPoint = SelectPointToDefend( defensePoints );
-				if ( pPoint )
-				{
-					m_hMyControlPoint = pPoint;
-					return pPoint;
-				}
-			}
 		}
-
-		m_myCPValidDuration.Invalidate();
-
-		return nullptr;
 	}
 
 	return m_hMyControlPoint;
