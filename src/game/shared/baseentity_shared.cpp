@@ -2040,6 +2040,47 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 }
 
 
+BEGIN_STRUCT_SCRIPTDESC( FireBulletsInfo_t, "Data for firing bullet tracers" )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iShots, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_VECTOR, m_vecSrc, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_VECTOR, m_vecDirShooting, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_VECTOR, m_vecSpread, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_FLOAT, m_flDistance, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iAmmoType, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iTracerFreq, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_FLOAT, m_flDamage, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_iPlayerDamage, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_INTEGER, m_nFlags, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_FLOAT, m_flDamageForceScale, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_BOOLEAN, m_bPrimaryAttack, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_BOOLEAN, m_bUseServerRandomSeed, "" )
+END_STRUCT_SCRIPTDESC()
+
+void CBaseEntity::ScriptFireBullets( HSCRIPT hInfo )
+{
+	CScriptScope scope;
+	if ( scope.Init( hInfo ) )
+	{
+		FireBulletsInfo_t info;
+		scope.GetStruct( &info );
+
+		// HSCRIPT variants that weren't retrieved
+		ScriptVariant_t variant;
+		if ( scope.GetValue( "m_pAttacker", &variant ) )
+		{
+			info.m_pAttacker = ToEnt( variant );
+			scope.ReleaseValue( variant );
+		}
+		if ( scope.GetValue( "m_pAdditionalIgnoreEnt", &variant ) )
+		{
+			info.m_pAdditionalIgnoreEnt = ToEnt( variant );
+			scope.ReleaseValue( variant );
+		}
+
+		FireBullets( info );
+	}
+}
+
 //-----------------------------------------------------------------------------
 // Should we draw bubbles underwater?
 //-----------------------------------------------------------------------------

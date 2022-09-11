@@ -5,6 +5,7 @@
 #include "econ_item_system.h"
 #include "script_parser.h"
 #include "activitylist.h"
+#include "vscript_shared.h"
 #ifndef NO_STEAM
 #include "steam/steamtypes.h"
 #include "steam/isteamhttp.h"
@@ -31,11 +32,11 @@ const char *g_TeamVisualSections[TF_TEAM_VISUALS_COUNT] =
 
 const char *g_WearableAnimTypeStrings[NUM_WEARABLEANIM_TYPES] =
 {
-	"on_spawn",
-	"start_building",
-	"stop_building",
-	"start_taunting",
-	"stop_taunting",
+	"on_spawn",			// WAP_ON_SPAWN,
+	"start_building",	// WAP_START_BUILDING,
+	"stop_building",	// WAP_STOP_BUILDING,
+	"start_taunting",		// WAP_START_TAUNTING,
+	"stop_taunting",	// WAP_STOP_TAUNTING,
 };
 
 const char *g_AttributeDescriptionFormats[] =
@@ -487,7 +488,7 @@ void CEconItemDefinition::ParseVisuals( KeyValues *pKVData, int iIndex )
 			{
 				*pVisuals = *GetVisuals( iTeam );
 			}
-			else
+			else if ( !V_stricmp( pVisualData->GetName(), "vm_bodygroup_override" ) )
 			{
 				Warning( "Unknown visuals block: %s", pszBlockTeamName );
 			}
@@ -843,7 +844,13 @@ bool CEconItemSchema::Init( void )
 
 	float flEndTime = engine->Time();
 	Msg( "Processing item schema took %.02fms. Parsed %d items and %d attributes.\n", ( flEndTime - flStartTime ) * 1000.0f, m_Items.Count(), m_Attributes.Count() );
-	
+
+	if ( !m_bScriptInit )
+	{
+		RegisterScriptFunctions();
+		m_bScriptInit = true;
+	}
+
 	return true;
 }
 
@@ -1359,6 +1366,14 @@ ISchemaAttributeType *CEconItemSchema::GetAttributeType( const char *name ) cons
 	}
 
 	return NULL;
+}
+
+bool CEconItemSchema::RegisterScriptFunctions( void )
+{
+	m_bScriptInit = true;
+
+
+	return true;
 }
 
 #if defined( CLIENT_DLL )

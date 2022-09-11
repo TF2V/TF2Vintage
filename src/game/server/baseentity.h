@@ -452,6 +452,7 @@ public:
 	void					SetNavIgnore( float duration = FLT_MAX );
 	void					ClearNavIgnore();
 	bool					IsNavIgnored() const;
+	virtual bool			ShouldBlockNav() const { return true; }
 
 	// Is the entity floating?
 	bool					IsFloating();
@@ -501,8 +502,6 @@ public:
 	virtual void			SetOwnerEntity( CBaseEntity* pOwner );
 	void					SetEffectEntity( CBaseEntity *pEffectEnt );
 	CBaseEntity				*GetEffectEntity() const;
-	HSCRIPT					GetScriptOwnerEntity();
-	virtual void			SetScriptOwnerEntity( HSCRIPT pOwner );
 
 	// Only CBaseEntity implements these. CheckTransmit calls the virtual ShouldTransmit to see if the
 	// entity wants to be sent. If so, it calls SetTransmit, which will mark any dependents for transmission too.
@@ -556,7 +555,6 @@ public:
 
 	// initialization
 	virtual void Spawn( void );
-	void ScriptSpawn( void );
 	virtual void Precache( void ) {}
 
 	virtual void SetModel( const char *szModelName );
@@ -593,7 +591,6 @@ public:
 	CBaseEntity *NextMovePeer( void );
 
 	void		SetName( string_t newTarget );
-	void		ScriptSetName( const char *newName );
 	void		SetParent( string_t newParent, CBaseEntity *pActivator, int iAttachment = -1 );
 	
 	// Set the movement parent. Your local origin and angles will become relative to this parent.
@@ -939,8 +936,6 @@ public:
 
 	// This is what you should call to apply damage to an entity.
 	int TakeDamage( const CTakeDamageInfo &info );
-	void ScriptTakeDamage( float flDamage, int ndamageType, HSCRIPT hAttacker );
-	void ScriptTakeDamageParams( HSCRIPT hInflictor, HSCRIPT hAttacker, HSCRIPT hWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, int ndamageType );
 	virtual void AdjustDamageDirection( const CTakeDamageInfo &info, Vector &dir, CBaseEntity *pEnt ) {}
 
 	virtual int		TakeHealth( float flHealth, int bitsDamageType );
@@ -1254,8 +1249,6 @@ public:
 	// in the other space, so setting the abs velocity will also set the local vel
 	void			SetLocalAngularVelocity( const QAngle &vecAngVelocity );
 	const QAngle&	GetLocalAngularVelocity( ) const;
-	const Vector&	ScriptGetLocalAngularVelocity( void );
-	void			ScriptSetLocalAngularVelocity( float pitchVel, float yawVel, float rollVel );
 
 	// FIXME: While we're using (dPitch, dYaw, dRoll) as our local angular velocity
 	// representation, we can't actually solve this problem
@@ -1329,8 +1322,6 @@ public:
 
 	// This defines collision bounds in OBB space
 	void					SetCollisionBounds( const Vector& mins, const Vector &maxs );
-	const Vector&			ScriptGetBoundingMins( void );
-	const Vector&			ScriptGetBoundingMaxs( void );
 
 	// NOTE: The world space center *may* move when the entity rotates.
 	virtual const Vector&	WorldSpaceCenter( ) const;
@@ -1386,8 +1377,6 @@ public:
 	// See CSoundEmitterSystem
 	void					EmitSound( const char *soundname, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter filter( this ), and EmitSound( filter, entindex(), etc. );
 	void					EmitSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, float soundtime = 0.0f, float *duration = NULL );  // Override for doing the general case of CPASAttenuationFilter filter( this ), and EmitSound( filter, entindex(), etc. );
-	void					ScriptEmitSound( const char *soundname );
-	void					ScriptStopSound( const char *soundname );
 	void					StopSound( const char *soundname );
 	void					StopSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle );
 	void					GenderExpandString( char const *in, char *out, int maxlen );
@@ -1395,7 +1384,6 @@ public:
 	virtual void ModifyEmitSoundParams( EmitSound_t &params );
 
 	static float GetSoundDuration( const char *soundname, char const *actormodel );
-	float		ScriptSoundDuration( const char *soundname, const char *actormodel );
 
 	static bool	GetParametersForSound( const char *soundname, CSoundParameters &params, char const *actormodel );
 	static bool	GetParametersForSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, CSoundParameters &params, char const *actormodel );
@@ -1878,41 +1866,71 @@ public:
 	
 	static bool s_bAbsQueriesValid;
 
-	// VSCRIPT
+	// Call this when hierarchy is not completely set up (such as during Restore) to throw asserts
+	// when people call GetAbsAnything. 
+	static inline void SetAbsQueriesValid( bool bValid )
+	{
+		s_bAbsQueriesValid = bValid;
+	}
+
+	static inline bool IsAbsQueriesValid()
+	{
+		return s_bAbsQueriesValid;
+	}
+
+	// ----------------------------------------------------------------------------
+	// VScript accessors
+	// ----------------------------------------------------------------------------
 	HSCRIPT GetScriptInstance( void );
 	bool ValidateScriptScope( void );
 	virtual void RunVScripts( void );
-	bool CallScriptFunction( const char *pFunctionName, ScriptVariant_t *pFunctionReturn );
+	virtual bool CallScriptFunction( const char *pFunctionName, ScriptVariant_t *pFunctionReturn );
 	void ConnectOutputToScript( const char *pszOutput, const char *pszScriptFunc );
 	void DisconnectOutputFromScript( const char *pszOutput, const char *pszScriptFunc );
 	void ScriptThink( void );
 	const char *GetScriptId( void );
 	HSCRIPT GetScriptScope( void );
+
 	void RunPrecacheScripts( void );
 	void RunOnPostSpawnScripts( void );
+	void ScriptSpawn( void );
 
+	void ScriptUtilRemove( void );
+
+	HSCRIPT GetScriptOwnerEntity();
+	void SetScriptOwnerEntity( HSCRIPT pOwner );
 	HSCRIPT ScriptGetMoveParent( void );
 	HSCRIPT ScriptGetRootMoveParent( void );
 	HSCRIPT ScriptFirstMoveChild( void );
 	HSCRIPT ScriptNextMovePeer( void );
 
-	const Vector &ScriptEyePosition( void ) { static Vector vec; vec = EyePosition(); return vec; }
-	void ScriptSetAngles( float fPitch, float fYaw, float fRoll ) { QAngle angles( fPitch, fYaw, fRoll ); Teleport( NULL, &angles, NULL ); }
-	void ScriptSetAnglesVector( const Vector &v ) { QAngle angles( VectorExpand( v ) ); Teleport( NULL, &angles, NULL ); }
-	const Vector &ScriptGetAngles( void ) { static Vector vec; QAngle qa = GetAbsAngles(); vec.x = qa.x; vec.y = qa.y; vec.z = qa.z; return vec; }
-	// BenLubar
-	void ScriptSetLocalAngles( float fPitch, float fYaw, float fRoll ) { QAngle angles( fPitch, fYaw, fRoll ); SetLocalAngles( angles ); }
-	const Vector &ScriptGetLocalAngles() { static Vector vec; QAngle qa = GetLocalAngles(); vec.x = qa.x; vec.y = qa.y; vec.z = qa.z; return vec; }
-	//
+	void ScriptTakeDamage( float flDamage, int nDamageType, HSCRIPT hAttacker );
+	void ScriptTakeDamageParams( HSCRIPT hInflictor, HSCRIPT hAttacker, HSCRIPT hWeapon, const Vector &damageForce, const Vector &damagePosition, float flDamage, int ndamageType );
+	void ScriptFireBullets( HSCRIPT info );
+	
+	const Vector &ScriptEyePosition( void );
+	void ScriptSetAngles( float fPitch, float fYaw, float fRoll );
+	const Vector &ScriptGetAngles( void );
+	void ScriptSetLocalAngles( float fPitch, float fYaw, float fRoll );
+	const Vector &ScriptGetLocalAngles( void );
 
-	void ScriptSetSize( const Vector &mins, const Vector &maxs ) { UTIL_SetSize( this, mins, maxs ); }
-	void ScriptUtilRemove( void ) { UTIL_Remove( this ); }
-	void ScriptSetOwner( HSCRIPT hEntity ) { SetOwnerEntity( ToEnt( hEntity ) ); }
-	void ScriptSetOrigin( const Vector &v ) { Teleport( &v, NULL, NULL ); }
-	void ScriptSetForward( const Vector &v ) { QAngle angles; VectorAngles( v, angles ); Teleport( NULL, &angles, NULL ); }
-	const Vector &ScriptGetForward( void ) { static Vector vecForward; GetVectors( &vecForward, NULL, NULL ); return vecForward; }
-	const Vector &ScriptGetLeft( void ) { static Vector vecLeft; GetVectors( NULL, &vecLeft, NULL ); return vecLeft; }
-	const Vector &ScriptGetUp( void ) { static Vector vecUp; GetVectors( NULL, NULL, &vecUp ); return vecUp; }
+	void ScriptSetSize( const Vector &mins, const Vector &maxs );
+	const Vector &ScriptGetBoundingMins( void );
+	const Vector &ScriptGetBoundingMaxs( void );
+
+	void ScriptSetOrigin( const Vector &v );
+	void ScriptSetForward( const Vector &v );
+	const Vector &ScriptGetLocalAngularVelocity( void );
+	void ScriptSetLocalAngularVelocity( float pitchVel, float yawVel, float rollVel );
+	const Vector &ScriptGetForward( void );
+	const Vector &ScriptGetLeft( void );
+	const Vector &ScriptGetUp( void );
+
+	void ScriptSetName( const char *newName );
+
+	void ScriptEmitSound( const char *soundname );
+	void ScriptStopSound( const char *soundname );
+	float ScriptSoundDuration( const char *soundname, const char *actormodel );
 
 	HSCRIPT ScriptGetModelKeyValues( void );
 
@@ -1922,20 +1940,6 @@ public:
 	HSCRIPT			m_hScriptInstance;
 	string_t		m_iszScriptId;
 	CScriptKeyValues *m_pScriptModelKeyValues;
-
-	// Call this when hierarchy is not completely set up (such as during Restore) to throw asserts
-	// when people call GetAbsAnything. 
-	static inline void SetAbsQueriesValid( bool bValid )
-	{
-		s_bAbsQueriesValid = bValid;
-	}
-	
-	static inline bool IsAbsQueriesValid()
-	{
-		return s_bAbsQueriesValid;
-	}
-
-	virtual bool ShouldBlockNav() const { return true; }
 };
 
 // Send tables exposed in this module.
@@ -2818,6 +2822,92 @@ inline void CBaseEntity::FireBullets( int cShots, const Vector &vecSrc,
 
 	FireBullets( info );
 }
+
+//-----------------------------------------------------------------------------
+// VScript accessors
+//-----------------------------------------------------------------------------
+inline Vector const &CBaseEntity::ScriptEyePosition( void )
+{
+	static Vector vec;
+	vec = EyePosition();
+	return vec;
+}
+
+inline void CBaseEntity::ScriptSetAngles( float fPitch, float fYaw, float fRoll )
+{
+	QAngle angles( fPitch, fYaw, fRoll );
+	Teleport( NULL, &angles, NULL );
+}
+
+inline Vector const &CBaseEntity::ScriptGetAngles( void )
+{
+	static Vector vecAng;
+
+	QAngle ang = GetAbsAngles();
+	vecAng.Init( ang.x, ang.y, ang.z );
+
+	return vecAng;
+}
+
+inline void CBaseEntity::ScriptSetLocalAngles( float fPitch, float fYaw, float fRoll )
+{
+	QAngle angles( fPitch, fYaw, fRoll );
+	SetLocalAngles( angles );
+}
+
+inline Vector const &CBaseEntity::ScriptGetLocalAngles( void )
+{
+	static Vector vecAng;
+
+	QAngle ang = GetLocalAngles();
+	vecAng.Init( ang.x, ang.y, ang.z );
+
+	return vecAng;
+}
+
+inline void CBaseEntity::ScriptSetSize( Vector const &mins, Vector const &maxs )
+{
+	UTIL_SetSize( this, mins, maxs );
+}
+
+inline void CBaseEntity::ScriptUtilRemove( void )
+{
+	UTIL_Remove( this );
+}
+
+inline void CBaseEntity::ScriptSetOrigin( Vector const &v )
+{
+	Teleport( &v, NULL, NULL );
+}
+
+inline void CBaseEntity::ScriptSetForward( Vector const &v )
+{
+	QAngle a;
+	VectorAngles( v, a );
+	Teleport( NULL, &a, NULL );
+}
+
+inline Vector const &CBaseEntity::ScriptGetForward( void )
+{
+	static Vector vecFwd;
+	GetVectors( &vecFwd, NULL, NULL );
+	return vecFwd;
+}
+
+inline Vector const &CBaseEntity::ScriptGetLeft( void )
+{
+	static Vector vecLeft;
+	GetVectors( NULL, &vecLeft, NULL );
+	return vecLeft;
+}
+
+inline Vector const &CBaseEntity::ScriptGetUp( void )
+{
+	static Vector vecUp;
+	GetVectors( NULL, NULL, &vecUp );
+	return vecUp;
+}
+
 
 // Ugly technique to override base member functions
 // Normally it's illegal to cast a pointer to a member function of a derived class to a pointer to a 

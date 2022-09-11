@@ -688,7 +688,6 @@ BEGIN_ENT_SCRIPTDESC_ROOT( CBaseEntity, "Root class of all server-side entities"
 	DEFINE_SCRIPTFUNC_NAMED( WorldSpaceCenter, "GetCenter", "Get vector to center of object - absolute coords")
 	DEFINE_SCRIPTFUNC_NAMED( ScriptEyePosition, "EyePosition", "Get vector to eye position - absolute coords")
 	DEFINE_SCRIPTFUNC_NAMED( ScriptSetAngles, "SetAngles", "Set entity pitch, yaw, roll")
-	DEFINE_SCRIPTFUNC_NAMED( ScriptSetAnglesVector, "SetAnglesVector", "Set entity pitch, yaw, roll from a vector")
 	DEFINE_SCRIPTFUNC_NAMED( ScriptGetAngles, "GetAngles", "Get entity pitch, yaw, roll as a vector")
 	// BenLubar
 	DEFINE_SCRIPTFUNC_NAMED( ScriptSetLocalAngles, "SetLocalAngles", "Set entity pitch, yaw, roll relative to the parent")
@@ -702,7 +701,8 @@ BEGIN_ENT_SCRIPTDESC_ROOT( CBaseEntity, "Root class of all server-side entities"
 	DEFINE_SCRIPTFUNC_NAMED( ScriptGetBoundingMaxs, "GetBoundingMaxs", "Get a vector containing max bounds, centered on object")
 
 	DEFINE_SCRIPTFUNC_NAMED( ScriptUtilRemove, "Destroy", ""  )
-	DEFINE_SCRIPTFUNC_NAMED( ScriptSetOwner, "SetOwner", ""  )
+	DEFINE_SCRIPTFUNC_NAMED( GetScriptOwnerEntity, "GetOwner", "Gets this entity's owner" )
+	DEFINE_SCRIPTFUNC_NAMED( SetScriptOwnerEntity, "SetOwner", "Sets this entity's owner" )
 	DEFINE_SCRIPTFUNC_NAMED( GetTeamNumber, "GetTeam", ""  )
 	DEFINE_SCRIPTFUNC_NAMED( ChangeTeam, "SetTeam", ""  )
 
@@ -730,9 +730,8 @@ BEGIN_ENT_SCRIPTDESC_ROOT( CBaseEntity, "Root class of all server-side entities"
 	DEFINE_SCRIPTFUNC( ValidateScriptScope, "Ensure that an entity's script scope has been created" )
 	DEFINE_SCRIPTFUNC( GetScriptScope, "Retrieve the script-side data associated with an entity" )
 	DEFINE_SCRIPTFUNC( GetScriptId, "Retrieve the unique identifier used to refer to the entity within the scripting system" )
-	DEFINE_SCRIPTFUNC_NAMED( GetScriptOwnerEntity, "GetOwner", "Gets this entity's owner" )
-	DEFINE_SCRIPTFUNC_NAMED( SetScriptOwnerEntity, "SetOwner", "Sets this entity's owner" )
 	DEFINE_SCRIPTFUNC( entindex, "" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptFireBullets, "FireBullets", "" )
 END_SCRIPTDESC();
 
 // dynamic models
@@ -1969,14 +1968,13 @@ int CBaseEntity::TakeDamage( const CTakeDamageInfo &inputInfo )
 //-----------------------------------------------------------------------------
 // VScript: Scale damage done and call OnTakeDamage
 //-----------------------------------------------------------------------------
-void CBaseEntity::ScriptTakeDamage( float flDamage, int ndamageType, HSCRIPT hAttacker )
+void CBaseEntity::ScriptTakeDamage( float flDamage, int nDamageType, HSCRIPT hAttacker )
 {
 	CBaseEntity *pAttacker = ToEnt(hAttacker);
-	if ( !pAttacker )
+	if ( pAttacker == NULL )
 		pAttacker = this;
 
-	CTakeDamageInfo info( pAttacker, pAttacker, flDamage, ndamageType );
-	TakeDamage( info );
+	TakeDamage( CTakeDamageInfo(pAttacker, pAttacker, flDamage, nDamageType) );
 }
 
 //-----------------------------------------------------------------------------
@@ -6954,14 +6952,14 @@ void CBaseEntity::ScriptThink( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-const char *CBaseEntity::GetScriptId()
+FORCEINLINE const char *CBaseEntity::GetScriptId()
 {
 	return STRING( m_iszScriptId );
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-HSCRIPT CBaseEntity::GetScriptScope()
+FORCEINLINE HSCRIPT CBaseEntity::GetScriptScope()
 {
 	return m_ScriptScope;
 }
@@ -6972,6 +6970,7 @@ HSCRIPT CBaseEntity::ScriptGetMoveParent( void )
 {
 	return ToHScript( GetMoveParent() );
 }
+
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 HSCRIPT CBaseEntity::ScriptGetRootMoveParent()
@@ -6993,6 +6992,8 @@ HSCRIPT CBaseEntity::ScriptNextMovePeer( void )
 	return ToHScript( NextMovePeer() );
 }
 
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 HSCRIPT CBaseEntity::ScriptGetModelKeyValues( void )
 {
 	KeyValues *pModelKeyValues = new KeyValues( "" );

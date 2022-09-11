@@ -7,6 +7,8 @@
 #include "cbase.h"
 #include "filesystem.h"
 #include "tf_gamerules.h"
+#include "econ_item_system.h"
+#include "tf_fx_shared.h"
 #include "vscript_shared.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -97,85 +99,56 @@ BEGIN_SCRIPTDESC_ROOT_NAMED( CScriptConvars, "Convars", SCRIPT_SINGLETON "Provid
 END_SCRIPTDESC();
 #endif
 
-static ScriptVariant_t AttribHookValue( ScriptVariant_t value, char const *szName, HSCRIPT hEntity )
+static float AttribHookValueFloat( float value, char const *szName, HSCRIPT hEntity )
 {
 	CBaseEntity *pEntity = ToEnt( hEntity );
 	if ( !pEntity )
 		return value;
 
 	IHasAttributes *pAttribInteface = pEntity->GetHasAttributesInterfacePtr();
-
 	if ( pAttribInteface )
 	{
 		string_t strAttributeClass = AllocPooledString_StaticConstantStringPointer( szName );
 		float flResult = pAttribInteface->GetAttributeManager()->ApplyAttributeFloat( value, pEntity, strAttributeClass, NULL );
-
-		if ( value.m_type == FIELD_INTEGER )
-			value = (int)flResult;
-		else if ( value.m_type == FIELD_FLOAT )
-			value = flResult;
+		value = flResult;
 	}
 
 	return value;
 }
 
-class CTFGameRulesScope : 
-	public CScriptScopeT<CDefScriptScopeBase>
+static int AttribHookValueInt( int value, char const *szName, HSCRIPT hEntity )
 {
-public:
+	CBaseEntity *pEntity = ToEnt( hEntity );
+	if ( !pEntity )
+		return value;
 
-	DEFINE_SCRIPT_PROXY_1V( RegisterWep );
-	DEFINE_SCRIPT_PROXY_1V( RegisterEnt );
-};
+	IHasAttributes *pAttribInteface = pEntity->GetHasAttributesInterfacePtr();
+	if ( pAttribInteface )
+	{
+		string_t strAttributeClass = AllocPooledString_StaticConstantStringPointer( szName );
+		float flResult = pAttribInteface->GetAttributeManager()->ApplyAttributeFloat( value, pEntity, strAttributeClass, NULL );
+		value = RoundFloatToInt( flResult );
+	}
+
+	return value;
+}
+
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CTFGameRules::RegisterScriptFunctions( void )
 {
-	ScriptRegisterFunctionNamed( g_pScriptVM, AttribHookValue, "GetAttribValue", "Fetch an attribute that is assigned to the provided weapon" );
+	ScriptRegisterFunctionNamed( g_pScriptVM, AttribHookValueFloat, "GetAttribFloatValue", "Fetch an attribute that is assigned to the provided weapon" );
+	ScriptRegisterFunctionNamed( g_pScriptVM, AttribHookValueInt, "GetAttribIntValue", "Fetch an attribute that is assigned to the provided weapon" );
+	ScriptRegisterFunction( g_pScriptVM, FX_FireBullets, "(playerIndex, origin, angles, weaponID, weaponMode, seed, spread, damage, isCritical)\nOn client: Performs all the visuals. On server: Traces damage to entities." );
 
 #if defined( GAME_DLL )
 	g_pScriptVM->RegisterInstance( &g_ConvarsVScript, "Convars" );
 #endif
 
-	char root[ MAX_PATH ]{};
-	Q_strncpy( root, "scripts\\vscripts", sizeof root );
-	Q_FixSlashes( root );
-
-	FileFindHandle_t fh;
-	char const *path = g_pFullFileSystem->FindFirst( root, &fh );
-	while ( path )
+	if ( GetItemSchema() )
 	{
-		CTFGameRulesScope hTable{};
-		if ( g_pFullFileSystem->FindIsDirectory( fh ) && path[0] != '.' )
-			break;
-
-		HSCRIPT hScript = VScriptCompileScript( path, true );
-
-		char const *className = Q_strrchr( path, CORRECT_PATH_SEPARATOR );
-		if ( hTable.Init( className ) )
-		{
-			if ( hTable.Run( hScript ) == SCRIPT_ERROR )
-			{
-				Warning( "Error running script named %s\n", className );
-				Assert( "Error running script" );
-			}
-
-			if ( hTable.RegisterEnt( className ) || hTable.RegisterWep( className ) )
-			{
-				DevMsg( "Registering new entity {%s} for creation.", className );
-			}
-		}
-		else
-		{
-			Warning( "Unable to create script scope for %s\n", className );
-		}
-
-		g_pScriptVM->ReleaseScript( hScript );
-
-		path = g_pFullFileSystem->FindNext( fh );
+		GetItemSchema()->RegisterScriptFunctions();
 	}
-
-	g_pFullFileSystem->FindClose( fh );
 }

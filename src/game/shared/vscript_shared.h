@@ -34,7 +34,7 @@ HSCRIPT VScriptCompileScript( const char *pszScriptName, bool bWarnMissing = fal
 bool VScriptRunScript( const char *pszScriptName, HSCRIPT hScope, bool bWarnMissing = false );
 inline bool VScriptRunScript( const char *pszScriptName, bool bWarnMissing = false ) { return VScriptRunScript( pszScriptName, NULL, bWarnMissing ); }
 
-#define DECLARE_ENT_SCRIPTDESC()													ALLOW_SCRIPT_ACCESS() virtual ScriptClassDesc_t *GetScriptDesc()
+#define DECLARE_ENT_SCRIPTDESC()													ALLOW_SCRIPT_ACCESS(); virtual ScriptClassDesc_t *GetScriptDesc()
 
 #define _IMPLEMENT_ENT_SCRIPTDESC_ACCESSOR( className )								template <> ScriptClassDesc_t *GetScriptDesc<className>( className * ); ScriptClassDesc_t *className::GetScriptDesc()  { return ::GetScriptDesc( this ); }	
 
@@ -45,5 +45,51 @@ inline bool VScriptRunScript( const char *pszScriptName, bool bWarnMissing = fal
 
 // Only allow scripts to create entities during map initialization
 bool IsEntityCreationAllowedInScripts( void );
+
+// ----------------------------------------------------------------------------
+// KeyValues access
+// ----------------------------------------------------------------------------
+class CScriptKeyValues
+{
+public:
+	CScriptKeyValues( KeyValues *pKeyValues );
+	~CScriptKeyValues( );
+
+	HSCRIPT ScriptFindKey( const char *pszName );
+	HSCRIPT ScriptGetFirstSubKey( void );
+	HSCRIPT ScriptGetNextKey( void );
+	int ScriptGetKeyValueInt( const char *pszName );
+	float ScriptGetKeyValueFloat( const char *pszName );
+	const char *ScriptGetKeyValueString( const char *pszName );
+	bool ScriptIsKeyValueEmpty( const char *pszName );
+	bool ScriptGetKeyValueBool( const char *pszName );
+	void ScriptReleaseKeyValues( );
+
+	// Functions below are new with Mapbase
+	void TableToSubKeys( HSCRIPT hTable );
+	void SubKeysToTable( HSCRIPT hTable );
+
+	HSCRIPT ScriptFindOrCreateKey( const char *pszName );
+
+	const char *ScriptGetName();
+	int ScriptGetInt();
+	float ScriptGetFloat();
+	const char *ScriptGetString();
+	bool ScriptGetBool();
+
+	void ScriptSetKeyValueInt( const char *pszName, int iValue );
+	void ScriptSetKeyValueFloat( const char *pszName, float flValue );
+	void ScriptSetKeyValueString( const char *pszName, const char *pszValue );
+	void ScriptSetKeyValueBool( const char *pszName, bool bValue );
+	void ScriptSetName( const char *pszValue );
+	void ScriptSetInt( int iValue );
+	void ScriptSetFloat( float flValue );
+	void ScriptSetString( const char *pszValue );
+	void ScriptSetBool( bool bValue );
+
+	KeyValues *GetKeyValues() { return m_pKeyValues; }
+
+	KeyValues *m_pKeyValues;	// actual KeyValue entity
+};
 
 #endif // VSCRIPT_SHARED_H

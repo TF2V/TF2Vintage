@@ -24,7 +24,6 @@ CNetPropManager::~CNetPropManager()
 	m_PropCache.PurgeAndDeleteElements();
 }
 
-//-----------------------------------------------------------------------------
 SendProp *CNetPropManager::SearchSendTable( SendTable *pSendTable, const char *pszProperty ) const
 {
 	// Iterate through the send table and find the prop that we are looking for
@@ -50,8 +49,6 @@ SendProp *CNetPropManager::SearchSendTable( SendTable *pSendTable, const char *p
 	return NULL;
 }
 
-
-//-----------------------------------------------------------------------------
 inline typedescription_t *CNetPropManager::SearchDataMap( datamap_t *pMap, const char *pszProperty ) const
 {
 	while ( pMap )
@@ -79,8 +76,6 @@ inline typedescription_t *CNetPropManager::SearchDataMap( datamap_t *pMap, const
 	return NULL; 
 }
 
-
-//-----------------------------------------------------------------------------
 inline CNetPropManager::PropInfo_t CNetPropManager::GetEntityPropInfo( CBaseEntity* pBaseEntity, const char *pszProperty, int element )
 {
 	ServerClass *pServerClass       = pBaseEntity->GetServerClass();
@@ -335,15 +330,6 @@ inline CNetPropManager::PropInfo_t CNetPropManager::GetEntityPropInfo( CBaseEnti
 	return propInfo;
 }
 
-
-//-----------------------------------------------------------------------------
-int CNetPropManager::GetPropInt( HSCRIPT hEnt, const char *pszProperty )
-{
-	return GetPropIntArray( hEnt, pszProperty, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 int CNetPropManager::GetPropIntArray( HSCRIPT hEnt, const char *pszProperty, int element )
 {
 	// Get the base entity of the specified index
@@ -356,7 +342,7 @@ int CNetPropManager::GetPropIntArray( HSCRIPT hEnt, const char *pszProperty, int
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
 	// Property must be valid
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Int) )
+	if ( !propInfo.m_IsPropValid || propInfo.m_eType != Type_Int )
 		return -1;
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -405,15 +391,6 @@ int CNetPropManager::GetPropIntArray( HSCRIPT hEnt, const char *pszProperty, int
 	return 0;
 }
 
-
-//-----------------------------------------------------------------------------
-void CNetPropManager::SetPropInt( HSCRIPT hEnt, const char *pszProperty, int value )
-{
-	SetPropIntArray( hEnt, pszProperty, value, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 void CNetPropManager::SetPropIntArray( HSCRIPT hEnt, const char *pszProperty, int value, int element )
 {
 	CBaseEntity *pBaseEntity = ToEnt( hEnt );
@@ -422,7 +399,7 @@ void CNetPropManager::SetPropIntArray( HSCRIPT hEnt, const char *pszProperty, in
 
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Int) )
+	if ( !propInfo.m_IsPropValid || propInfo.m_eType != Type_Int )
 		return;
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -467,15 +444,6 @@ void CNetPropManager::SetPropIntArray( HSCRIPT hEnt, const char *pszProperty, in
 	}
 }
 
-
-//-----------------------------------------------------------------------------
-float CNetPropManager::GetPropFloat( HSCRIPT hEnt, const char *pszProperty )
-{
-	return GetPropFloatArray( hEnt, pszProperty, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 float CNetPropManager::GetPropFloatArray( HSCRIPT hEnt, const char *pszProperty, int element )
 {
 	CBaseEntity *pBaseEntity = ToEnt( hEnt );
@@ -484,7 +452,7 @@ float CNetPropManager::GetPropFloatArray( HSCRIPT hEnt, const char *pszProperty,
 
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Float) )
+	if ( !propInfo.m_IsPropValid || propInfo.m_eType != Type_Float )
 		return -1.0f;
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -498,15 +466,6 @@ float CNetPropManager::GetPropFloatArray( HSCRIPT hEnt, const char *pszProperty,
 	return *(float *)((uint8 *)pBaseEntityOrGameRules + propInfo.m_nOffset);
 }
 
-
-//-----------------------------------------------------------------------------
-void CNetPropManager::SetPropFloat( HSCRIPT hEnt, const char *pszProperty, float value )
-{
-	SetPropFloatArray( hEnt, pszProperty, value, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 void CNetPropManager::SetPropFloatArray( HSCRIPT hEnt, const char *pszProperty, float value, int element )
 {
 	CBaseEntity *pBaseEntity = ToEnt( hEnt );
@@ -515,7 +474,7 @@ void CNetPropManager::SetPropFloatArray( HSCRIPT hEnt, const char *pszProperty, 
 
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Float) )
+	if ( !propInfo.m_IsPropValid || propInfo.m_eType != Type_Float )
 		return;
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -534,15 +493,60 @@ void CNetPropManager::SetPropFloatArray( HSCRIPT hEnt, const char *pszProperty, 
 	}
 }
 
-
-//-----------------------------------------------------------------------------
-HSCRIPT CNetPropManager::GetPropEntity( HSCRIPT hEnt, const char *pszProperty )
+Vector CNetPropManager::GetPropVectorArray( HSCRIPT hEnt, const char *pszProperty, int element )
 {
-	return GetPropEntityArray( hEnt, pszProperty, 0 );
+	static Vector vAng = Vector(0, 0, 0);
+	CBaseEntity *pBaseEntity = ToEnt( hEnt );
+	if ( !pBaseEntity )
+		return vAng;
+
+	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
+
+	if ( !propInfo.m_IsPropValid || (propInfo.m_eType != Type_Vector) )
+		return vAng;
+
+	void *pBaseEntityOrGameRules = pBaseEntity;
+	if ( dynamic_cast<CGameRulesProxy*>(pBaseEntity) && propInfo.m_bIsSendProp )
+	{
+		pBaseEntityOrGameRules = GameRules();
+		if ( !pBaseEntityOrGameRules )
+			return vAng;
+	}
+
+	vAng = *(Vector *)((uint8 *)pBaseEntityOrGameRules + propInfo.m_nOffset);
+	return vAng;
 }
 
+void CNetPropManager::SetPropVectorArray( HSCRIPT hEnt, const char *pszProperty, Vector value, int element )
+{
+	CBaseEntity *pBaseEntity = ToEnt( hEnt );
+	if ( !pBaseEntity )
+		return;
 
-//-----------------------------------------------------------------------------
+	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
+
+	if ( !propInfo.m_IsPropValid || propInfo.m_eType != Type_Vector )
+		return;
+
+	void *pBaseEntityOrGameRules = pBaseEntity;
+	if ( dynamic_cast<CGameRulesProxy*>(pBaseEntity) && propInfo.m_bIsSendProp )
+	{
+		pBaseEntityOrGameRules = GameRules();
+		if ( !pBaseEntityOrGameRules )
+			return;
+	}
+
+	Vector *pVec = (Vector *)((uint8 *)pBaseEntityOrGameRules + propInfo.m_nOffset);
+	pVec->x = value.x;
+	pVec->y = value.y;
+	pVec->z = value.z;
+
+	if ( propInfo.m_bIsSendProp )
+	{
+		pBaseEntity->edict()->StateChanged( propInfo.m_nOffset );
+	}
+}
+
 HSCRIPT CNetPropManager::GetPropEntityArray( HSCRIPT hEnt, const char *pszProperty, int element )
 {
 	CBaseEntity *pBaseEntity = ToEnt( hEnt );
@@ -551,7 +555,7 @@ HSCRIPT CNetPropManager::GetPropEntityArray( HSCRIPT hEnt, const char *pszProper
 
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Int) )
+	if ( !propInfo.m_IsPropValid || propInfo.m_eType != Type_Int )
 		return NULL;
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -568,15 +572,6 @@ HSCRIPT CNetPropManager::GetPropEntityArray( HSCRIPT hEnt, const char *pszProper
 	return ToHScript( pPropEntity );
 }
 
-
-//-----------------------------------------------------------------------------
-void CNetPropManager::SetPropEntity( HSCRIPT hEnt, const char *pszProperty, HSCRIPT hPropEnt )
-{
-	SetPropEntityArray( hEnt, pszProperty, hPropEnt, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 void CNetPropManager::SetPropEntityArray( HSCRIPT hEnt, const char *pszProperty, HSCRIPT hPropEnt, int element )
 {
 	CBaseEntity *pBaseEntity = ToEnt( hEnt );
@@ -585,7 +580,7 @@ void CNetPropManager::SetPropEntityArray( HSCRIPT hEnt, const char *pszProperty,
 
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Int) )
+	if ( !propInfo.m_IsPropValid || propInfo.m_eType != Type_Int )
 		return;
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -614,87 +609,6 @@ void CNetPropManager::SetPropEntityArray( HSCRIPT hEnt, const char *pszProperty,
 	}
 }
 
-
-//-----------------------------------------------------------------------------
-const Vector& CNetPropManager::GetPropVector( HSCRIPT hEnt, const char *pszProperty )
-{
-	return GetPropVectorArray( hEnt, pszProperty, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
-const Vector& CNetPropManager::GetPropVectorArray( HSCRIPT hEnt, const char *pszProperty, int element )
-{
-	static Vector vAng = Vector(0, 0, 0);
-	CBaseEntity *pBaseEntity = ToEnt( hEnt );
-	if ( !pBaseEntity )
-		return vAng;
-
-	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
-
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Vector) )
-		return vAng;
-
-	void *pBaseEntityOrGameRules = pBaseEntity;
-	if ( dynamic_cast<CGameRulesProxy*>(pBaseEntity) && propInfo.m_bIsSendProp )
-	{
-		pBaseEntityOrGameRules = GameRules();
-		if ( !pBaseEntityOrGameRules )
-			return vAng;
-	}
-
-	vAng = *(Vector *)((uint8 *)pBaseEntityOrGameRules + propInfo.m_nOffset);
-	return vAng;
-}
-
-
-//-----------------------------------------------------------------------------
-void CNetPropManager::SetPropVector( HSCRIPT hEnt, const char *pszProperty, Vector value )
-{
-	SetPropVectorArray( hEnt, pszProperty, value, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
-void CNetPropManager::SetPropVectorArray( HSCRIPT hEnt, const char *pszProperty, Vector value, int element )
-{
-	CBaseEntity *pBaseEntity = ToEnt( hEnt );
-	if ( !pBaseEntity )
-		return;
-
-	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
-
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_Vector) )
-		return;
-
-	void *pBaseEntityOrGameRules = pBaseEntity;
-	if ( dynamic_cast<CGameRulesProxy*>(pBaseEntity) && propInfo.m_bIsSendProp )
-	{
-		pBaseEntityOrGameRules = GameRules();
-		if ( !pBaseEntityOrGameRules )
-			return;
-	}
-
-	Vector *pVec = (Vector *)((uint8 *)pBaseEntityOrGameRules + propInfo.m_nOffset);
-	pVec->x = value.x;
-	pVec->y = value.y;
-	pVec->z = value.z;
-
-	if ( propInfo.m_bIsSendProp )
-	{
-		pBaseEntity->edict()->StateChanged( propInfo.m_nOffset );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-const char *CNetPropManager::GetPropString( HSCRIPT hEnt, const char *pszProperty )
-{
-	return GetPropStringArray( hEnt, pszProperty, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 const char *CNetPropManager::GetPropStringArray( HSCRIPT hEnt, const char *pszProperty, int element )
 {
 	CBaseEntity *pBaseEntity = ToEnt( hEnt );
@@ -703,7 +617,7 @@ const char *CNetPropManager::GetPropStringArray( HSCRIPT hEnt, const char *pszPr
 
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_String && propInfo.m_eType != Type_String_t && propInfo.m_eType != Type_Int) )
+	if ( !propInfo.m_IsPropValid || (propInfo.m_eType != Type_String && propInfo.m_eType != Type_String_t && propInfo.m_eType != Type_Int) )
 		return "";
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -725,15 +639,6 @@ const char *CNetPropManager::GetPropStringArray( HSCRIPT hEnt, const char *pszPr
 	}
 }
 
-
-//-----------------------------------------------------------------------------
-void CNetPropManager::SetPropString( HSCRIPT hEnt, const char *pszProperty, const char *value )
-{
-	SetPropStringArray( hEnt, pszProperty, value, 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 void CNetPropManager::SetPropStringArray( HSCRIPT hEnt, const char *pszProperty, const char *value, int element )
 {
 	CBaseEntity *pBaseEntity = ToEnt( hEnt );
@@ -742,7 +647,7 @@ void CNetPropManager::SetPropStringArray( HSCRIPT hEnt, const char *pszProperty,
 
 	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, element );
 
-	if ( (!propInfo.m_IsPropValid) || (propInfo.m_eType != Type_String && propInfo.m_eType != Type_String_t) )
+	if ( !propInfo.m_IsPropValid || (propInfo.m_eType != Type_String && propInfo.m_eType != Type_String_t) )
 		return;
 
 	void *pBaseEntityOrGameRules = pBaseEntity;
@@ -767,84 +672,4 @@ void CNetPropManager::SetPropStringArray( HSCRIPT hEnt, const char *pszProperty,
 	{
 		pBaseEntity->edict()->StateChanged( propInfo.m_nOffset );
 	}
-}
-
-
-//-----------------------------------------------------------------------------
-int CNetPropManager::GetPropArraySize( HSCRIPT hEnt, const char *pszProperty )
-{
-	CBaseEntity *pBaseEntity = ToEnt( hEnt );
-	if (!pBaseEntity)
-		return -1;
-
-	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, 0 );
-
-	if ( (!propInfo.m_IsPropValid) )
-		return -1;
-
-	return propInfo.m_nProps;
-}
-
-
-//-----------------------------------------------------------------------------
-bool CNetPropManager::HasProp( HSCRIPT hEnt, const char *pszProperty )
-{
-	CBaseEntity *pBaseEntity = ToEnt( hEnt );
-	if ( !pBaseEntity )
-		return false;
-
-	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, 0 );
-
-	return ( propInfo.m_IsPropValid ) ? true : false;
-}
-
-
-//-----------------------------------------------------------------------------
-const char *CNetPropManager::GetPropType( HSCRIPT hEnt, const char *pszProperty )
-{
-	CBaseEntity *pBaseEntity = ToEnt( hEnt );
-	if ( !pBaseEntity )
-		return NULL;
-
-	PropInfo_t propInfo = GetEntityPropInfo( pBaseEntity, pszProperty, 0 );
-
-	if ( !propInfo.m_IsPropValid )
-		return NULL;
-
-	if ( propInfo.m_eType == Type_Int )
-	{
-		return "integer";
-	}
-	else if ( propInfo.m_eType == Type_Float )
-	{
-		return "float";
-	}
-	else if ( propInfo.m_eType == Type_Vector )
-	{
-		return "Vector";
-	}
-	else if ( propInfo.m_eType == Type_VectorXY )
-	{
-		return "VectorXY";
-	}
-	else if ( propInfo.m_eType == Type_String || propInfo.m_eType == Type_String_t )
-	{
-		return "string";
-	}
-	else if ( propInfo.m_eType == Type_Array )
-	{
-		return "array";
-	}
-	else if ( propInfo.m_eType == Type_DataTable )
-	{
-		return "table";
-	}
-	#ifdef SUPPORTS_INT64
-		else if ( propInfo.m_eType == Type_Int64 )
-		{
-			return "integer64";
-		}
-	#endif
-
-	return NULL;
 }

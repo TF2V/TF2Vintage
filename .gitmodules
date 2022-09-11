@@ -1,7 +1,3 @@
-[submodule "src/thirdparty/abseil"]
-	path = src/thirdparty/abseil
-	url = https://github.com/abseil/abseil-cpp
-	branch = lts_2020_02_25
-[submodule "src/thirdparty/webrtc"]
-	path = src/thirdparty/webrtc
-	url = https://webrtc.googlesource.com/src
+[submodule "src/thirdparty/luajit"]
+	path = src/thirdparty/luajit
+	url = https://github.com/LuaJIT/LuaJIT.git

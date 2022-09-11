@@ -113,10 +113,10 @@ bool CScriptGameEventListener::Init()
 			const char *keyName = pSubKey->GetName();
 			const char *type = pSubKey->GetString();
 
-			auto const GetType =[ type ]() -> int {
+			auto const GetType =[ type ] () {
 				for ( int i=0; i < ARRAYSIZE( g_sGameEventTypeMap ); ++i )
 				{
-					if ( Q_stricmp( type, g_sGameEventTypeMap[i] ) == 0 )
+					if ( Q_stricmp( type, g_sGameEventTypeMap[ i ] ) == 0 )
 						return i;
 				}
 
@@ -137,7 +137,7 @@ bool CScriptGameEventListener::Init()
 					event.m_EventParams.Insert( keyName, KeyValues::TYPE_FLOAT );
 					break;
 				default:
-					DevMsg( "Received unsupported event type '%s' while seting up event listeners", type );
+					DevMsg( "Received unsupported event type '%s' while seting up event listeners\n", type );
 					break;
 			}
 		}

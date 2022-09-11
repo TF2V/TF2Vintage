@@ -422,7 +422,7 @@ typedef unsigned int		uint;
 
 #elif defined ( COMPILER_GCC )
 
-	#if (CROSS_PLATFORM_VERSION >= 1) && !defined( PLATFORM_64BITS )
+	#if !defined( PLATFORM_64BITS )
 		#define  STDCALL			__attribute__ ((__stdcall__))
 	#else
 		#define  STDCALL

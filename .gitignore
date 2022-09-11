@@ -21,6 +21,7 @@ ipch
 *.vcxproj.filters
 *.vcxproj.vpc_crc
 *.sln
+*.pdb
 
 # OSX/Linux build products
 *.mak
@@ -32,21 +33,10 @@ obj*/
 !utils/smdlexp/smdlexp.mak
 
 # Specific Source build products
+[Rr]elease*/
+[Dd]ebug*/
 game/bin
 game/*/bin
-
-[Dd]ebug*/
-[Rr]elease*/
-
-vscript.pdb
-vscript.dll
-vscript.lib
-
-vscript.so
-vscript.so.dbg
-
-vscript.dylib
-vscript.dylib.dSYM/
 
 # generated protobuf sources
 generated_proto*/
@@ -61,6 +51,7 @@ src/lib/public/tier1.pdb
 src/lib/public/vgui_controls.lib
 src/lib/public/vgui_controls.pdb
 src/thirdparty/bullet/build/lib
+src/lib/common/angelscript.lib
 
 # misc files
 fgdlib.lib

@@ -74,6 +74,14 @@ $Configuration
 	}
 }
 
+$CustomBuildStep "nut"
+{
+	$CommandLine	"$SRCDIR\devtools\srcsrv\perl\bin\perl.exe $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_$(InputName)> $(InputDir)$(InputName)_nut.h" [$WINDOWS]
+	$CommandLine	"perl $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_$(InputName)> $(InputDir)$(InputName)_nut.h" [$POSIX]
+	$Description	"$(InputFileName) produces $(InputName)_nut.h"
+	$Outputs		"$(InputDir)$(InputName)_nut.h"
+}
+
 $Project
 {
 	$Folder "Replay"
@@ -256,6 +264,8 @@ $Project
 		$File	"$SRCDIR\game\shared\baseprojectile.cpp"
 		$File	"$SRCDIR\game\shared\baseprojectile.h"
 		$File	"BasePropDoor.h"
+		$File	"$SRCDIR\game\shared\basescriptedweapon.cpp"
+		$File	"$SRCDIR\game\shared\basescriptedweapon.h"
 		$File	"basetoggle.h"
 		$File	"baseviewmodel.cpp"
 		$File	"baseviewmodel.h"

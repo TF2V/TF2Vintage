@@ -23,8 +23,6 @@
 #endif
 
 extern ScriptClassDesc_t *GetScriptDesc( CBaseEntity * );
-/*extern */void RegisterScriptedWeapon( char const *szName ) {}
-/*extern */void RegisterScriptedEntity( char const *szName ) {}
 
 
 //-----------------------------------------------------------------------------
@@ -105,116 +103,6 @@ BEGIN_SCRIPTDESC_ROOT_NAMED( CScriptEntityIterator, "CEntities", SCRIPT_SINGLETO
 	DEFINE_SCRIPTFUNC( FindByClassnameNearest, "Find entities by class name nearest to a point."  )
 	DEFINE_SCRIPTFUNC( FindByClassnameWithin, "Find entities by class name within a radius. Pass 'null' to start an iteration, or reference to a previously found entity to continue a search"  )
 END_SCRIPTDESC();
-
-// ----------------------------------------------------------------------------
-// KeyValues access - CBaseEntity::ScriptGetKeyFromModel returns root KeyValues
-// ----------------------------------------------------------------------------
-
-BEGIN_SCRIPTDESC_ROOT( CScriptKeyValues, "Wrapper class over KeyValues instance" )
-	DEFINE_SCRIPT_CONSTRUCTOR()	
-	DEFINE_SCRIPTFUNC_NAMED( ScriptFindKey, "FindKey", "Given a KeyValues object and a key name, find a KeyValues object associated with the key name" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetFirstSubKey, "GetFirstSubKey", "Given a KeyValues object, return the first sub key object" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetNextKey, "GetNextKey", "Given a KeyValues object, return the next key object in a sub key group" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetKeyValueInt, "GetKeyInt", "Given a KeyValues object and a key name, return associated integer value" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetKeyValueFloat, "GetKeyFloat", "Given a KeyValues object and a key name, return associated float value" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetKeyValueBool, "GetKeyBool", "Given a KeyValues object and a key name, return associated bool value" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptGetKeyValueString, "GetKeyString", "Given a KeyValues object and a key name, return associated string value" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptIsKeyValueEmpty, "IsKeyEmpty", "Given a KeyValues object and a key name, return true if key name has no value" );
-	DEFINE_SCRIPTFUNC_NAMED( ScriptReleaseKeyValues, "ReleaseKeyValues", "Given a root KeyValues object, release its contents" );
-END_SCRIPTDESC();
-
-HSCRIPT CScriptKeyValues::ScriptFindKey( const char *pszName )
-{
-	KeyValues *pKeyValues = m_pKeyValues->FindKey(pszName);
-	if ( pKeyValues == NULL )
-		return NULL;
-
-	CScriptKeyValues *pScriptKey = new CScriptKeyValues( pKeyValues );
-
-	// UNDONE: who calls ReleaseInstance on this??
-	HSCRIPT hScriptInstance = g_pScriptVM->RegisterInstance( pScriptKey );
-	return hScriptInstance;
-}
-
-HSCRIPT CScriptKeyValues::ScriptGetFirstSubKey( void )
-{
-	KeyValues *pKeyValues = m_pKeyValues->GetFirstSubKey();
-	if ( pKeyValues == NULL )
-		return NULL;
-
-	CScriptKeyValues *pScriptKey = new CScriptKeyValues( pKeyValues );
-
-	// UNDONE: who calls ReleaseInstance on this??
-	HSCRIPT hScriptInstance = g_pScriptVM->RegisterInstance( pScriptKey );
-	return hScriptInstance;
-}
-
-HSCRIPT CScriptKeyValues::ScriptGetNextKey( void )
-{
-	KeyValues *pKeyValues = m_pKeyValues->GetNextKey();
-	if ( pKeyValues == NULL )
-		return NULL;
-
-	CScriptKeyValues *pScriptKey = new CScriptKeyValues( pKeyValues );
-
-	// UNDONE: who calls ReleaseInstance on this??
-	HSCRIPT hScriptInstance = g_pScriptVM->RegisterInstance( pScriptKey );
-	return hScriptInstance;
-}
-
-int CScriptKeyValues::ScriptGetKeyValueInt( const char *pszName )
-{
-	int i = m_pKeyValues->GetInt( pszName );
-	return i;
-}
-
-float CScriptKeyValues::ScriptGetKeyValueFloat( const char *pszName )
-{
-	float f = m_pKeyValues->GetFloat( pszName );
-	return f;
-}
-
-const char *CScriptKeyValues::ScriptGetKeyValueString( const char *pszName )
-{
-	const char *psz = m_pKeyValues->GetString( pszName );
-	return psz;
-}
-
-bool CScriptKeyValues::ScriptIsKeyValueEmpty( const char *pszName )
-{
-	bool b = m_pKeyValues->IsEmpty( pszName );
-	return b;
-}
-
-bool CScriptKeyValues::ScriptGetKeyValueBool( const char *pszName )
-{
-	bool b = m_pKeyValues->GetBool( pszName );
-	return b;
-}
-
-void CScriptKeyValues::ScriptReleaseKeyValues( )
-{
-	m_pKeyValues->deleteThis();
-	m_pKeyValues = NULL;
-}
-
-
-// constructors
-CScriptKeyValues::CScriptKeyValues( KeyValues *pKeyValues = NULL )
-{
-	m_pKeyValues = pKeyValues;
-}
-
-// destructor
-CScriptKeyValues::~CScriptKeyValues( )
-{
-	if (m_pKeyValues)
-	{
-		m_pKeyValues->deleteThis();
-	}
-	m_pKeyValues = NULL;
-}
-
 
 class CScriptResponseCriteria
 {
@@ -804,9 +692,7 @@ bool VScriptServerInit()
 				ScriptRegisterFunctionNamed( g_pScriptVM, Script_GetPlayerFromUserID, "GetPlayerFromUserID", "Given a user id, return the entity, or null." );
 				ScriptRegisterFunctionNamed( g_pScriptVM, Script_EntIndexToHScript, "EntIndexToHScript", "Returns the script handle for the given entity index." );
 
-				ScriptRegisterFunctionNamed( g_pScriptVM, RegisterScriptedEntity, "RegisterEnt", "Register an entity by name that can be created" );
-				ScriptRegisterFunctionNamed( g_pScriptVM, RegisterScriptedWeapon, "RegisterWep", "Register a weapon by name that can be created" );
-
+				g_pScriptVM->RegisterClass( GetScriptDescForClass( CScriptKeyValues ) );
 				
 				if ( GameRules() )
 				{
@@ -816,6 +702,7 @@ bool VScriptServerInit()
 				g_pScriptVM->RegisterInstance( &g_ScriptEntityIterator, "Entities" );
 				g_pScriptVM->RegisterInstance( &g_NetPropManager, "NetProps" );
 				g_pScriptVM->RegisterInstance( &g_ScriptResponseCriteria, "ResponseCriteria" );
+				g_pScriptVM->RegisterInstance( &g_ScriptEntityOutputs, "EntityOutputs" );
 
 				// To be used with Script_ClientPrint
 				g_pScriptVM->SetValue( "HUD_PRINTNOTIFY", HUD_PRINTNOTIFY );
