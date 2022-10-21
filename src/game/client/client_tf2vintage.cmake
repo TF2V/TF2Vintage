@@ -692,7 +692,7 @@ set_target_properties(
 
 target_use_client_base(client_tf2vintage CLIENT_TF2VINTAGE_EXCLUDE_SOURCES)
 
-TargetBuildAndAddProto(client_tf2vintage ${SRCDIR}/game/shared/econ/econ_messages.proto "${GENERATED_PROTO_DIR}")
+TargetBuildAndAddProto(client_tf2vintage "${SRCDIR}/game/shared/econ/econ_messages.proto" "${GENERATED_PROTO_DIR}")
 
 # Nut
 add_custom_command(

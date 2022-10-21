@@ -11,6 +11,7 @@ if (${BUILD_GROUP} STREQUAL "game")
 	include("${SRCDIR}/raytrace/raytrace.cmake")
 	include("${SRCDIR}/tier1/tier1.cmake")
 	include("${SRCDIR}/vgui2/vgui_controls/vgui_controls.cmake")
+	include("${SRCDIR}/vscript/vscript.cmake")
 elseif (${BUILD_GROUP} STREQUAL "everything")
 
 	if (${BUILD_GAME} STREQUAL "tf2vintage")
@@ -42,6 +43,7 @@ elseif (${BUILD_GROUP} STREQUAL "everything")
 	include("${SRCDIR}/utils/serverplugin_sample/serverplugin_empty.cmake")
 	include("${SRCDIR}/tier1/tier1.cmake")
 	include("${SRCDIR}/vgui2/vgui_controls/vgui_controls.cmake")
+	include("${SRCDIR}/vscript/vscript.cmake")
 
 elseif (${BUILD_GROUP} STREQUAL "shaders")
 

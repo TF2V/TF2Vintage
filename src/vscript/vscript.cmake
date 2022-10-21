@@ -1,250 +1,206 @@
-//-----------------------------------------------------------------------------
-//	VSCRIPT.VPC
-//
-//	Project Script
-//-----------------------------------------------------------------------------
+# vscript.cmake
 
-$macro SRCDIR		".."
-$Macro OUTBINDIR	"$SRCDIR\..\game\tf2vintage\bin"
+set(VSCRIPT_DIR ${CMAKE_CURRENT_LIST_DIR})
+set(
+	VSCRIPT_SOURCE_FILES
 
-$include "$SRCDIR\vpc_scripts\source_dll_base.vpc"
+	# Source Files
+	"${VSCRIPT_DIR}/vscript.cpp"
+	"${VSCRIPT_DIR}/vscript_math.cpp"
+	"${VSCRIPT_DIR}/vscript_misc.cpp"
+	"${VSCRIPT_DIR}/languages/squirrel/vsquirrel.cpp"
+	"${VSCRIPT_DIR}/languages/squirrel/vsquirrel_math.cpp"
+	"${VSCRIPT_DIR}/languages/squirrel/sq_vmstate.cpp"
+	"${VSCRIPT_DIR}/languages/lua/lua_vm.cpp"
+	"${VSCRIPT_DIR}/languages/lua/lua_vector.cpp"
+	"${VSCRIPT_DIR}/languages/angelscript/vangelscript.cpp"
+	"${VSCRIPT_DIR}/languages/angelscript/as_vector.cpp"
 
+	# Public Header Files
+	"${SRCDIR}/public/vscript/ivscript.h"	
+	"${SRCDIR}/public/vscript/vscript_templates.h"
 
-$Configuration
-{
-	$Compiler
-	{
-		$AdditionalIncludeDirectories	"$BASE;..\public\vscript;$SRCDIR\thirdparty\SQUIRREL3\include;$SRCDIR\thirdparty\SQUIRREL3\squirrel;$SRCDIR\thirdparty\SQUIRREL3\sqplus;$SRCDIR\thirdparty\luajit\src;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\angelscript\include;$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on"
-		$PreprocessorDefinitions		"$BASE;VSCRIPT_DLL_EXPORT;CROSS_PLATFORM_VERSION=1"
-		$WarningLevel					"Level 3 (/W3)"
-	}
-}
+	# Header Files
+	"${VSCRIPT_DIR}/vscript_math.h"
+	"${VSCRIPT_DIR}/vscript_misc.h"
+	"${VSCRIPT_DIR}/languages/squirrel/vsquirrel.h"
+	"${VSCRIPT_DIR}/languages/squirrel/vsquirrel_math.h"
+	"${VSCRIPT_DIR}/languages/squirrel/sq_vmstate.h"
+	"${VSCRIPT_DIR}/languages/lua/lua_vm.h"
+	"${VSCRIPT_DIR}/languages/lua/lua_vector.h"
+	"${VSCRIPT_DIR}/languages/angelscript/vangelscript.h"
+	"${VSCRIPT_DIR}/languages/angelscript/as_vector.h"
 
-$Project "VScript"
-{
-	$Folder "Script Files"
-	{
-		$File   "languages/squirrel/vscript_init.nut"
-		{
-			$Configuration
-			{
-				$CustomBuildStep
-				{
-					$CommandLine	"$SRCDIR\devtools\srcsrv\perl\bin\perl.exe $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_init> $(InputDir)$(InputName)_nut.h" [$WINDOWS]
-					$CommandLine	"perl $SRCDIR\devtools\bin\texttoarray.pl $(InputPath) g_Script_init> $(InputDir)$(InputName)_nut.h" [$POSIX]
-					$Description	"$(InputFileName) produces $(InputName)_nut.h"
-					$Outputs		"$(InputDir)$(InputName)_nut.h"
-				}
-			}
-		}
-	}
+	# Squirrel Lang
+	# Source Files
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqapi.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqbaselib.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqclass.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqcompiler.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqdbg/sqdbgserver.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqdebug.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqfuncstate.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqlexer.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqmem.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqobject.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqdbg/sqrdbg.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqstate.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqtable.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqvm.cpp"
 
-	$Folder	"Source Files"
-	{
-		$File   "vscript.cpp"
-		$File   "vscript_math.cpp"
-		$File   "vscript_misc.cpp"
-		$File   "languages/squirrel/vsquirrel.cpp"
-		$File   "languages/squirrel/vsquirrel_math.cpp"
-		$File   "languages/squirrel/sq_vmstate.cpp"
-		$File	"languages/lua/lua_vm.cpp"
-		$File	"languages/lua/lua_vector.cpp"
-		$File	"languages/angelscript/vangelscript.cpp"
-		$File	"languages/angelscript/as_vector.cpp"
-	}
+	# Header Files
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqarray.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqclass.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqclosure.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqcompiler.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqfuncproto.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqfuncstate.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqlexer.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqobject.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqopcodes.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqpcheader.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqstate.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqstring.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqtable.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/squserdata.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/squtils.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel/sqvm.h"
 
-	$Folder	"Public Header Files"
-	{
-		$File	"$SRCDIR\public\vscript\ivscript.h"	
-		$File	"$SRCDIR\public\vscript\vscript_templates.h"
-	}
+	# SQSTDLib
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqstdlib/sqstdblob.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqstdlib/sqstdmath.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqstdlib/sqstdrex.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqstdlib/sqstdstring.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqstdlib/sqstdstream.cpp"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqstdlib/sqstdaux.cpp"
 
-	$Folder	"Header Files"
-	{
-		$File   "vscript_math.h"
-		$File   "vscript_misc.h"
-		$File   "languages/squirrel/vsquirrel.h"
-		$File   "languages/squirrel/vsquirrel_math.h"
-		$File   "languages/squirrel/sq_vmstate.h"
-		$File	"languages/lua/lua_vm.h"
-		$File	"languages/lua/lua_vector.h"
-		$File	"languages/angelscript/vangelscript.h"
-		$File	"languages/angelscript/as_vector.h"
-	}
+	# Public Header Files
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqconfig.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqstdaux.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqstdio.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqstdmath.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqstdstring.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqstdsystem.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/squirrel.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqrdbg.h"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include/sqdbgserver.h"
 
-	$Folder "Squirrel Lang"
-	{
-		$Folder "Source Files"
-		{
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqapi.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqbaselib.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqclass.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqcompiler.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqdbg\sqdbgserver.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqdebug.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqfuncstate.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqlexer.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqmem.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqobject.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqdbg\sqrdbg.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqstate.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqtable.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqvm.cpp"
-		}
+	# LuaJIT
+	# Header Files
+	"${SRCDIR}/thirdparty/luajit/src/lauxlib.h"
+	"${SRCDIR}/thirdparty/luajit/src/lualib.h"
+	"${SRCDIR}/thirdparty/luajit/src/lua.h"
+	"${SRCDIR}/thirdparty/luajit/src/luaconf.h"
+	"${SRCDIR}/thirdparty/luajit/src/luajit.h"
 
-		$Folder "Header Files"
-		{
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqarray.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqclass.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqclosure.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqcompiler.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqfuncproto.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqfuncstate.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqlexer.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqobject.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqopcodes.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqpcheader.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqstate.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqstring.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqtable.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\squserdata.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\squtils.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\squirrel\sqvm.h"
-		}
+	# AngelScript
+	# Source Files
+	"$<${IS_LINUX}:${VSCRIPT_DIR}/languages/angelscript/virtual_asm_linux.cpp>"
+	"$<${IS_WINDOWS}:${VSCRIPT_DIR}/languages/angelscript/virtual_asm_windows.cpp>"
+	"${VSCRIPT_DIR}/languages/angelscript/virtual_asm_x86.cpp"
+	"${VSCRIPT_DIR}/languages/angelscript/as_jit.cpp"
 
-		$Folder "SQSTDLib"
-		{
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqstdlib\sqstdblob.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqstdlib\sqstdmath.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqstdlib\sqstdrex.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqstdlib\sqstdstring.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqstdlib\sqstdstream.cpp"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\sqstdlib\sqstdaux.cpp"
-		}
+	# Header Files
+	"${VSCRIPT_DIR}/languages/angelscript/as_jit.h"
+	"${VSCRIPT_DIR}/languages/angelscript/virtual_asm.h"
 
-		$Folder "Public Header Files"
-		{
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqconfig.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqstdaux.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqstdio.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqstdmath.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqstdstring.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqstdsystem.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\squirrel.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqrdbg.h"
-			$File   "$SRCDIR\thirdparty\SQUIRREL3\include\sqdbgserver.h"
-		}
-	}
+	# Public Header Files
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/angelscript/include/angelscript.h"
 
-	$Folder "LuaJIT"
-	{
-		$Folder "Source Files"
-		{
-			$File   "$SRCDIR\thirdparty\luajit\src\luajit.c"
-			{
-				$Configuration
-				{
-					$ExcludedFromBuild	"Yes"
-				}
-			}
-		}
+    # Add-Ons
+	# Source Files
+    "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring_utils.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.cpp"
 
-		$Folder "Header Files"
-		{
-			$File   "$SRCDIR\thirdparty\luajit\src\lauxlib.h"
-			$File   "$SRCDIR\thirdparty\luajit\src\lualib.h"
-			$File   "$SRCDIR\thirdparty\luajit\src\lua.h"
-			$File   "$SRCDIR\thirdparty\luajit\src\luaconf.h"
-			$File   "$SRCDIR\thirdparty\luajit\src\luajit.h"
-		}
-	}
+	# Header Files
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.h"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.h"
+)
 
-	$Folder "AngelScript"
-	{
-		$Folder "Source Files"
-		{
-			$File	"languages\angelscript\virtual_asm_linux.cpp"		[$POSIX]
-			$File	"languages\angelscript\virtual_asm_windows.cpp"		[$WINDOWS]
-			$File	"languages\angelscript\virtual_asm_x86.cpp"		\
-					"languages\angelscript\as_jit.cpp"
-			{
-				$Configuration
-				{
-					$Compiler
-					{
-						$AdditionalOptions		"$BASE /EHa"
-					}
-				}
-			}
-		}
+set_source_files_properties(
+	"${VSCRIPT_DIR}/languages/angelscript/virtual_asm_x86.cpp"
+	"${VSCRIPT_DIR}/languages/angelscript/as_jit.cpp"
+    "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring_utils.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.cpp"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.cpp"
+	PROPERTIES COMPILE_FLAGS "/EHa"
+)
 
-		$Folder "Header Files"
-		{
-			$File 	"languages\angelscript\as_jit.h"
-			$File	"languages\angelscript\virtual_asm.h"
-		}
+add_library(vscript MODULE ${VSCRIPT_SOURCE_FILES})
 
-		$Folder "Public Header Files"
-        {
-            $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\angelscript\include\angelscript.h"
-        }
+set_target_properties(
+	vscript PROPERTIES
+	LIBRARY_OUTPUT_DIRECTORY "${GAMEDIR}/tf2vintage/bin"
+)
 
-        $Folder "Add-Ons"
-        {
-            $Folder "Source Files"
-            {
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\contextmgr\contextmgr.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\debugger\debugger.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptany\scriptany.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptarray\scriptarray.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptbuilder\scriptbuilder.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptdictionary\scriptdictionary.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptgrid\scriptgrid.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthandle\scripthandle.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthelper\scripthelper.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmath.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmathcomplex.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptstdstring\scriptstdstring.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptstdstring\scriptstdstring_utils.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\serializer\serializer.cpp" \
-                      "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\weakref\weakref.cpp"
-                {
-                    $Configuration
-                    {
-                        $Compiler
-                        {
-                            $AdditionalOptions				"$BASE /EHa"
-                        }
-                    }
-                }
-            }
+target_include_directories(
+	vscript PRIVATE
+	"${SRCDIR}/public/vscript"
+	"${SRCDIR}/thirdparty/SQUIRREL3/include"
+	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel"
+	"${SRCDIR}/thirdparty/SQUIRREL3/sqplus"
+	"${SRCDIR}/thirdparty/luajit/src"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/angelscript/include"
+	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on"
 
-            $Folder "Header Files"
-            {
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\contextmgr\contextmgr.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\debugger\debugger.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptany\scriptany.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptarray\scriptarray.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptbuilder\scriptbuilder.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptdictionary\scriptdictionary.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptgrid\scriptgrid.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthandle\scripthandle.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scripthelper\scripthelper.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmath.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptmath\scriptmathcomplex.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\scriptstdstring\scriptstdstring.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\serializer\serializer.h"
-                $File "$SRCDIR\thirdparty\angelscript_2.32.0\sdk\add_on\weakref\weakref.h"
-            }
-        }
-	}
+)
 
-	$Folder	"Link Libraries" 
-	{
-		$Lib 	mathlib
-		$Lib 	tier1
-		$Lib	"$LIBCOMMON\lua51"			[$WINDOWS]
-		$Lib	"$LIBCOMMON\libluajit"		[$POSIX]
-		$Lib	"$LIBCOMMON\angelscript"
-	}
-}
+# Nut
+add_custom_command(
+	TARGET vscript
+    PRE_BUILD
+    COMMAND ${Python3_EXECUTABLE} "${SRCDIR}/devtools/bin/texttoarray.py" --file "${VSCRIPT_DIR}/languages/squirrel/vscript_init.nut" --name "g_Script_init" --out "${VSCRIPT_DIR}/languages/squirrel/vscript_init_nut.h"
+)
+
+target_compile_definitions(
+	vscript PRIVATE
+	VSCRIPT_DLL_EXPORT
+	CROSS_PLATFORM_VERSION=1
+)
+
+target_link_libraries(
+	vscript PRIVATE
+
+	mathlib
+	tier1
+	"$<${IS_WINDOWS}:${LIBCOMMON}/lua51>"
+	"$<${IS_LINUX}:${LIBCOMMON}/libluajit>"
+	"${LIBCOMMON}/angelscript"
+)
