@@ -324,6 +324,8 @@ struct ScriptMemberBinding_t
 //---------------------------------------------------------
 struct ScriptHook_t
 {
+	ScriptHook_t() : m_pOriginalBytes( 0 ), m_unFunctionBytes( 0 ) {}
+
 	ScriptFunctionBinding_t		m_func;
 	void *						m_pOriginalBytes;
 	uint32						m_unFunctionBytes;
@@ -593,6 +595,8 @@ private:
 
 struct ScriptConstantBinding_t
 {
+	ScriptConstantBinding_t() : m_pszDescription( 0 ), m_pszScriptName( 0 ), m_flags( 0 ) {}
+
 	const char			*m_pszScriptName;
 	const char			*m_pszDescription;
 	ScriptVariant_t		m_data;
@@ -603,23 +607,12 @@ struct ScriptConstantBinding_t
 
 struct ScriptEnumDesc_t
 {
-	ScriptEnumDesc_t() : m_pszScriptName( 0 ), m_pszDescription( 0 ), m_flags( 0 )
-	{
-		AllEnumsDesc().AddToTail(this);
-	}
-
-	virtual void		RegisterDesc() = 0;
+	ScriptEnumDesc_t() : m_pszScriptName( 0 ), m_pszDescription( 0 ), m_flags( 0 ) {}
 
 	const char			*m_pszScriptName;
 	const char			*m_pszDescription;
 	CUtlVector<ScriptConstantBinding_t> m_ConstantBindings;
 	unsigned			m_flags;
-
-	static CUtlVector<ScriptEnumDesc_t*>& AllEnumsDesc()
-	{
-		static CUtlVector<ScriptEnumDesc_t*> enums;
-		return enums;
-	}
 };
 
 //-----------------------------------------------------------------------------
@@ -677,10 +670,10 @@ struct ScriptEnumDesc_t
 
 #if defined(MSVC) && (_MSC_VER < 1800)
 #define DEFINE_ENUM_SCRIPTDESC_FUNCTION( enumName ) \
-		ScriptClassDesc_t *GetScriptEnumDesc(ScriptEnum##enumName##Desc_t *)
+		ScriptEnumDesc_t *GetScriptEnumDesc(ScriptEnum##enumName##Desc_t *)
 #else
 #define DEFINE_ENUM_SCRIPTDESC_FUNCTION( enumName ) \
-		template<> ScriptStructDesc_t *GetScriptEnumDesc<ScriptEnum##enumName##Desc_t>(ScriptEnum##enumName##Desc_t *)
+		template<> ScriptEnumDesc_t *GetScriptEnumDesc<ScriptEnum##enumName##Desc_t>(ScriptEnum##enumName##Desc_t *)
 #endif
 
 #define BEGIN_SCRIPTENUM( enumName, description ) \
@@ -777,7 +770,6 @@ ScriptEnumDesc_t *GetScriptEnumDesc( T* );
 		ScriptHook_t *pHook = &(pDesc->m_Hooks[pDesc->m_Hooks.AddToTail()]); \
 		pHook->m_func.m_desc.m_pszFunction = #hook; \
 		pHook->m_func.m_desc.m_pszScriptName = hookName; \
-		pHook->m_func.m_pFunction = ScriptConvertFuncPtrToVoid( &_className::hook ); \
 		pHook->m_func.m_flags = SF_MEMBER_FUNC; \
 		pHook->m_func.m_desc.m_pszDescription = description; \
 		pHook->m_func.m_desc.m_ReturnType = returnType; \
@@ -790,7 +782,6 @@ ScriptEnumDesc_t *GetScriptEnumDesc( T* );
 		pHook->m_func.m_desc.m_Parameters.SetGrowSize( 1 ); \
 		pHook->m_func.m_desc.m_pszFunction = #hook; \
 		pHook->m_func.m_desc.m_pszScriptName = hookName; \
-		pHook->m_func.m_pFunction = ScriptConvertFuncPtrToVoid( &_className::hook ); \
 		pHook->m_func.m_flags = SF_MEMBER_FUNC; \
 		pHook->m_func.m_desc.m_pszDescription = description; \
 		pHook->m_func.m_desc.m_ReturnType = returnType;
@@ -1313,6 +1304,10 @@ public:
 	template<typename T>
 	void GetStruct( T *pStruct, HSCRIPT hScope = NULL )
 	{
+	#ifdef GNUC
+		extern string_t AllocPooledString(const char *);
+	#endif
+
 		ScriptStructDesc_t *pDesc = GetScriptDescForStruct( T );
 		if ( hScope == NULL ) hScope = m_hScope;
 

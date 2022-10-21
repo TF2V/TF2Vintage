@@ -11,6 +11,8 @@
 #pragma once
 #endif
 
+#include "vscript/ivscript.h"
+
 #define TICK_INTERVAL			(gpGlobals->interval_per_tick)
 
 
@@ -609,9 +611,9 @@ enum
 	EFL_DIRTY_ABSTRANSFORM =	(1<<11),
 	EFL_DIRTY_ABSVELOCITY =		(1<<12),
 	EFL_DIRTY_ABSANGVELOCITY =	(1<<13),
-	EFL_DIRTY_SURROUNDING_COLLISION_BOUNDS	= (1<<14),
+	EFL_DIRTY_SURROUNDING_COLLISION_BOUNDS = (1<<14),
 	EFL_DIRTY_SPATIAL_PARTITION = (1<<15),
-//	UNUSED						= (1<<16),
+	EFL_PLUGIN_BASED_BOT =		(1<<16),	//this is set on plugin bots, so that if any games include their own bot code, they won't affect plugin bots.
 
 	EFL_IN_SKYBOX =				(1<<17),	// This is set if the entity detects that it's in the skybox.
 											// This forces it to pass the "in PVS" for transmission.
@@ -735,6 +737,44 @@ struct FireBulletsInfo_t
 	CBaseEntity *m_pAdditionalIgnoreEnt;
 	bool m_bPrimaryAttack;
 	bool m_bUseServerRandomSeed;
+
+	int GetShots() { return m_iShots; }
+	void SetShots( int value ) { m_iShots = value; }
+
+	Vector GetSource() { return m_vecSrc; }
+	void SetSource( Vector value ) { m_vecSrc = value; }
+	Vector GetDirShooting() { return m_vecDirShooting; }
+	void SetDirShooting( Vector value ) { m_vecDirShooting = value; }
+	Vector GetSpread() { return m_vecSpread; }
+	void SetSpread( Vector value ) { m_vecSpread = value; }
+
+	float GetDistance() { return m_flDistance; }
+	void SetDistance( float value ) { m_flDistance = value; }
+
+	int GetAmmoType() { return m_iAmmoType; }
+	void SetAmmoType( int value ) { m_iAmmoType = value; }
+
+	int GetTracerFreq() { return m_iTracerFreq; }
+	void SetTracerFreq( int value ) { m_iTracerFreq = value; }
+
+	float GetDamage() { return m_flDamage; }
+	void SetDamage( float value ) { m_flDamage = value; }
+	int GetPlayerDamage() { return m_iPlayerDamage; }
+	void SetPlayerDamage( float value ) { m_iPlayerDamage = value; }
+
+	int GetFlags() { return m_nFlags; }
+	void SetFlags( float value ) { m_nFlags = value; }
+
+	float GetDamageForceScale() { return m_flDamageForceScale; }
+	void SetDamageForceScale( float value ) { m_flDamageForceScale = value; }
+
+	HSCRIPT ScriptGetAttacker();
+	void ScriptSetAttacker( HSCRIPT value );
+	HSCRIPT ScriptGetAdditionalIgnoreEnt();
+	void ScriptSetAdditionalIgnoreEnt( HSCRIPT value );
+
+	bool GetPrimaryAttack() { return m_bPrimaryAttack; }
+	void SetPrimaryAttack( bool value ) { m_bPrimaryAttack = value; }
 };
 
 //-----------------------------------------------------------------------------

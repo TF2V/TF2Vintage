@@ -92,4 +92,7 @@ public:
 	KeyValues *m_pKeyValues;	// actual KeyValue entity
 };
 
+void RegisterSharedScriptConstants();
+void RegisterSharedScriptFunctions();
+
 #endif // VSCRIPT_SHARED_H

@@ -162,6 +162,14 @@ struct thinkfunc_t
 	int			m_nLastThinkTick;
 };
 
+struct scriptthinkfunc_t
+{
+	int				m_nNextThinkTick;
+	HSCRIPT			m_hfnThink;
+	unsigned short	m_iContextHash;
+	bool			m_bNoParam;
+};
+
 #define CREATE_PREDICTED_ENTITY( className )	\
 	C_BaseEntity::CreatePredictedEntityByName( className, __FILE__, __LINE__ );
 
@@ -201,7 +209,6 @@ public:
 	
 	// FireBullets uses shared code for prediction.
 	virtual void					FireBullets( const FireBulletsInfo_t &info );
-	void							ScriptFireBullets( HSCRIPT info );
 	virtual void					ModifyFireBulletsDamage( CTakeDamageInfo* dmgInfo ) {}
 	virtual bool					ShouldDrawUnderwaterBulletBubbles();
 	virtual bool					ShouldDrawWaterImpacts( void ) { return true; }
@@ -267,10 +274,87 @@ public:
 
 	string_t				m_iClassname;
 
-	HSCRIPT					GetScriptInstance();
+	// ----------------------------------------------------------------------------
+	// VScript accessors
+	// ----------------------------------------------------------------------------
+	bool					ValidateScriptScope( void );
+	bool					CallScriptFunction( const char *pFunctionName, ScriptVariant_t *pFunctionReturn );
 
+	HSCRIPT					GetOrCreatePrivateScriptScope( void );
+	HSCRIPT					GetScriptScope( void ) { return m_ScriptScope; }
+
+	HSCRIPT					LookupScriptFunction( const char *pFunctionName );
+	bool					CallScriptFunctionHandle( HSCRIPT hFunc, ScriptVariant_t *pFunctionReturn );
+
+	bool					RunScriptFile( const char *pScriptFile, bool bUseRootScope = false );
+	bool					RunScript( const char *pScriptText, const char *pDebugFilename = "C_BaseEntity::RunScript" );
+	HSCRIPT					GetScriptInstance( void );
+
+	int						GetEntityIndex( void ) const;
+
+	const Vector&			ScriptGetForward( void ) { static Vector vecForward; GetVectors( &vecForward, NULL, NULL ); return vecForward; }
+	const Vector&			ScriptGetRight( void ) { static Vector vecRight; GetVectors( NULL, &vecRight, NULL ); return vecRight; }
+	const Vector&			ScriptGetLeft( void ) { static Vector vecRight; GetVectors( NULL, &vecRight, NULL ); return vecRight; }
+	const Vector&			ScriptGetUp( void ) { static Vector vecUp; GetVectors( NULL, NULL, &vecUp ); return vecUp; }
+	void					ScriptFireBullets( HSCRIPT info );
+
+	HSCRIPT					GetScriptOwnerEntity( void );
+	virtual void			SetScriptOwnerEntity( HSCRIPT pOwner );
+	void					ScriptFollowEntity( HSCRIPT hBaseEntity, bool bBoneMerge );
+	HSCRIPT					ScriptGetFollowedEntity( void );
+
+	void					ScriptSetParent( HSCRIPT hParent, const char *szAttachment );
+	HSCRIPT					ScriptGetMoveParent( void );
+	HSCRIPT					ScriptGetRootMoveParent();
+	HSCRIPT					ScriptFirstMoveChild( void );
+	HSCRIPT					ScriptNextMovePeer( void );
+
+	void					ScriptSetContextThink( const char *szContext, HSCRIPT hFunc, float time );
+	void					ScriptContextThink( void );
+
+	const char*				ScriptGetModelName( void ) const { return STRING( GetModelName() ); }
+
+	void					ScriptStopSound( const char* soundname );
+	void					ScriptEmitSound( const char* soundname );
+	float					ScriptSoundDuration( const char* soundname, const char* actormodel );
+
+	void					VScriptPrecacheScriptSound( const char* soundname );
+
+	const Vector&			ScriptEyePosition( void ) { static Vector vec; vec = EyePosition(); return vec; }
+	const QAngle&			ScriptEyeAngles( void ) { static QAngle ang; ang = EyeAngles(); return ang; }
+	void					ScriptSetForward( const Vector& v ) { QAngle angles; VectorAngles( v, angles ); SetAbsAngles( angles ); }
+
+	const Vector&			ScriptGetBoundingMins( void ) { return m_Collision.OBBMins(); }
+	const Vector&			ScriptGetBoundingMaxs( void ) { return m_Collision.OBBMaxs(); }
+
+	const matrix3x4_t&		ScriptEntityToWorldTransform( void );
+
+	HSCRIPT					ScriptGetPhysicsObject( void );
+
+	const Vector&			ScriptGetColorVector( void );
+	int						ScriptGetColorR( void )	{ return m_clrRender.GetR(); }
+	int						ScriptGetColorG( void )	{ return m_clrRender.GetG(); }
+	int						ScriptGetColorB( void )	{ return m_clrRender.GetB(); }
+	int						ScriptGetAlpha( void )	{ return m_clrRender.GetA(); }
+	void					ScriptSetColorVector( const Vector& vecColor );
+	void					ScriptSetColor( int r, int g, int b );
+	void					ScriptSetColorR( int iVal )	{ SetRenderColorR( iVal ); }
+	void					ScriptSetColorG( int iVal )	{ SetRenderColorG( iVal ); }
+	void					ScriptSetColorB( int iVal )	{ SetRenderColorB( iVal ); }
+	void					ScriptSetAlpha( int iVal )	{ SetRenderColorA( iVal ); }
+
+	int						ScriptGetRenderMode() { return GetRenderMode(); }
+	void					ScriptSetRenderMode( int nRenderMode ) { SetRenderMode( (RenderMode_t)nRenderMode ); }
+
+	int						ScriptGetMoveType() { return GetMoveType(); }
+	void					ScriptSetMoveType( int iMoveType ) { SetMoveType( (MoveType_t)iMoveType ); }
+private:
+	CUtlVector< scriptthinkfunc_t * > m_ScriptThinkFuncs;
+
+public:
 	HSCRIPT					m_hScriptInstance;
 	string_t				m_iszScriptId;
+	CScriptScope			m_ScriptScope;
 
 // IClientUnknown overrides.
 public:
@@ -1137,11 +1221,6 @@ public:
 	virtual int GetBody() { return 0; }
 	virtual int GetSkin() { return 0; }
 
-
-	const Vector &ScriptGetForward( void ) { static Vector vecForward; GetVectors( &vecForward, NULL, NULL ); return vecForward; }
-	const Vector &ScriptGetLeft( void ) { static Vector vecLeft; GetVectors( NULL, &vecLeft, NULL ); return vecLeft; }
-	const Vector &ScriptGetUp( void ) { static Vector vecUp; GetVectors( NULL, NULL, &vecUp ); return vecUp; }
-
 	// Stubs on client
 	void	NetworkStateManualMode( bool activate )		{ }
 	void	NetworkStateChanged()						{ }
@@ -1716,20 +1795,6 @@ protected:
 
 	CThreadFastMutex m_CalcAbsolutePositionMutex;
 	CThreadFastMutex m_CalcAbsoluteVelocityMutex;
-
-#ifdef TF_CLIENT_DLL
-	// TF prevents drawing of any entity attached to players that aren't items in the inventory of the player.
-	// This is to prevent servers creating fake cosmetic items and attaching them to players.
-public:
-	virtual bool ValidateEntityAttachedToPlayer( bool &bShouldRetry );
-	bool EntityDeemedInvalid( void ) { return (m_bValidatedOwner && m_bDeemedInvalid); }
-protected:
-	bool m_bValidatedOwner;
-	bool m_bDeemedInvalid;
-	bool m_bWasDeemedInvalid;
-	RenderMode_t m_PreviousRenderMode;
-	color32 m_PreviousRenderColor;
-#endif
 };
 
 EXTERN_RECV_TABLE(DT_BaseEntity);
@@ -2243,6 +2308,11 @@ inline bool C_BaseEntity::ShouldRecordInTools() const
 inline const char *C_BaseEntity::GetEntityName()
 {
 	return m_iName;
+}
+
+inline int C_BaseEntity::GetEntityIndex() const 
+{
+	return entindex();
 }
 
 C_BaseEntity *CreateEntityByName( const char *className );

@@ -1193,7 +1193,6 @@ void CBaseEntity::EmitSound( const char *soundname, HSOUNDSCRIPTHANDLE& handle, 
 	EmitSound( filter, entindex(), params, handle );
 }
 
-#if !defined ( CLIENT_DLL )
 void CBaseEntity::ScriptEmitSound( const char *soundname )
 {
 	EmitSound( soundname );
@@ -1209,7 +1208,6 @@ void CBaseEntity::ScriptStopSound( const char *soundname )
 {
 	StopSound( soundname );
 }
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1470,13 +1468,11 @@ HSOUNDSCRIPTHANDLE CBaseEntity::PrecacheScriptSound( const char *soundname )
 #endif
 }
 
-#if !defined ( CLIENT_DLL )
 // Same as server version of above, but signiture changed so it can be deduced by the macros
 void CBaseEntity::VScriptPrecacheScriptSound( const char *soundname )
 {
 	g_SoundEmitterSystem.PrecacheScriptSound( soundname );
 }
-#endif // !CLIENT_DLL
 
 void CBaseEntity::PrefetchScriptSound( const char *soundname )
 {

@@ -139,7 +139,7 @@ void CTFItemToolTipPanel::ShowToolTip(CEconItemDefinition *pItemData)
 		if (pItemData->year >= 2006)	// Only debug, undefined always whitelisted items before this period.
 		{
 			wchar_t wszYear[128];
-			V_swprintf_safe(wszYear, L"%d", pItemData->year);s
+			V_swprintf_safe(wszYear, L"%d", pItemData->year);
 			m_pYear->SetText(wszYear);
 		}
 	}
