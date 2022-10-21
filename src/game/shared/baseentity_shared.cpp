@@ -2075,29 +2075,15 @@ BEGIN_STRUCT_SCRIPTDESC( FireBulletsInfo_t, "Data for firing bullet tracers" )
 	DEFINE_STRUCT_MEMBER( FIELD_FLOAT, m_flDamageForceScale, "" )
 	DEFINE_STRUCT_MEMBER( FIELD_BOOLEAN, m_bPrimaryAttack, "" )
 	DEFINE_STRUCT_MEMBER( FIELD_BOOLEAN, m_bUseServerRandomSeed, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_HSCRIPT, m_pAttacker, "" )
+	DEFINE_STRUCT_MEMBER( FIELD_HSCRIPT, m_pAdditionalIgnoreEnt, "" )
 END_STRUCT_SCRIPTDESC()
 
 void CBaseEntity::ScriptFireBullets( HSCRIPT hInfo )
 {
-	CScriptScope scope;
-	if ( scope.Init( hInfo ) )
+	if ( hInfo )
 	{
-		FireBulletsInfo_t info;
-		scope.GetStruct( &info );
-
-		// HSCRIPT variants that weren't retrieved
-		ScriptVariant_t variant;
-		if ( scope.GetValue( "m_pAttacker", &variant ) )
-		{
-			info.m_pAttacker = ToEnt( variant );
-			scope.ReleaseValue( variant );
-		}
-		if ( scope.GetValue( "m_pAdditionalIgnoreEnt", &variant ) )
-		{
-			info.m_pAdditionalIgnoreEnt = ToEnt( variant );
-			scope.ReleaseValue( variant );
-		}
-
+		FireBulletsInfo_t info = *HScriptToClass<FireBulletsInfo_t>( hInfo );
 		FireBullets( info );
 	}
 }

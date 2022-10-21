@@ -39,7 +39,7 @@
 #include "tier0/memdbgon.h"
 
 extern IScriptManager *scriptmanager;
-CNetMsgScriptHelper *g_ScriptNetMsg = new CNetMsgScriptHelper();
+//CNetMsgScriptHelper *g_ScriptNetMsg = new CNetMsgScriptHelper();
 
 //=============================================================================
 // Localization Interface
@@ -2133,13 +2133,6 @@ void RegisterScriptSingletons()
 	// Singletons not unique to VScript (not declared or defined here)
 	g_pScriptVM->RegisterInstance( GameRules(), "GameRules" );
 	g_pScriptVM->RegisterInstance( GetAmmoDef(), "AmmoDef" );
-#ifndef CLIENT_DLL
-	g_pScriptVM->RegisterInstance( &g_AI_SquadManager, "Squads" );
-#endif
 
-#ifdef USE_OLD_EVENT_DESCRIPTORS
-	CScriptGameEventListener::LoadAllEvents();
-#endif
-
-	g_ScriptNetMsg->InitPostVM();
+	//g_ScriptNetMsg->InitPostVM();
 }

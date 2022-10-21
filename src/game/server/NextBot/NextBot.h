@@ -35,6 +35,7 @@ public:
 	virtual Vector EyePosition( void );
 
 	virtual INextBot *MyNextBotPointer( void ) { return this; }
+	virtual bool IsNextBot( void ) OVERRIDE { return true; }
 
 	// Event hooks into NextBot system ---------------------------------------
 	virtual int OnTakeDamage_Alive( const CTakeDamageInfo &info );

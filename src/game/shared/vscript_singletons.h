@@ -14,7 +14,7 @@
 void RegisterScriptSingletons();
 
 
-
+#if 0
 #ifdef CLIENT_DLL
 // usercmd
 #define SCRIPT_NETMSG_DATA_SIZE ( ( 1 << 11 ) - 1 )
@@ -136,6 +136,7 @@ public:
 };
 
 extern CNetMsgScriptHelper *g_ScriptNetMsg;
+#endif
 
 #ifdef CLIENT_DLL
 void VScriptSaveRestoreUtil_OnVMRestore();

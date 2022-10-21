@@ -19,6 +19,33 @@ extern ScriptClassDesc_t * GetScriptDesc( CBaseEntity * );
 
 
 // ----------------------------------------------------------------------------
+class CScriptColorInstanceHelper : public IScriptInstanceHelper
+{
+	bool ToString( void *p, char *pBuf, int bufSize ) OVERRIDE
+	{
+		Color *pClr = ( (Color *)p );
+		V_snprintf( pBuf, bufSize, "(color: (%i, %i, %i, %i))", pClr->r(), pClr->g(), pClr->b(), pClr->a() );
+		return true;
+	}
+} g_ColorScriptInstanceHelper;
+
+BEGIN_SCRIPTDESC_ROOT( Color, "" )
+	DEFINE_SCRIPT_CONSTRUCTOR()
+	DEFINE_SCRIPT_INSTANCE_HELPER( &g_ColorScriptInstanceHelper )
+
+	DEFINE_SCRIPTFUNC( SetColor, "Sets the color." )
+
+	DEFINE_SCRIPTFUNC( SetRawColor, "Sets the raw color integer." )
+	DEFINE_SCRIPTFUNC( GetRawColor, "Gets the raw color integer." )
+
+	DEFINE_MEMBERVAR_NAMED( _color[0], FIELD_CHARACTER, "r", "Member variable for red.")
+	DEFINE_MEMBERVAR_NAMED( _color[1], FIELD_CHARACTER, "g", "Member variable for green.")
+	DEFINE_MEMBERVAR_NAMED( _color[2], FIELD_CHARACTER, "b", "Member variable for blue.")
+	DEFINE_MEMBERVAR_NAMED( _color[3], FIELD_CHARACTER, "a", "Member variable for alpha. (transparency)")
+END_SCRIPTDESC();
+
+
+// ----------------------------------------------------------------------------
 // KeyValues access - CBaseEntity::ScriptGetKeyFromModel returns root KeyValues
 // ----------------------------------------------------------------------------
 BEGIN_SCRIPTDESC_ROOT( CScriptKeyValues, "Wrapper class over KeyValues instance" )

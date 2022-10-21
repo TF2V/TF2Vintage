@@ -1300,62 +1300,6 @@ public:
 		return ( hFunction != NULL ) ;
 	}
 
-#ifndef VSCRIPT_DLL_EXPORT
-	template<typename T>
-	void GetStruct( T *pStruct, HSCRIPT hScope = NULL )
-	{
-	#ifdef GNUC
-		extern string_t AllocPooledString(const char *);
-	#endif
-
-		ScriptStructDesc_t *pDesc = GetScriptDescForStruct( T );
-		if ( hScope == NULL ) hScope = m_hScope;
-
-		FOR_EACH_VEC( pDesc->m_MemberBindings, idx )
-		{
-			ScriptMemberBinding_t const &binding = pDesc->m_MemberBindings[idx];
-
-			ScriptVariant_t res;
-			if( GetVM()->GetValue( hScope, binding.m_pszScriptName, &res ) )
-			{
-				switch ( binding.m_nMemberType )
-				{
-					case FIELD_VECTOR:
-					{
-						Vector newVec( res.m_pVector->x, res.m_pVector->y, res.m_pVector->z );
-						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), &newVec, binding.m_unMemberSize );
-						break;
-					}
-					case FIELD_CSTRING:
-					{
-						string_t iNewString = AllocPooledString( res.m_pszString );
-						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), STRING( iNewString ), binding.m_unMemberSize );
-						break;
-					}
-					case FIELD_BOOLEAN:
-					{
-						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), &res.m_bool, binding.m_unMemberSize );
-						break;
-					}
-					case FIELD_INTEGER:
-					case FIELD_FLOAT:
-					{
-						V_memcpy( (void *)( (intptr_t)pStruct + binding.m_unMemberOffs ), &res.m_int, binding.m_unMemberSize );
-						break;
-					}
-					default:
-					{
-						DevWarning( "Unsupported data type (%s) hit building struct data\n", ScriptFieldTypeName( binding.m_nMemberType ) );
-						break;
-					}
-				}
-
-				GetVM()->ReleaseValue( res );
-			}
-		}
-	}
-#endif
-
 	//-----------------------------------------------------
 
 	enum Flags_t

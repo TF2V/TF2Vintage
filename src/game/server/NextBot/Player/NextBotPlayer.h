@@ -155,6 +155,7 @@ public:
 	virtual bool IsFakeClient( void ) const { return true; }
 	virtual bool IsBot( void ) const { return true; }
 	virtual INextBot *MyNextBotPointer( void ) { return this; }
+	virtual bool IsNextBot( void ) OVERRIDE { return true; }
 
 	// this is valid because the templatized PlayerType must be derived from CBasePlayer, which is derived from CBaseCombatCharacter
 	virtual CBaseCombatCharacter *GetEntity( void ) const { return ( PlayerType * )this; }	
