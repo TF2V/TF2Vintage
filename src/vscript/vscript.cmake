@@ -200,7 +200,8 @@ target_link_libraries(
 
 	mathlib
 	tier1
-	"$<${IS_WINDOWS}:${LIBCOMMON}/lua51>"
-	"$<${IS_LINUX}:${LIBCOMMON}/libluajit>"
-	"${LIBCOMMON}/angelscript"
+	"$<${IS_WINDOWS}:${LIBCOMMON}/lua51.lib>"
+	"$<${IS_LINUX}:${LIBCOMMON}/linux32/libluajit.a>"
+	"$<${IS_LINUX}:${LIBCOMMON}/linux32/angelscript.a>"
+	"$<${IS_WINDOWS}:${LIBCOMMON}/angelscript.lib>"
 )
