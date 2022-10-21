@@ -60,6 +60,12 @@ set(
 	"${SRCDIR}/game/shared/vscript_shared.cpp"
 	"${SERVER_TF2VINTAGE_DIR}/vscript_server.cpp"
 	"${SERVER_TF2VINTAGE_DIR}/vscript_server.nut"
+	"${SRCDIR}/game/shared/vscript_consts_shared.cpp"
+	"${SRCDIR}/game/shared/vscript_consts_weapons.cpp"
+	"${SRCDIR}/game/shared/vscript_funcs_shared.cpp"
+	"${SRCDIR}/game/shared/vscript_singletons.cpp"
+	"${SRCDIR}/game/shared/logic_script_client.cpp"
+	"${SRCDIR}/game/shared/matchers.cpp"
 	
 	# Protobuf Files
 	"${SRCDIR}/game/shared/econ/econ_messages.proto"
