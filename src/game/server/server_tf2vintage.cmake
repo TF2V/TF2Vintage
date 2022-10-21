@@ -55,6 +55,8 @@ set(
 	"${SRCDIR}/game/shared/bannedwords.h"
 	"${SRCDIR}/game/shared/basescriptedweapon.cpp"
 	"${SRCDIR}/game/shared/basescriptedweapon.h"
+	"${SRCDIR}/common/steamid.cpp"
+	"${SRCDIR}/public/rtime.cpp"
 
 	# VScript
 	"${SRCDIR}/game/shared/vscript_shared.cpp"
@@ -817,12 +819,14 @@ add_custom_command(
 	TARGET client_tf2vintage
     PRE_BUILD
     COMMAND ${Python3_EXECUTABLE} "${SRCDIR}/devtools/bin/texttoarray.py" --file "${SERVER_TF2VINTAGE_DIR}/vscript_server.nut" --name "g_Script_vscript_server" --out "${SERVER_TF2VINTAGE_DIR}/vscript_server_nut.h"
+	COMMENT "vscript_server.nut produces vscript_server_nut.h"
 )
 
 target_link_libraries(
 	server_tf2vintage PRIVATE
 
-	"${LIBCOMMON}/lzma"
+	"$<${IS_WINDOWS}:${LIBCOMMON}/lzma.lib>"
+	"$<${IS_LINUX}:${LIBCOMMON}/linux32/lzma.a>"
 )
 
 target_include_directories(

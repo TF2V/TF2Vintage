@@ -48,8 +48,9 @@ set(
 	"${GAME_SHADER_DX9_BASE_DIR}/buildsdkshaders.bat"
 	"${GAME_SHADER_DX9_BASE_DIR}/buildshaders.bat"
 
-	"${GAME_SHADER_DX9_BASE_DIR}/stdshader_dx9_20b.txt"
-	"${GAME_SHADER_DX9_BASE_DIR}/stdshader_dx9_30.txt"
+	"${GAME_SHADER_DX9_BASE_DIR}/sdk_shaders.txt"
+	"${GAME_SHADER_DX9_BASE_DIR}/shaders.txt"
+	"${GAME_SHADER_DX9_BASE_DIR}/light_volumetrics_shaders.txt"
 )
 
 function(target_use_game_shader_dx9_base target)
@@ -60,8 +61,7 @@ function(target_use_game_shader_dx9_base target)
 
 	target_include_directories(
 		${target} PRIVATE
-		"${GAME_SHADER_DX9_BASE_DIR}/fxctmp9"
-		"${GAME_SHADER_DX9_BASE_DIR}/vshtmp9"
+		"${GAME_SHADER_DX9_BASE_DIR}/include"
 	)
 
 	target_compile_definitions(

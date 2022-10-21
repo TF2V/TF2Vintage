@@ -13,8 +13,8 @@ set(
 	"${VSCRIPT_DIR}/languages/squirrel/sq_vmstate.cpp"
 	"${VSCRIPT_DIR}/languages/lua/lua_vm.cpp"
 	"${VSCRIPT_DIR}/languages/lua/lua_vector.cpp"
-	"${VSCRIPT_DIR}/languages/angelscript/vangelscript.cpp"
-	"${VSCRIPT_DIR}/languages/angelscript/as_vector.cpp"
+	# "${VSCRIPT_DIR}/languages/angelscript/vangelscript.cpp"
+	# "${VSCRIPT_DIR}/languages/angelscript/as_vector.cpp"
 
 	# Public Header Files
 	"${SRCDIR}/public/vscript/ivscript.h"	
@@ -28,8 +28,8 @@ set(
 	"${VSCRIPT_DIR}/languages/squirrel/sq_vmstate.h"
 	"${VSCRIPT_DIR}/languages/lua/lua_vm.h"
 	"${VSCRIPT_DIR}/languages/lua/lua_vector.h"
-	"${VSCRIPT_DIR}/languages/angelscript/vangelscript.h"
-	"${VSCRIPT_DIR}/languages/angelscript/as_vector.h"
+	# "${VSCRIPT_DIR}/languages/angelscript/vangelscript.h"
+	# "${VSCRIPT_DIR}/languages/angelscript/as_vector.h"
 
 	# Squirrel Lang
 	# Source Files
@@ -95,73 +95,73 @@ set(
 
 	# AngelScript
 	# Source Files
-	"$<${IS_LINUX}:${VSCRIPT_DIR}/languages/angelscript/virtual_asm_linux.cpp>"
-	"$<${IS_WINDOWS}:${VSCRIPT_DIR}/languages/angelscript/virtual_asm_windows.cpp>"
-	"${VSCRIPT_DIR}/languages/angelscript/virtual_asm_x86.cpp"
-	"${VSCRIPT_DIR}/languages/angelscript/as_jit.cpp"
+	# "$<${IS_LINUX}:${VSCRIPT_DIR}/languages/angelscript/virtual_asm_linux.cpp>"
+	# "$<${IS_WINDOWS}:${VSCRIPT_DIR}/languages/angelscript/virtual_asm_windows.cpp>"
+	# "${VSCRIPT_DIR}/languages/angelscript/virtual_asm_x86.cpp"
+	# "${VSCRIPT_DIR}/languages/angelscript/as_jit.cpp"
 
 	# Header Files
-	"${VSCRIPT_DIR}/languages/angelscript/as_jit.h"
-	"${VSCRIPT_DIR}/languages/angelscript/virtual_asm.h"
+	# "${VSCRIPT_DIR}/languages/angelscript/as_jit.h"
+	# "${VSCRIPT_DIR}/languages/angelscript/virtual_asm.h"
 
 	# Public Header Files
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/angelscript/include/angelscript.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/angelscript/include/angelscript.h"
 
     # Add-Ons
 	# Source Files
-    "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring_utils.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.cpp"
+    # "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring_utils.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.cpp"
 
 	# Header Files
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.h"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.h"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.h"
 )
 
-set_source_files_properties(
-	"${VSCRIPT_DIR}/languages/angelscript/virtual_asm_x86.cpp"
-	"${VSCRIPT_DIR}/languages/angelscript/as_jit.cpp"
-    "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring_utils.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.cpp"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.cpp"
-	PROPERTIES COMPILE_FLAGS "/EHa"
-)
+# set_source_files_properties(
+	# "${VSCRIPT_DIR}/languages/angelscript/virtual_asm_x86.cpp"
+	# "${VSCRIPT_DIR}/languages/angelscript/as_jit.cpp"
+    # "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/contextmgr/contextmgr.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/debugger/debugger.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptany/scriptany.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptarray/scriptarray.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptbuilder/scriptbuilder.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptdictionary/scriptdictionary.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptgrid/scriptgrid.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthandle/scripthandle.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scripthelper/scripthelper.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmath.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptmath/scriptmathcomplex.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/scriptstdstring/scriptstdstring_utils.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/serializer/serializer.cpp"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on/weakref/weakref.cpp"
+	# PROPERTIES COMPILE_FLAGS "/EHa"
+# )
 
 add_library(vscript MODULE ${VSCRIPT_SOURCE_FILES})
 
@@ -177,8 +177,8 @@ target_include_directories(
 	"${SRCDIR}/thirdparty/SQUIRREL3/squirrel"
 	"${SRCDIR}/thirdparty/SQUIRREL3/sqplus"
 	"${SRCDIR}/thirdparty/luajit/src"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/angelscript/include"
-	"${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/angelscript/include"
+	# "${SRCDIR}/thirdparty/angelscript_2.32.0/sdk/add_on"
 
 )
 
@@ -187,6 +187,7 @@ add_custom_command(
 	TARGET vscript
     PRE_BUILD
     COMMAND ${Python3_EXECUTABLE} "${SRCDIR}/devtools/bin/texttoarray.py" --file "${VSCRIPT_DIR}/languages/squirrel/vscript_init.nut" --name "g_Script_init" --out "${VSCRIPT_DIR}/languages/squirrel/vscript_init_nut.h"
+	COMMENT "vscript_init.nut produces vscript_init_nut.h"
 )
 
 target_compile_definitions(
@@ -202,6 +203,6 @@ target_link_libraries(
 	tier1
 	"$<${IS_WINDOWS}:${LIBCOMMON}/lua51.lib>"
 	"$<${IS_LINUX}:${LIBCOMMON}/linux32/libluajit.a>"
-	"$<${IS_LINUX}:${LIBCOMMON}/linux32/angelscript.a>"
-	"$<${IS_WINDOWS}:${LIBCOMMON}/angelscript.lib>"
+	# "$<${IS_LINUX}:${LIBCOMMON}/linux32/angelscript.a>"
+	# "$<${IS_WINDOWS}:${LIBCOMMON}/angelscript.lib>"
 )

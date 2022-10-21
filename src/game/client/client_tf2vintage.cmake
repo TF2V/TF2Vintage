@@ -45,6 +45,8 @@ set(
 	"${CLIENT_TF2VINTAGE_DIR}/worldlight.cpp"
 	"${CLIENT_TF2VINTAGE_DIR}/worldlight.h"
 	"${CLIENT_TF2VINTAGE_DIR}/vis_tester.cpp"
+	"${SRCDIR}/common/steamid.cpp"
+	"${SRCDIR}/public/rtime.cpp"
 	
 	# Header Files
 	"${SRCDIR}/game/shared/basescriptedweapon.h"
@@ -705,15 +707,17 @@ add_custom_command(
 	TARGET client_tf2vintage
     PRE_BUILD
     COMMAND ${Python3_EXECUTABLE} "${SRCDIR}/devtools/bin/texttoarray.py" --file "${CLIENT_TF2VINTAGE_DIR}/vscript_client.nut" --name "g_Script_vscript_client" --out "${CLIENT_TF2VINTAGE_DIR}/vscript_client_nut.h"
+	COMMENT "vscript_client.nut produces vscript_client_nut.h"
 )
 
 # Copy discord_game_sdk.dll
 add_custom_command(
 	TARGET client_tf2vintage
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
+    COMMAND ${CMAKE_COMMAND} -E  copy
         ${SRCDIR}/thirdparty/discord_game_sdk/lib/x86/discord_game_sdk.dll
-        ${LIBRARY_OUTPUT_DIRECTORY}
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/discord_game_sdk.dll
+	COMMENT "Copying discord_game_sdk.dll to game directory."
 )
 
 target_link_directories(
@@ -725,8 +729,9 @@ target_link_directories(
 target_link_libraries(
 	client_tf2vintage PRIVATE
 
-	"${LIBCOMMON}/lzma"
-	$<${IS_WINDOWS}:discord_game_sdk.dll>
+	"$<${IS_WINDOWS}:${LIBCOMMON}/lzma.lib>"
+	"$<${IS_LINUX}:${LIBCOMMON}/linux32/lzma.a>"
+	"$<${IS_WINDOWS}:discord_game_sdk.dll.lib>"
 )
 
 target_include_directories(

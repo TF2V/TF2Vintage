@@ -2,7 +2,7 @@
 #include "ivscript.h"
 #include "languages/lua/lua_vm.h"
 #include "languages/squirrel/vsquirrel.h"
-#include "languages/angelscript/vangelscript.h"
+//#include "languages/angelscript/vangelscript.h"
 #include "vscript_misc.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -32,8 +32,8 @@ IScriptVM *CScriptManager::CreateVM( ScriptLanguage_t language )
 		/*case SL_LUA:
 			pVM = CreateLuaVM();
 			break;*/
-		case SL_ANGELSCRIPT:
-			pVM = CreateAngelScriptVM();
+		/*case SL_ANGELSCRIPT:
+			pVM = CreateAngelScriptVM();*/
 		default:
 			return NULL;
 	}
@@ -69,9 +69,9 @@ void CScriptManager::DestroyVM( IScriptVM *pVM )
 			/*case SL_LUA:
 				DestroyLuaVM( pVM );
 				break;*/
-			case SL_ANGELSCRIPT:
+			/*case SL_ANGELSCRIPT:
 				DestroyAngelScriptVM( pVM );
-				break;
+				break;*/
 		}
 	}
 }

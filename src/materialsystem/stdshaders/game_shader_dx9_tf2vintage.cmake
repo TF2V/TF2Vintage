@@ -2,8 +2,8 @@
 
 include( "${CMAKE_CURRENT_LIST_DIR}/game_shader_dx9_base.cmake")
 
-list( INSERT
-	GAME_SHADER_DX9_BASE_SOURCE_FILES
+set(
+	GAME_SHADER_DX9_TF2VINTAGE_SOURCE_FILES
 	"${GAME_SHADER_DX9_BASE_DIR}/pbr_dx9.cpp"
 
 	# Header Files
@@ -23,7 +23,7 @@ list( INSERT
 	"${GAME_SHADER_DX9_BASE_DIR}/pbr_dx9_20b.txt"
 )
 
-add_library(game_shader_dx9_tf2vintage MODULE)
+add_library(game_shader_dx9_tf2vintage MODULE ${GAME_SHADER_DX9_TF2VINTAGE_SOURCE_FILES})
 
 set_target_properties(
 	game_shader_dx9_tf2vintage PROPERTIES

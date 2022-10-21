@@ -13,6 +13,7 @@
 #include "../source/as_scriptengine.h"
 #include "../source/as_scriptobject.h"
 #include "../source/as_texts.h"
+#include "../source/as_builder.h"
 #include "../source/as_context.h"
 
 #include "virtual_asm.h"

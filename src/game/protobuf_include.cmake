@@ -3,6 +3,6 @@
 target_link_libraries(
 	${target} PRIVATE
 
-	$<${IS_WINDOWS}:${LIBPUBLIC}/2015/libprotobuf>
-	$<${IS_LINUX}:${LIBPUBLIC}/linux32/libprotobuf>
+	$<${IS_WINDOWS}:${LIBPUBLIC}/2015/libprotobuf.lib>
+	$<${IS_LINUX}:${LIBPUBLIC}/linux32/libprotobuf.a>
 )
