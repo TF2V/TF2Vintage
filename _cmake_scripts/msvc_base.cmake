@@ -37,6 +37,7 @@ add_compile_definitions(
 	_ALLOW_RUNTIME_LIBRARY_MISMATCH
 	_ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
 	_ALLOW_MSC_VER_MISMATCH
+	_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING
 )
 
 # Remove default warning level from CMAKE_CXX_FLAGS (This is stupid I know)
@@ -53,6 +54,29 @@ string(REPLACE "/Ob0" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
 string(REPLACE "/Ob2" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 string(REPLACE "/Ob2" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+
+# Disable some warnings from now
+# Remove me once all of them are fixed.
+# C4458: declaration of 'X' hides class member
+# C5208: unnamed class used in typedef name cannot declare members other than non-static data members, member enumerations, or member classes
+# C4459: declaration of 'X' hides global declaration
+# C4457: declaration of 'X' hides function parameter
+# C4456: declaration of 'X' hides local declaration
+# C5105: macro expansion producing 'x' has undefined behavior
+# C4463: overflow; assigning 1 to bit-field that can only hold values from -1 to 0
+# C26495: Variable 'X' is uninitialized. Always initialize a member variable (type.6).
+# C26451: Arithmetic overflow: Using operator 'x' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'x' to avoid overflow (io.2).
+# C26819: Unannotated fallthrough between switch labels (es.78).
+# C4838: conversion from 'x' to 'x' requires a narrowing conversion.
+# C5205: delete of an abstract class 'x' that has a non-virtual destructor results in undefined behavior
+# C6255: _alloca indicates failure by raising a stack overflow exception. Consider using _malloca instead.
+# C5205: delete of an abstract class 'IHaptics' that has a non-virtual destructor results in undefined behavior
+# C6308: 'y' might return null pointer: assigning null pointer to 'X', which is passed as an argument to 'y', will cause the original memory block to be leaked.
+# C6385: Reading invalid data from 'X'.
+# C4189: 'X': local variable is initialized but not referenced
+# C4706: assignment within conditional expression.
+# C6269: Possibly incorrect order of operations.
+add_definitions( "/wd4458 /wd5208 /wd4459 /wd4457 /wd4456 /wd5105 /wd4463 /wd26495 /wd26451 /wd26819 /wd4838 /wd6255 /wd5205 /wd6308 /wd6385 /wd4189 /wd4706 /wd6269" )
 
 # These are expanded so that we can pass each option individually to the targets
 # So they may choose to exclude them
@@ -74,6 +98,13 @@ set(
 	/Zc:__cplusplus
 	/Zc:preprocessor
 	/Zc:inline
+
+	# Turn on some cpu features
+	/arch:SSE
+	/arch:SSE2
+	/arch:AVX
+	/arch:AVX2
+	/arch:AVX512
 
 	# We'll be permissive for now
 #	/permissive-
