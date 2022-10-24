@@ -30,15 +30,6 @@ jobs:
           key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}
           restore-keys: ${{ runner.os }}-
       
-      - name: Download ccache
-        id: ccache
-        shell: cmake -P {0}
-        run: |
-          set(ccache_url "https://github.com/cristianadam/ccache/releases/download/v$ENV{CCACHE_VERSION}/${{ runner.os }}.tar.xz")
-          file(DOWNLOAD "${ccache_url}" ./ccache.tar.xz SHOW_PROGRESS)
-          execute_process(COMMAND ${CMAKE_COMMAND} -E tar xvf ./ccache.tar.xz)
-          file(COPY ./ccache DESTINATION src/devtools/bin/linux USE_SOURCE_PERMISSIONS)
-      
       - name: Setup ccache
         run: |
           sudo mkdir -p game/tf2vintage/bin
@@ -56,11 +47,11 @@ jobs:
         run: sudo apt update && sudo apt install -y zip build-essential gcc-multilib g++-multilib
       
       - name: Download Steamworks SDK
-        run: |
-          sudo wget https://deathreus.github.io/download/steamworks_sdk_150.zip
-          unzip steamworks_sdk_150.zip
-          sudo rm -rf src/public/steam
-          sudo mv sdk/public/steam src/public/steam
+        uses: actions/checkout@v2
+        with:
+          path: src/public
+          ssh: ${{ secrets.SDK_DEPLOY_KEY }}
+          repository: Deathreus/steamworks_sdk
 
       - name: Create project
         run: cd src && sudo devtools/bin/vpc /tf2vintage +game /mksln TF2vintage

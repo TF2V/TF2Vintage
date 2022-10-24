@@ -1,32 +1,68 @@
-//========== Copyright © 2008, Valve Corporation, All rights reserved. ========
+//========== Copyright Â© 2008, Valve Corporation, All rights reserved. ========
 //
 // Purpose:
 //
 //=============================================================================
+
+local DoEntFire = DoEntFire
+local DoEntFireByInstanceHandle = DoEntFireByInstanceHandle
+local DoDispatchParticleEffect = DoDispatchParticleEffect
+local DoUniqueString = DoUniqueString
 
 function UniqueString( string = "" )
 {
 	return DoUniqueString( string.tostring() );
 }
 
-function EntFire( target, action, value = null, delay = 0.0, activator = null )
+function EntFire( target, action, value = null, delay = 0.0, activator = null, caller = null )
 {
 	if ( !value )
 	{
 		value = "";
 	}
-	
-	local caller = null;
+
 	if ( "self" in this )
 	{
-		caller = self;
+		if ( !caller )
+		{
+			caller = self;
+		}
+
 		if ( !activator )
 		{
 			activator = self;
 		}
 	}
-	
-	DoEntFire( target.tostring(), action.tostring(), value.tostring(), delay, activator, caller ); 
+
+	return DoEntFire( target.tostring(), action.tostring(), value.tostring(), delay, activator, caller );
+}
+
+function EntFireByHandle( target, action, value = null, delay = 0.0, activator = null, caller = null )
+{
+	if ( !value )
+	{
+		value = "";
+	}
+
+	if ( "self" in this )
+	{
+		if ( !caller )
+		{
+			caller = self;
+		}
+
+		if ( !activator )
+		{
+			activator = self;
+		}
+	}
+
+	return DoEntFireByInstanceHandle( target, action.tostring(), value.tostring(), delay, activator, caller );
+}
+
+function DispatchParticleEffect( particleName, origin, angles, entity = null )
+{
+	DoDispatchParticleEffect( particleName, origin, angles, entity );
 }
 
 function __ReplaceClosures( script, scope )
@@ -35,11 +71,11 @@ function __ReplaceClosures( script, scope )
 	{
 		scope = getroottable();
 	}
-	
+
 	local tempParent = { getroottable = function() { return null; } };
 	local temp = { runscript = script };
 	delegate tempParent : temp;
-	
+
 	temp.runscript()
 	foreach( key,val in temp )
 	{
@@ -51,7 +87,7 @@ function __ReplaceClosures( script, scope )
 	}
 }
 
-__OutputsPattern <- regexp("^On.*Output$");
+local __OutputsPattern = regexp("^On.*Output$");
 
 function ConnectOutputs( table )
 {
@@ -68,7 +104,7 @@ function ConnectOutputs( table )
 
 function IncludeScript( name, scope = null )
 {
-	if ( scope == null )
+	if ( !scope )
 	{
 		scope = this;
 	}
@@ -124,4 +160,3 @@ function __DumpScope( depth, table )
         print("\n");  
 	}
 }
-
