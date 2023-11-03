@@ -4770,6 +4770,12 @@ bool CTFPlayer::ClientCommand( const CCommand &args )
 		}
 		return true;
 	}
+	else if ( FStrEq ( pcmd, "respawn" ) )
+	{
+		if (CheckInstantLoadoutRespawn())
+			ForceRegenerateAndRespawn();
+		return true;
+	}
 	else if ( FStrEq( pcmd, "arena_changeclass" ) )
 	{
 		/*if ( !TFGameRules() || !TFGameRules()->IsInArenaMode() || !tf_arena_force_class.GetBool() || TFGameRules()->State_Get != GR_STATE_PREROUND )
@@ -9298,7 +9304,7 @@ int CTFPlayer::GiveAmmo( int iCount, int iAmmoIndex, bool bSuppressSound )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Reset player's information and force him to spawn
+// Purpose: Check if the player is allowed to respawn (e.g. after changing their loadout)
 //-----------------------------------------------------------------------------
 bool CTFPlayer::CheckInstantLoadoutRespawn( void )
 {
@@ -9333,47 +9339,6 @@ void CTFPlayer::ForceRegenerateAndRespawn( void )
 	ForceRespawn();
 	m_bRegenerating = false;
 }
-
-class CLoadoutChangedHandler : public IMessageHandler
-{
-public:
-	CLoadoutChangedHandler() {}
-
-	bool ProcessMessage( CNetPacket *pPacket ) OVERRIDE
-	{
-		CSteamID playerID( pPacket->Hdr().m_ulSourceID );
-
-		CTFPlayer *pPlayer = ToTFPlayer( UTIL_PlayerBySteamID( playerID ) );
-		if ( pPlayer && pPlayer->CheckInstantLoadoutRespawn() )
-		{
-			if ( pPlayer->m_Shared.InCond( TF_COND_AIMING ) )
-			{
-				CTFWeaponBase *pWeapon = pPlayer->GetActiveTFWeapon();
-				if ( pWeapon )
-				{
-					if ( pPlayer->IsPlayerClass( TF_CLASS_HEAVYWEAPONS ) || WeaponID_IsSniperRifle( pWeapon->GetWeaponID() ) )
-					{
-						pWeapon->WeaponReset();
-					}
-				}
-			}
-
-			if ( pPlayer->IsPlayerClass( TF_CLASS_MEDIC ) )
-			{
-				CWeaponMedigun *pMedigun = dynamic_cast<CWeaponMedigun *>( pPlayer->GetActiveTFWeapon() );
-				if ( pMedigun )
-				{
-					pMedigun->Lower();
-				}
-			}
-
-			pPlayer->ForceRegenerateAndRespawn();
-		}
-
-		return true;
-	}
-};
-REG_ECON_MSG_HANDLER( CLoadoutChangedHandler, k_ELoadoutChangedMsg, CLoadoutChangedMsg );
 
 //-----------------------------------------------------------------------------
 // Purpose: Reset player's information and force him to spawn
