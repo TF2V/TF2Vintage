@@ -9373,6 +9373,27 @@ void CTFPlayer::ForceRespawn( void )
 			return;
 	}
 
+	if (m_Shared.InCond(TF_COND_AIMING))
+	{
+		CTFWeaponBase* pWeapon = GetActiveTFWeapon();
+		if (pWeapon)
+		{
+			if (IsPlayerClass(TF_CLASS_HEAVYWEAPONS) || WeaponID_IsSniperRifle(pWeapon->GetWeaponID()))
+			{
+				pWeapon->WeaponReset();
+			}
+		}
+	}
+
+	if (IsPlayerClass(TF_CLASS_MEDIC))
+	{
+		CWeaponMedigun* pMedigun = dynamic_cast<CWeaponMedigun*>(GetActiveTFWeapon());
+		if (pMedigun)
+		{
+			pMedigun->Lower();
+		}
+	}
+
 	if ( iDesiredClass == TF_CLASS_UNDEFINED )
 	{
 		return;
