@@ -106,16 +106,11 @@ CTFLoadoutPanel::CTFLoadoutPanel(vgui::Panel* parent, const char *panelName) : C
 CTFLoadoutPanel::~CTFLoadoutPanel()
 {
 	m_pWeaponIcons.RemoveAll();
-	if ( m_pszServerID )
-	{
-		free( m_pszServerID );
-	}
 }
 
 bool CTFLoadoutPanel::Init()
 {
 	BaseClass::Init();
-	ListenForGameEvent( "server_spawn" );
 
 	m_iCurrentClass = TF_CLASS_SCOUT;
 	m_iCurrentSlot = TF_LOADOUT_SLOT_PRIMARY;
@@ -124,7 +119,6 @@ bool CTFLoadoutPanel::Init()
 	m_pItemPanel = NULL;
 	g_TFWeaponScriptParser.InitParser( "scripts/tf_weapon_*.txt", true, false );
 	m_bLoadoutChanged = false;
-	m_pszServerID = NULL;
 
 	char chEmptyLoc[32];
 	wchar_t* wcLoc = g_pVGuiLocalize->Find("SelectNoItemSlot");
@@ -150,14 +144,6 @@ bool CTFLoadoutPanel::Init()
 	}
 	
 	return true;
-}
-
-void CTFLoadoutPanel::FireGameEvent( IGameEvent *event )
-{
-	if ( FStrEq( event->GetName(), "server_spawn" ) )
-	{
-		m_pszServerID = strdup( event->GetString( "steamid" ) );
-	}
 }
 
 void CTFLoadoutPanel::ApplySchemeSettings( vgui::IScheme *pScheme )
@@ -217,8 +203,8 @@ void CTFLoadoutPanel::OnCommand ( const char* command )
 		{
 			m_bLoadoutChanged = false;
 
-			if( tf_respawn_on_loadoutchanges.GetBool() && m_pszServerID && m_pszServerID[0] )
-				g_pNetworking->SendMessage( CSteamID( m_pszServerID ), k_ELoadoutChangedMsg, NULL, 0 );
+			if (tf_respawn_on_loadoutchanges.GetBool())
+				engine->ServerCmd( "respawn" );
 		}
 	}
 	else if ( !Q_strcmp ( command, "select_scout" ) )
