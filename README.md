@@ -1,5 +1,9 @@
 [![Build](https://github.com/TF2V/TF2Vintage/actions/workflows/release.yml/badge.svg)](https://github.com/TF2V/TF2Vintage/actions/workflows/release.yml)
 
+Developtment may be a bit slowdown, consider becoming a contributor :)
+
+-------------------------------------------------------------------------------------------
+
 Latest full compile, including game assets: [Click](https://nightly.link/TF2V/TF2Vintage/workflows/release/3.6/tf2vintage.zip)
 
 -------------------------------------------------------------------------------------------
