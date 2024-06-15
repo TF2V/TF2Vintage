@@ -197,7 +197,7 @@
 		{
 			"labelText"			"#TF_ItemPresetName0"
 			"textAlignment"		"center"
-			"font"				"TallTextSmall"
+			"font"				"HudFontMediumSmallBold"
 			"defaultFgColor_override"		"MainMenuTextDefault"
 			"armedFgColor_override"			"MainMenuTextArmed"
 			"depressedFgColor_override"		"MainMenuTextDepressed"	
@@ -225,7 +225,7 @@
 		{
 			"labelText"			"#TF_ItemPresetName1"
 			"textAlignment"		"center"
-			"font"				"TallTextSmall"
+			"font"				"HudFontMediumSmallBold"
 			"defaultFgColor_override"		"MainMenuTextDefault"
 			"armedFgColor_override"			"MainMenuTextArmed"
 			"depressedFgColor_override"		"MainMenuTextDepressed"	
@@ -254,7 +254,7 @@
 		{
 			"labelText"			"#TF_ItemPresetName2"
 			"textAlignment"		"center"
-			"font"				"TallTextSmall"
+			"font"				"HudFontMediumSmallBold"
 			"defaultFgColor_override"		"MainMenuTextDefault"
 			"armedFgColor_override"			"MainMenuTextArmed"
 			"depressedFgColor_override"		"MainMenuTextDepressed"	
@@ -283,7 +283,7 @@
 		{
 			"labelText" 		"#TF_ItemPresetName3"
 			"textAlignment"		"center"
-			"font"				"TallTextSmall"
+			"font"				"HudFontMediumSmallBold"
 			"defaultFgColor_override"		"MainMenuTextDefault"
 			"armedFgColor_override"			"MainMenuTextArmed"
 			"depressedFgColor_override"		"MainMenuTextDepressed"
