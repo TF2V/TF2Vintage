@@ -3603,7 +3603,9 @@ bool CBasePlayer::IsUserCmdDataValid( CUserCmd *pCmd )
 	const int nMinDelta = Max( 0, gpGlobals->tickcount - nCmdMaxTickDelta );
 	const int nMaxDelta = gpGlobals->tickcount + nCmdMaxTickDelta;
 
-	bool bValid = ( pCmd->tick_count >= nMinDelta && pCmd->tick_count < nMaxDelta ) &&
+	// when using host_thread_mode 1 or 2 on a listen server the client and server tickcount get desynced resulting in none of the hosts usermsgs getting accepted
+	// this first || fixes that and doesnt seem to do anything else as far as i can tell; Tholp
+    bool bValid = ((!engine->IsDedicatedServer() && entindex() == 1) || ( pCmd->tick_count >= nMinDelta && pCmd->tick_count < nMaxDelta )) &&
 				  // Prevent clients from sending invalid view angles to try to get leaf server code to crash
 				  ( pCmd->viewangles.IsValid() && IsEntityQAngleReasonable( pCmd->viewangles ) ) &&
 				  // Movement ranges

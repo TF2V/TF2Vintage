@@ -9,6 +9,7 @@ $Macro GAMENAME 	"tf2vintage"
 
 $Include "$SRCDIR\game\client\client_base.vpc"
 $Include "$SRCDIR\game\shared\econ_protobuf_include.vpc"
+$Include "$SRCDIR\coplay\src\coplay.vpc"
 
 $Configuration
 {
