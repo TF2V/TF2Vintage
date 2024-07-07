@@ -37,7 +37,15 @@ obj*/
 [Rr]elease*/
 [Dd]ebug*/
 game/bin
-game/*/bin
+#game/*/bin
+
+# Manual override of bin folder
+game/*/bin/client.dll
+game/*/bin/client.pdb
+game/*/bin/server.dll
+game/*/bin/server.pdb
+game/*/bin/vscript.dll
+game/*/bin/vscript.pdb
 
 # generated protobuf sources
 generated_proto*/
