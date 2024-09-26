@@ -1,1 +1,0 @@
-devtools\bin\vpc.exe /tf2vintage /2013 +everything /mksln everything.sln
