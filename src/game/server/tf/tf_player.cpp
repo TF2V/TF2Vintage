@@ -245,6 +245,7 @@ ConVar tf2v_new_sentry_damage_falloff( "tf2v_new_sentry_damage_falloff", "0", FC
 
 ConVar tf2v_use_new_uber_taunt( "tf2v_use_new_uber_taunt", "0", FCVAR_NOTIFY, "Changes the way the Spinal Tap taunt builds uber." );
 
+ConVar tf2v_disguise_break_touch("tf2v_disguise_break_touch", "0", FCVAR_NOTIFY, "Enemy scouts and spies can break disguises on touch.", true, 0, true, 1);
 
 // -------------------------------------------------------------------------------- //
 // Player animation event. Sent to the client when a player fires, jumps, reloads, etc..
@@ -10983,6 +10984,19 @@ void CTFPlayer::CheckUncoveringSpies( CTFPlayer *pTouchedPlayer )
 	if ( m_Shared.IsAlly( pTouchedPlayer ) )
 	{
 		return;
+	}
+	
+	// TFC disguise touching: Enemy Scouts and Spies can remove disguises.
+	if ( tf2v_disguise_break_touch.GetBool() )
+	{
+		if ( pTouchedPlayer->m_Shared.InCond( TF_COND_DISGUISED ) )
+		{
+			int nClass = GetPlayerClass()->GetClassIndex();
+			if ( nClass == TF_CLASS_SCOUT || nClass == TF_CLASS_SPY )
+			{
+				pTouchedPlayer->m_Shared.RemoveDisguise();
+			}
+		}
 	}
 
 	// Only uncover if they're stealthed
