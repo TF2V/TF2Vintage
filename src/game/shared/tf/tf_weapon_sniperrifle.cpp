@@ -1628,7 +1628,7 @@ int CSniperDot::DrawModel( int flags )
 		}
 
 		trace_t tr;
-		UTIL_TraceLine( vecAttachment, vecAttachment + ( vecDir * flDist ), MASK_SHOT, pPlayer, COLLISION_GROUP_NONE, &tr );
+		UTIL_TraceLine( vecAttachment, GetAbsOrigin(), MASK_SHOT, pPlayer, COLLISION_GROUP_NONE, &tr );
 
 		// Backup off the hit plane, towards the source
 		vecEndPos = tr.endpos + vecDir * -4;
