@@ -1260,7 +1260,7 @@ bool CTFSniperRifle_Classic::Holster( CBaseCombatWeapon *pSwitchingTo )
 	
 	// Remove our charging.
 	m_bIsChargingAttack = false;	
-	if ( pPlayer->m_Shared.InCond(TF_COND_AIMING) )
+	if ( pPlayer && pPlayer->m_Shared.InCond(TF_COND_AIMING) )
 	{
 		pPlayer->m_Shared.RemoveCond( TF_COND_AIMING );
 		pPlayer->TeamFortress_SetSpeed();
