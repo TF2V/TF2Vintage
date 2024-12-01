@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     runs-on:
-      windows-2022
+      windows-2019
 
     steps:
       - name: Checkout
@@ -17,7 +17,7 @@ jobs:
       - name: Install components
         run: |
                 Set-Location "C:\Program Files (x86)\Microsoft Visual Studio\Installer\"
-                $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+                $InstallPath = "C:\Program Files\Microsoft Visual Studio\2019\Enterprise"
                 $Arguments = ('/c', "vs_installer.exe", 'modify', '--installPath', "`"$InstallPath`"", '--add', "Microsoft.VisualStudio.Component.VC.140", '--quiet', '--norestart', '--nocache')
                 # should be run twice
                 $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
