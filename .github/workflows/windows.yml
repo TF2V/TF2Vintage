@@ -7,27 +7,35 @@ jobs:
   build:
     runs-on:
       windows-2022
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: true
 
-      - name: Configure dependencies
-        uses: ilammy/msvc-dev-cmd@v1
+      - name: Install components
+        run: |
+                Set-Location "C:\Program Files (x86)\Microsoft Visual Studio\Installer\"
+                $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+                $Arguments = ('/c', "vs_installer.exe", 'modify', '--installPath', "`"$InstallPath`"", --add "Microsoft.VisualStudio.Component.VC.140", '--quiet', '--norestart', '--nocache')
+                # should be run twice
+                $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
+                $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
 
       - name: Configure registry
         shell: powershell
         run: |
-          REG ADD "HKLM\Software\Microsoft\VisualStudio\12.0\Projects\{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}" /v "DefaultProjectExtension" /t REG_SZ  /d "vcxproj" /f /reg:32
-          REG ADD "HKLM\Software\Microsoft\VisualStudio\12.0\Projects\{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}" /v "PossibleProjectExtensions" /t REG_SZ /d "vcxproj;vcxitems;vcproj;mak" /f /reg:32
+          REG ADD "HKLM\Software\Microsoft\VisualStudio\14.0\Projects\{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}" /v "DefaultProjectExtension" /t REG_SZ  /d "vcxproj" /f /reg:32
+          REG ADD "HKLM\Software\Microsoft\VisualStudio\14.0\Projects\{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}" /v "PossibleProjectExtensions" /t REG_SZ /d "vcxproj;vcxitems;vcproj;mak" /f /reg:32
+
+      - name: Configure dependencies
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Create project
         run: |
           cd src
           devtools/bin/vpc.exe /tf2vintage /2015 +game /mksln TF2vintage.sln
-          devtools/bin/vpu.exe /2019 TF2vintage.sln
 
       - name: Build project
         run: cd src;devenv TF2vintage.sln /Build Release
