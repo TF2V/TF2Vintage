@@ -25,7 +25,7 @@ jobs:
 
 
   build-game:
-    needs: [build-windows , build-linux]
+    needs: [build-windows] #, build-linux]
     runs-on:
       ubuntu-20.04
     
