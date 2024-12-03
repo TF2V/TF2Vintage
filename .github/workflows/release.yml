@@ -20,8 +20,8 @@ jobs:
   build-windows:
     uses: ./.github/workflows/windows.yml
 
-  build-linux:
-   uses: ./.github/workflows/linux.yml
+  #build-linux:
+  # uses: ./.github/workflows/linux.yml
 
 
   build-game:
@@ -56,4 +56,4 @@ jobs:
         with:
           name: |
             tf2vintage-windows
-            tf2vintage-linux
+      #     tf2vintage-linux
