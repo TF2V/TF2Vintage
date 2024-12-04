@@ -15,9 +15,7 @@
 	supportsDX8 	0
 	GameData	"tf2v.fgd"
 	hidden_maps 
-	{ 
-		"test_speakers"		1 
-		"test_hardware"		1 
+	{
 	}
 	InstancePath 	"maps/instances/"	
 
@@ -53,7 +51,7 @@
 			game_lv				"|all_source_engine_paths|../Team Fortress 2/tf/tf2_lv.vpk"
 			game+mod			"|all_source_engine_paths|../Team Fortress 2/tf/tf2_textures.vpk"
 			game+mod			"|all_source_engine_paths|../Team Fortress 2/tf/tf2_sound_misc.vpk"
-			game+mod+vgui		"|all_source_engine_paths|../Team Fortress 2/tf/tf2_misc.vpk"
+			game+mod+vgui			"|all_source_engine_paths|../Team Fortress 2/tf/tf2_misc.vpk"
 			game+mod			"|all_source_engine_paths|../Team Fortress 2/tf/tf2_sound_vo_english.vpk"
 			
 			// We search VPK files before ordinary folders, because most files will be found in
@@ -64,7 +62,7 @@
 			game				"|all_source_engine_paths|hl2/hl2_sound_vo_english.vpk"
 			game				"|all_source_engine_paths|hl2/hl2_sound_misc.vpk"
 			game+vgui			"|all_source_engine_paths|hl2/hl2_misc.vpk"
-			platform+vgui		"|all_source_engine_paths|platform/platform_misc.vpk"
+			platform+vgui			"|all_source_engine_paths|platform/platform_misc.vpk"
 			
 			// Add the HL2 directory as a game search path.  This is also where where writes
 			// to the "game" path go.
@@ -75,7 +73,7 @@
 			platform			"|all_source_engine_paths|platform"		
 
 			// Load in all loose TF2 content second to last, to try and prevent as much overrides as possible.
-			game+mod									"|all_source_engine_paths|../Team Fortress 2/tf/."
+			game+mod	"|all_source_engine_paths|../Team Fortress 2/tf"
 			
 			// Random files downloaded from gameservers go into a seperate directory, so
 			// that it's easy to keep those files segregated from the official game files
